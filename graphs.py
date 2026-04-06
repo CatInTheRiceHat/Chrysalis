@@ -364,21 +364,21 @@ def grouped_vs_baseline(df, metrics, out_path):
             base_vals,
             width=bar_w,
             label="Baseline",
-            color="#b81c14",
+            color="#bfe2eaff",
         )
         ax.bar(
             x,
             off_vals,
             width=bar_w,
             label="Improved (Night OFF)",
-            color="#f0b800",
+            color="#3f9bc7",
         )
         ax.bar(
             [v + bar_w for v in x],
             on_vals,
             width=bar_w,
             label="Improved (Night ON)",
-            color="#117fbf",
+            color="#2f3b7a",
         )
 
         ax.set_xticks(x)
