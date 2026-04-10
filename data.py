@@ -15,14 +15,6 @@ def get_hash_index(val, length):
     h = int(hashlib.sha256(str(val).encode('utf-8')).hexdigest(), 16)
     return h % length
 
-def get_mock_user_profile():
-    """Provides a simulated user profile for similarity testing."""
-    return {
-        "user_id": 999999,
-        "user_trait": "urban",
-        "passive_streak": 2 # Simulated passive consumption streak
-    }
-
 def process_vklsvd_data(max_items=1000):
     """
     Reads the anonymized VK-LSVD items metadata, formats it,

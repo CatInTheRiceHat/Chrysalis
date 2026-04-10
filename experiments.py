@@ -2,6 +2,9 @@
 Runs multiple simulated sessions of the prototype feed and compares each run to an engagement-only baseline.
 It records design metrics + baseline overlap for every run, then saves raw results and summary stats to CSV files.
 Outputs: results/experiment_raw.csv and results/experiment_summary.csv.
+
+Usage:
+    python experiments.py --n_sessions 10 --dataset datasets/processed_dataset.csv
 """
 
 from pathlib import Path
@@ -26,6 +29,15 @@ from metrics import (
 )
 
 # -----------------------------
+# Design Criteria Targets
+# -----------------------------
+
+TARGET_DIVERSITY_AT_10 = 4
+TARGET_MAX_STREAK = 2
+TARGET_PROSOCIAL_RATIO = 0.25
+TARGET_RUNTIME_SEC_PER_100 = 2.0
+
+# -----------------------------
 # Config
 # -----------------------------
 
@@ -37,11 +49,6 @@ CREATOR_COL = "channel"
 PROSOCIAL_COL = "prosocial"
 
 K_DEFAULT = 100
-
-TARGET_DIVERSITY_AT_10 = 4
-TARGET_MAX_STREAK = 2
-TARGET_PROSOCIAL_RATIO = 0.25
-TARGET_RUNTIME_SEC_PER_100 = 2.0
 
 
 # -----------------------------
