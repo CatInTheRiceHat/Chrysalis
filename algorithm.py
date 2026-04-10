@@ -26,9 +26,16 @@ WEIGHTS: Dict[str, Dict[str, float]] = {
 NIGHT_MODE_K = 15
 
 
-def night_mode_settings(w, risk_boost=0.05):
+def night_mode_settings(w, risk_boost=0.05, prosocial_boost=0.03):
+    """
+    Adjusts weights for night-time viewing.
+    Raises risk sensitivity AND prosocial weight (research: night mode should
+    protect against harmful content AND promote calming prosocial content).
+    Both boosts are applied then the full weight vector is re-normalised to 1.0.
+    """
     w2 = dict(w)
     w2["r"] = w2.get("r", 0.0) + risk_boost
+    w2["p"] = w2.get("p", 0.0) + prosocial_boost
 
     total = sum(w2.values())
     if total != 0:
@@ -56,7 +63,14 @@ def get_mode_settings(preset, night_mode=False, k_default=100):
 # Dataset prep / validation
 # -----------------------------
 
-REQUIRED_COLUMNS = {"view_count", "topic", "channel", "prosocial", "risk", "appearance_comparison", "creator_trait"}
+REQUIRED_COLUMNS = {
+    "view_count", "topic", "channel", "prosocial", "risk",
+    "appearance_comparison", "creator_trait",
+    # Research-backed additions
+    "active_engagement_ratio",  # comments+shares / views — active vs. passive signal
+    "opinion_comparison",       # opinion/discourse comparison content (identity-positive)
+    "creator_authenticity",     # temporal consistency of creator voice (0=trend-chaser, 1=genuine)
+}
 
 def validate_and_clean(df: pd.DataFrame) -> pd.DataFrame:
     missing = REQUIRED_COLUMNS - set(df.columns)
@@ -66,9 +80,9 @@ def validate_and_clean(df: pd.DataFrame) -> pd.DataFrame:
 
     out = df.copy()
 
-    out["prosocial"] = pd.to_numeric(out["prosocial"], errors="coerce").fillna(0).clip(0, 1)
-    out["risk"] = pd.to_numeric(out["risk"], errors="coerce").fillna(0).clip(0, 1)
-    out["appearance_comparison"] = pd.to_numeric(out["appearance_comparison"], errors="coerce").fillna(0).clip(0, 1)
+    for col in ("prosocial", "risk", "appearance_comparison",
+                "active_engagement_ratio", "opinion_comparison", "creator_authenticity"):
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0).clip(0, 1)
 
     return out
 
@@ -97,27 +111,75 @@ def calculate_gini(distribution: List[int]) -> float:
 
 def score_parts(e: float, d: float, p: float, r: float, w: Dict[str, float],
                 passive_streak: int = 0, similarity: float = 0.0,
-                appearance_comp: float = 0.0) -> float:
+                appearance_comp: float = 0.0,
+                active_engagement_ratio: float = 0.0,
+                opinion_comp: float = 0.0,
+                creator_authenticity: float = 0.0) -> float:
     """
-    Total score with new algorithm implementation.
-    Decay engagement based on passive_streak.
-    Adjust risk based on similarity mindset.
+    Total score with all research-backed dimensions.
+
+    passive_streak decay:
+        Weight shifts from engagement toward diversity + prosocial as passive
+        viewing continues, keeping total weight budget constant at 1.0.
+
+    similarity mindset:
+        similarity=+1.0  (creator trait matches user trait)
+            * affinity bonus on effective engagement
+            * mitigates risk when appearance comparison is high
+        similarity=-1.0  (mismatch)
+            * no affinity bonus
+            * amplifies risk when appearance comparison is high
+
+    active_engagement_ratio  [0, 1]:
+        Content-side signal. Videos that historically provoke comments/shares
+        receive an additive score bonus (up to +0.15), rewarding active rather
+        than passive consumption (research §2.1).
+
+    creator_authenticity  [0, 1]:
+        Temporal consistency of creator voice. Genuine creators get up to a
+        +15% multiplicative boost on their effective engagement (research §2.4).
+
+    opinion_comp  [0, 1]:
+        Discourse / opinion comparison content. Above 0.5, adds a small
+        positive bonus (up to +0.05) because opinion comparison supports
+        healthy identity formation, unlike appearance comparison (research §2.3).
     """
-    # 1. Decay Function
+    # 1. Passive-streak decay: shift weight from engagement to d+p
     decay_rate = 0.8
-    e_weight = w["e"] * (decay_rate ** passive_streak)
-    
-    # 3. Similarity Mindset
-    # If appearance comparison > 0.5, apply modifier
+    decay_factor = decay_rate ** passive_streak   # in [0, 1]
+    # engagement weight shrinks; the freed budget goes equally to d and p
+    w_e = w["e"] * decay_factor
+    freed = w["e"] - w_e                          # weight shed by engagement
+    w_d = w["d"] + freed * 0.5
+    w_p = w["p"] + freed * 0.5
+    w_r = w["r"]
+
+    # 2. Affinity bonus (user-trait match) + creator authenticity (both multiplicative)
+    affinity_bonus = 0.20 * max(0.0, similarity)        # 0.20 if match, 0 if mismatch
+    auth_bonus     = 0.15 * creator_authenticity        # 0–0.15 based on creator consistency
+    e_effective = e * (1.0 + affinity_bonus + auth_bonus)
+
+    # 3. Similarity mindset on risk
     r_effective = r
     if appearance_comp > 0.5:
-        # If similar (1), risk is mitigated.
-        # If not similar (-1), risk is doubled.
-        r_effective = r * (1 - similarity)
-        # ensure it doesn't go negative, though standard math keeps it >= 0 if similarity is 1.
+        # similar creator mitigates risk; dissimilar amplifies it
+        r_effective = r * (1.0 - similarity * 0.5)
         r_effective = max(0.0, r_effective)
 
-    return (e * e_weight) + (d * w["d"]) + (p * w["p"]) - (r_effective * w["r"])
+    # 4. Active engagement bonus — content that drives comments/shares, not just watch time
+    active_boost = 0.15 * active_engagement_ratio      # additive, 0–0.15
+
+    # 5. Opinion comparison bonus — discourse content is identity-positive
+    opinion_bonus = 0.05 * opinion_comp if opinion_comp > 0.5 else 0.0
+
+    return (
+        (e_effective * w_e)
+        + (d * w_d)
+        + (p * w_p)
+        - (r_effective * w_r)
+        + active_boost
+        + opinion_bonus
+    )
 
 
 def would_break_streak(recent_list: List[str], candidate_value: str, max_streak: int = 2) -> bool:
@@ -146,24 +208,68 @@ def build_prototype_feed(
     """
     Prototype algorithm using Gini coefficient for diversity
     and user profile attributes for similarity and engagement decay.
+
+    user_profile keys
+    -----------------
+    passive_streak          int   (default 0)   consecutive passive views so far
+    user_trait              str   (default '')   user's self-identified creator-trait preference
+    novelty_tolerance       float (default 0.5) 0=low comfort with novelty, 1=high;
+                                                scales serendipity_multiplier between 1.0–3.0
+    boost_topics            list[str] (default [])
+                                                UCRS: topics to amplify in ranking
+    reduce_topics           list[str] (default [])
+                                                UCRS: topics to exclude from feed entirely
+    override_passive_history bool (default False)
+                                                UCRS: treat passive_streak as 0 for this session
     """
     remaining = df.copy().reset_index(drop=True)
     feed_rows: List[dict] = []
 
     recent_topics: List[str] = []
     recent_channels: List[str] = []
-    
+
     # Pre-extract all possible topics for Gini distribution tracking
     all_topics = sorted(list(remaining["topic"].unique()))
-    
-    passive_streak = user_profile.get("passive_streak", 0)
-    user_trait = user_profile.get("user_trait", "")
+
+    # --- User profile extraction ---
+    passive_streak  = user_profile.get("passive_streak", 0)
+    user_trait      = user_profile.get("user_trait", "")
+    boost_topics    = set(user_profile.get("boost_topics", []))
+    reduce_topics   = set(user_profile.get("reduce_topics", []))
+    override        = user_profile.get("override_passive_history", False)
+
+    # UCRS: override_passive_history resets streak effect for this session
+    passive_streak_eff = 0 if override else passive_streak
+
+    # Novelty tolerance scales how aggressively serendipity is pushed
+    # tolerance=0.0 → multiplier=1.0 (gentle), tolerance=1.0 → multiplier=3.0 (bold)
+    novelty_tolerance      = float(user_profile.get("novelty_tolerance", 0.5))
+    novelty_tolerance      = max(0.0, min(1.0, novelty_tolerance))  # clamp
+    serendipity_multiplier = 2.0 * (0.5 + novelty_tolerance)        # range [1.0, 3.0]
+
+    def _score_row(row, topic, d, passive_streak_eff):
+        """Helper that reads optional new columns safely (default 0.0 for legacy data)."""
+        creator_trait = getattr(row, "creator_trait", "")
+        similarity    = 1.0 if creator_trait == user_trait else -1.0
+        return score_parts(
+            e=getattr(row, "engagement"),
+            d=d,
+            p=getattr(row, "prosocial"),
+            r=getattr(row, "risk"),
+            w=weights,
+            passive_streak=passive_streak_eff,
+            similarity=similarity,
+            appearance_comp=getattr(row, "appearance_comparison", 0.0),
+            active_engagement_ratio=getattr(row, "active_engagement_ratio", 0.0),
+            opinion_comp=getattr(row, "opinion_comparison", 0.0),
+            creator_authenticity=getattr(row, "creator_authenticity", 0.0),
+        )
 
     for _ in range(k):
         if remaining.empty:
             break
 
-        window_topics = recent_topics[-recent_window:]
+        window_topics   = recent_topics[-recent_window:]
         window_channels = recent_channels[-recent_window:]
 
         # Calculate base Gini across recent topics
@@ -176,8 +282,14 @@ def build_prototype_feed(
         score_list: List[float] = []
 
         for row in remaining.itertuples(index=False):
-            topic = getattr(row, "topic")
+            topic   = getattr(row, "topic")
             channel = getattr(row, "channel")
+
+            # UCRS: hard-exclude reduce_topics
+            if topic in reduce_topics:
+                diversity_list.append(0.0)
+                score_list.append(float("-inf"))
+                continue
 
             if (
                 would_break_streak(recent_topics, topic, max_streak=max_streak)
@@ -187,69 +299,54 @@ def build_prototype_feed(
                 score_list.append(float("-inf"))
                 continue
 
-            # 2. Gini Coefficient Diversity Score
-            # Simulate adding this topic
+            # Gini Coefficient Diversity Score
             hypothetical_counts = dict(topic_counts)
             hypothetical_counts[topic] += 1
             new_gini = calculate_gini(list(hypothetical_counts.values()))
-            
-            # Improvement in equality (lower Gini = better)
-            # We scale it with a multiplier so it has a reasonable magnitude like engagement
-            serendipity_multiplier = 2.0 
-            d = (base_gini - new_gini) * serendipity_multiplier
-            # ensure diversity score is somewhat positive or bounded
-            d = max(0.0, d + 0.1) 
 
-            # Similarity Evaluation
-            creator_trait = getattr(row, "creator_trait")
-            similarity = 1.0 if creator_trait == user_trait else -1.0
-            
-            s = score_parts(
-                e=getattr(row, "engagement"),
-                d=d,
-                p=getattr(row, "prosocial"),
-                r=getattr(row, "risk"),
-                w=weights,
-                passive_streak=passive_streak,
-                similarity=similarity,
-                appearance_comp=getattr(row, "appearance_comparison")
-            )
+            d = (base_gini - new_gini) * serendipity_multiplier
+            d = max(0.0, d + 0.1)
+
+            # UCRS: amplify diversity score for boost_topics
+            if topic in boost_topics:
+                d *= 1.5
+
+            s = _score_row(row, topic, d, passive_streak_eff)
             diversity_list.append(d)
             score_list.append(s)
 
         remaining = remaining.copy()
         remaining["diversity"] = diversity_list
-        remaining["score"] = score_list
+        remaining["score"]     = score_list
 
         if remaining["score"].max() == float("-inf"):
-            # Relax the streak rule for one pick
+            # All items blocked by streak rule (or reduce_topics) — relax streak for one pick
+            # Note: reduce_topics items remain at -inf even in fallback
             diversity_list = []
-            score_list = []
+            score_list     = []
             for row in remaining.itertuples(index=False):
                 topic = getattr(row, "topic")
-                
+
+                # UCRS: still respect hard exclusions in fallback
+                if topic in reduce_topics:
+                    diversity_list.append(0.0)
+                    score_list.append(float("-inf"))
+                    continue
+
                 hypothetical_counts = dict(topic_counts)
                 hypothetical_counts[topic] += 1
                 new_gini = calculate_gini(list(hypothetical_counts.values()))
-                d = max(0.0, (base_gini - new_gini) * 2.0 + 0.1)
+                d = max(0.0, (base_gini - new_gini) * serendipity_multiplier + 0.1)
 
-                similarity = 1.0 if getattr(row, "creator_trait") == user_trait else -1.0
-                
-                s = score_parts(
-                    e=getattr(row, "engagement"),
-                    d=d,
-                    p=getattr(row, "prosocial"),
-                    r=getattr(row, "risk"),
-                    w=weights,
-                    passive_streak=passive_streak,
-                    similarity=similarity,
-                    appearance_comp=getattr(row, "appearance_comparison")
-                )
+                if topic in boost_topics:
+                    d *= 1.5
+
+                s = _score_row(row, topic, d, passive_streak_eff)
                 diversity_list.append(d)
                 score_list.append(s)
 
             remaining["diversity"] = diversity_list
-            remaining["score"] = score_list
+            remaining["score"]     = score_list
 
         best_idx = remaining["score"].idxmax()
         best_row = remaining.loc[best_idx]
