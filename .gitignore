@@ -47,3 +47,6 @@ results/figures/*.png
 
 # Logs
 *.log
+
+# VK-LSVD
+VK-LSVD/
