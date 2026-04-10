@@ -1,171 +1,78 @@
-"""
-This program collects public YouTube Shorts data and saves it so it can be used for my algorithm project.
-
-Outputs:
-- datasets/shorts_dataset.csv          (raw collected data)
-- datasets/shorts_dataset_to_tag.csv   (template with topic/tone/prosocial/risk)
-"""
-
 import os
 from pathlib import Path
-
-import isodate
 import pandas as pd
-from googleapiclient.discovery import build
-
-
-# -----------------------------
-# Config
-# -----------------------------
+import numpy as np
+import hashlib
 
 DATA_DIR = Path("datasets")
-RAW_CSV = DATA_DIR / "shorts_dataset.csv"
-TO_TAG_CSV = DATA_DIR / "shorts_dataset_to_tag.csv"
+PROCESSED_CSV = DATA_DIR / "processed_dataset.csv"
+ITEMS_PARQUET = Path("VK-LSVD/metadata/items_metadata.parquet")
 
-API_KEY_ENV = "YOUTUBE_API_KEY"
+TOPICS = ["entertainment", "education", "lifestyle", "news", "gaming", "music", "sports"]
+TRAITS = ["urban", "rural", "suburban", "international"]
 
-DEFAULT_QUERY = "shorts"
-DEFAULT_MAX_VIDEOS = 200
-SEARCH_PAGE_SIZE = 50          # YouTube search maxResults limit
-DETAILS_CHUNK_SIZE = 50        # videos().list ID limit
+def get_hash_index(val, length):
+    h = int(hashlib.sha256(str(val).encode('utf-8')).hexdigest(), 16)
+    return h % length
 
+def get_mock_user_profile():
+    """Provides a simulated user profile for similarity testing."""
+    return {
+        "user_id": 999999,
+        "user_trait": "urban",
+        "passive_streak": 2 # Simulated passive consumption streak
+    }
 
-# -----------------------------
-# Helpers
-# -----------------------------
-
-def get_api_key():
+def process_vklsvd_data(max_items=1000):
     """
-    Reads API key from environment variable.
-    """
-    api_key = os.getenv(API_KEY_ENV)
-    if not api_key:
-        raise RuntimeError(
-            f"Missing API key. Set environment variable {API_KEY_ENV} first."
-        )
-    return api_key
-
-
-def chunk_list(lst, size):
-    """
-    Split a list into smaller chunks to avoid API limits.
-    """
-    for i in range(0, len(lst), size):
-        yield lst[i:i + size]
-
-
-def build_youtube_client():
-    """
-    Create a YouTube API client.
-    """
-    return build("youtube", "v3", developerKey=get_api_key())
-
-
-def safe_parse_duration_seconds(duration_iso):
-    """
-    Convert ISO 8601 duration (e.g., 'PT15S') to seconds.
-    Returns 0.0 if parsing fails.
-    """
-    try:
-        return float(isodate.parse_duration(duration_iso).total_seconds())
-    except Exception:
-        return 0.0
-
-
-# -----------------------------
-# Core collection
-# -----------------------------
-
-def fetch_youtube_shorts(query=DEFAULT_QUERY, max_videos=DEFAULT_MAX_VIDEOS, region_code="US",  relevance_language="en",):
-    """
-    Collects up to max_videos YouTube Shorts video IDs using search(),
-    then fetches details with videos().list(), and saves RAW_CSV.
+    Reads the anonymized VK-LSVD items metadata, formats it,
+    and generates simulated attributes required by the algorithm plan.
     """
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    youtube = build_youtube_client()
+    
+    if not ITEMS_PARQUET.exists():
+        print(f"Warning: {ITEMS_PARQUET} not found. Creating a dummy dataset.")
+        df = pd.DataFrame({
+            "item_id": range(max_items),
+            "author_id": np.random.randint(0, 100, max_items),
+            "train_interactions_rank": np.random.randint(1, 100000, max_items),
+        })
+    else:
+        df = pd.read_parquet(ITEMS_PARQUET)
+        df = df.head(max_items).copy()
+    
+    # Bridge anonymized integer IDs and mathematical embeddings
+    # We use hashing to ensure deterministic but semi-random assignment
+    
+    # Basic mapping
+    df["video_id"] = "vid_" + df["item_id"].astype(str)
+    df["channel"] = "creator_" + df["author_id"].astype(str)
+    
+    # Treat interactions rank as a proxy for view count (inverted if rank 1 is best, or just use raw if it's count)
+    # The dataset says 'rank', so smaller is better? Let's just use it dynamically as view_count
+    df["view_count"] = df["train_interactions_rank"] 
+    if len(df) > 0 and df["view_count"].max() > 10000:
+        # If it's truly a rank, let's invert it so higher is better
+        max_rank = df["view_count"].max()
+        df["view_count"] = max_rank - df["view_count"] + 1
 
-    video_ids = []
-    seen = set()
-    next_page_token = None
-
-    # Search loop
-    while len(video_ids) < max_videos:
-        search_response = youtube.search().list(
-            part="id",
-            q=query,
-            type="video",
-            videoDuration="short",
-            maxResults=SEARCH_PAGE_SIZE,
-            relevanceLanguage=relevance_language,
-            regionCode=region_code,
-            pageToken=next_page_token,
-        ).execute()
-
-        for item in search_response.get("items", []):
-            vid = item["id"].get("videoId")
-            if vid and vid not in seen:
-                seen.add(vid)
-                video_ids.append(vid)
-
-            if len(video_ids) >= max_videos:
-                break
-
-        next_page_token = search_response.get("nextPageToken")
-        if not next_page_token:
-            break
-
-    # Details loop
-    rows = []
-    for chunk in chunk_list(video_ids, DETAILS_CHUNK_SIZE):
-        video_response = youtube.videos().list(
-            part="snippet,statistics,contentDetails",
-            id=",".join(chunk),
-        ).execute()
-
-        for video in video_response.get("items", []):
-            snippet = video.get("snippet", {})
-            stats = video.get("statistics", {})
-            content = video.get("contentDetails", {})
-
-            rows.append({
-                "video_id": video.get("id", ""),
-                "title": snippet.get("title", ""),
-                "channel": snippet.get("channelTitle", ""),
-                "published_at": snippet.get("publishedAt", ""),
-                "view_count": int(stats.get("viewCount", 0) or 0),
-                "duration_sec": safe_parse_duration_seconds(content.get("duration", "")),
-            })
-
-    df = pd.DataFrame(rows)
-    df.to_csv(RAW_CSV, index=False)
-
-    print(f"Saved {RAW_CSV}")
-    print(f"Total videos collected: {len(df)}")
-
+    # Simulate required attributes
+    df["topic"] = df["item_id"].apply(lambda x: TOPICS[get_hash_index(x, len(TOPICS))])
+    df["creator_trait"] = df["author_id"].apply(lambda x: TRAITS[get_hash_index(x, len(TRAITS))])
+    
+    # Simulate tagging classes
+    # Deterministic pseudo-randomness for reproducibility (using item_id)
+    np.random.seed(42)
+    df["prosocial"] = np.random.choice([0, 1], p=[0.7, 0.3], size=len(df))
+    df["risk"] = np.random.choice([0, 1], p=[0.8, 0.2], size=len(df))
+    
+    # Simulate continuous comparison scores
+    df["appearance_comparison"] = np.random.rand(len(df))
+    df["opinion_comparison"] = np.random.rand(len(df))
+    
+    df.to_csv(PROCESSED_CSV, index=False)
+    print(f"Saved {len(df)} records to {PROCESSED_CSV}")
     return df
-
-
-def create_tagging_template(input_csv=RAW_CSV, output_csv=TO_TAG_CSV):
-    """
-    Loads the raw dataset CSV and adds columns for manual tagging.
-    Saves as shorts_dataset_to_tag.csv.
-    """
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-    df = pd.read_csv(input_csv)
-
-    # Add tagging columns (blank/0 defaults)
-    df["topic"] = ""         # content category
-    df["tone"] = ""          # positive / neutral / negative
-    df["prosocial"] = 0      # 1 = prosocial, 0 = not prosocial
-    df["risk"] = 0           # 1 = risky, 0 = not risky
-
-    df.to_csv(output_csv, index=False)
-    print(f"Saved {output_csv}")
-
-    return df
-
 
 if __name__ == "__main__":
-    fetch_youtube_shorts()
-    create_tagging_template()
+    process_vklsvd_data()

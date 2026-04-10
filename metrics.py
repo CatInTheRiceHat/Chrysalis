@@ -113,3 +113,25 @@ def jaccard_similarity(ids_a, ids_b, top_n=10):
     if union_size == 0:
         return 0.0
     return len(set_a & set_b) / float(union_size)
+
+def gini_distribution(feed, col, all_categories):
+    """
+    Calculates the Gini coefficient for a specified column's distribution in the feed.
+    """
+    import numpy as np
+    if feed is None or len(feed) == 0:
+        return 0.0
+    if col not in feed.columns:
+        raise ValueError(f"Missing column '{col}' in feed")
+
+    target_counts = {c: 0 for c in all_categories}
+    for val in feed[col].astype(str):
+        if val in target_counts:
+            target_counts[val] += 1
+            
+    arr = np.sort(np.array(list(target_counts.values()), dtype=float))
+    n = len(arr)
+    if np.sum(arr) == 0:
+        return 0.0
+    index = np.arange(1, n + 1)
+    return (np.sum((2 * index - n - 1) * arr)) / (n * np.sum(arr))

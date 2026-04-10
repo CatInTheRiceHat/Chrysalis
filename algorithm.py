@@ -1,14 +1,15 @@
 """
 Testing different algorithms for the project.
 
-Baseline: engagement-only ranking (common in short-video apps)
-Prototype: engagement + diversity (topic+creator) + prosocial - risk
+Baseline: engagement-only ranking
+Prototype: engagement (decayed) + diversity (Gini) + prosocial - risk (similarity mindset)
 """
 
 from __future__ import annotations
 
 from typing import Dict, List, Tuple
 import pandas as pd
+import numpy as np
 
 
 # -----------------------------
@@ -26,12 +27,6 @@ NIGHT_MODE_K = 15
 
 
 def night_mode_settings(w, risk_boost=0.05):
-    """
-    Night Mode settings:
-    - risk weight +0.05 (then normalized)
-    - k = 15
-    Returns (new_weights, k)
-    """
     w2 = dict(w)
     w2["r"] = w2.get("r", 0.0) + risk_boost
 
@@ -44,9 +39,6 @@ def night_mode_settings(w, risk_boost=0.05):
 
 
 def get_mode_settings(preset, night_mode=False, k_default=100):
-    """
-    Returns (weights, k) for a given preset and mode.
-    """
     if preset not in WEIGHTS:
         raise KeyError(
             f"Unknown preset: {preset}. Options: {list(WEIGHTS.keys())}")
@@ -64,13 +56,9 @@ def get_mode_settings(preset, night_mode=False, k_default=100):
 # Dataset prep / validation
 # -----------------------------
 
-REQUIRED_COLUMNS = {"view_count", "topic", "channel", "prosocial", "risk"}
-
+REQUIRED_COLUMNS = {"view_count", "topic", "channel", "prosocial", "risk", "appearance_comparison", "creator_trait"}
 
 def validate_and_clean(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Ensures required columns exist and prosocial/risk are numeric 0/1.
-    """
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
         raise ValueError(
@@ -78,22 +66,14 @@ def validate_and_clean(df: pd.DataFrame) -> pd.DataFrame:
 
     out = df.copy()
 
-    # Force prosocial/risk into numeric (0/1-ish). Fill blanks with 0.
-    out["prosocial"] = pd.to_numeric(
-        out["prosocial"], errors="coerce").fillna(0)
-    out["risk"] = pd.to_numeric(out["risk"], errors="coerce").fillna(0)
-
-    # Optional: clamp into [0,1] if needed
-    out["prosocial"] = out["prosocial"].clip(0, 1)
-    out["risk"] = out["risk"].clip(0, 1)
+    out["prosocial"] = pd.to_numeric(out["prosocial"], errors="coerce").fillna(0).clip(0, 1)
+    out["risk"] = pd.to_numeric(out["risk"], errors="coerce").fillna(0).clip(0, 1)
+    out["appearance_comparison"] = pd.to_numeric(out["appearance_comparison"], errors="coerce").fillna(0).clip(0, 1)
 
     return out
 
 
 def add_engagement(df: pd.DataFrame) -> Tuple[pd.DataFrame, float]:
-    """
-    Add normalized engagement score (0–1) based on view_count.
-    """
     out = df.copy()
     max_views = out["view_count"].max()
     if not max_views or max_views == 0:
@@ -106,29 +86,41 @@ def add_engagement(df: pd.DataFrame) -> Tuple[pd.DataFrame, float]:
 # Scoring helpers
 # -----------------------------
 
-def diversity_counter(topic: str, channel: str, recent_topics: List[str], recent_channels: List[str]) -> float:
-    """
-    Diversity d in {0, 0.5, 1.0}
-    +0.5 if topic is new in recent window
-    +0.5 if channel is new in recent window
-    """
-    topic_new = 1 if topic not in recent_topics else 0
-    channel_new = 1 if channel not in recent_channels else 0
-    return 0.5 * topic_new + 0.5 * channel_new
+def calculate_gini(distribution: List[int]) -> float:
+    """Calculates the Gini coefficient of a frequency distribution."""
+    if not distribution or sum(distribution) == 0:
+        return 0.0
+    arr = np.sort(np.array(distribution, dtype=float))
+    n = len(arr)
+    index = np.arange(1, n + 1)
+    return (np.sum((2 * index - n - 1) * arr)) / (n * np.sum(arr))
 
+def score_parts(e: float, d: float, p: float, r: float, w: Dict[str, float],
+                passive_streak: int = 0, similarity: float = 0.0,
+                appearance_comp: float = 0.0) -> float:
+    """
+    Total score with new algorithm implementation.
+    Decay engagement based on passive_streak.
+    Adjust risk based on similarity mindset.
+    """
+    # 1. Decay Function
+    decay_rate = 0.8
+    e_weight = w["e"] * (decay_rate ** passive_streak)
+    
+    # 3. Similarity Mindset
+    # If appearance comparison > 0.5, apply modifier
+    r_effective = r
+    if appearance_comp > 0.5:
+        # If similar (1), risk is mitigated.
+        # If not similar (-1), risk is doubled.
+        r_effective = r * (1 - similarity)
+        # ensure it doesn't go negative, though standard math keeps it >= 0 if similarity is 1.
+        r_effective = max(0.0, r_effective)
 
-def score_parts(e: float, d: float, p: float, r: float, w: Dict[str, float]) -> float:
-    """
-    Total score:
-    e*w_e + d*w_d + p*w_p - r*w_r
-    """
-    return (e * w["e"]) + (d * w["d"]) + (p * w["p"]) - (r * w["r"])
+    return (e * e_weight) + (d * w["d"]) + (p * w["p"]) - (r_effective * w["r"])
 
 
 def would_break_streak(recent_list: List[str], candidate_value: str, max_streak: int = 2) -> bool:
-    """
-    True if adding candidate_value would create a streak longer than max_streak.
-    """
     if len(recent_list) < max_streak:
         return False
     tail = recent_list[-max_streak:]
@@ -140,30 +132,32 @@ def would_break_streak(recent_list: List[str], candidate_value: str, max_streak:
 # -----------------------------
 
 def rank_baseline(df: pd.DataFrame, k: int = 100) -> pd.DataFrame:
-    """
-    Baseline algorithm: top-k videos ranked by engagement only.
-    """
     return df.sort_values("engagement", ascending=False).head(k)
 
 
 def build_prototype_feed(
     df: pd.DataFrame,
-    weights: Dict[str, float] = WEIGHTS["entertainment"],
+    weights: Dict[str, float],
+    user_profile: dict,
     k: int = 100,
     recent_window: int = 10,
     max_streak: int = 2,
 ) -> pd.DataFrame:
     """
-    Prototype algorithm:
-    Build a feed one-by-one so diversity depends on recent history.
-    Adds columns: 'diversity' and 'score' to the returned feed.
-    Enforces streak caps for both topic and channel, with a fallback if all candidates are blocked.
+    Prototype algorithm using Gini coefficient for diversity
+    and user profile attributes for similarity and engagement decay.
     """
     remaining = df.copy().reset_index(drop=True)
     feed_rows: List[dict] = []
 
     recent_topics: List[str] = []
     recent_channels: List[str] = []
+    
+    # Pre-extract all possible topics for Gini distribution tracking
+    all_topics = sorted(list(remaining["topic"].unique()))
+    
+    passive_streak = user_profile.get("passive_streak", 0)
+    user_trait = user_profile.get("user_trait", "")
 
     for _ in range(k):
         if remaining.empty:
@@ -172,16 +166,19 @@ def build_prototype_feed(
         window_topics = recent_topics[-recent_window:]
         window_channels = recent_channels[-recent_window:]
 
-        # Compute diversity + score for each candidate
+        # Calculate base Gini across recent topics
+        topic_counts = {t: 0 for t in all_topics}
+        for t in window_topics:
+            topic_counts[t] += 1
+        base_gini = calculate_gini(list(topic_counts.values()))
+
         diversity_list: List[float] = []
         score_list: List[float] = []
 
-        # Use itertuples for readability + speed
         for row in remaining.itertuples(index=False):
             topic = getattr(row, "topic")
             channel = getattr(row, "channel")
 
-            # Block if it breaks streak rule
             if (
                 would_break_streak(recent_topics, topic, max_streak=max_streak)
                 or would_break_streak(recent_channels, channel, max_streak=max_streak)
@@ -190,14 +187,32 @@ def build_prototype_feed(
                 score_list.append(float("-inf"))
                 continue
 
-            d = diversity_counter(
-                topic, channel, window_topics, window_channels)
+            # 2. Gini Coefficient Diversity Score
+            # Simulate adding this topic
+            hypothetical_counts = dict(topic_counts)
+            hypothetical_counts[topic] += 1
+            new_gini = calculate_gini(list(hypothetical_counts.values()))
+            
+            # Improvement in equality (lower Gini = better)
+            # We scale it with a multiplier so it has a reasonable magnitude like engagement
+            serendipity_multiplier = 2.0 
+            d = (base_gini - new_gini) * serendipity_multiplier
+            # ensure diversity score is somewhat positive or bounded
+            d = max(0.0, d + 0.1) 
+
+            # Similarity Evaluation
+            creator_trait = getattr(row, "creator_trait")
+            similarity = 1.0 if creator_trait == user_trait else -1.0
+            
             s = score_parts(
                 e=getattr(row, "engagement"),
                 d=d,
                 p=getattr(row, "prosocial"),
                 r=getattr(row, "risk"),
                 w=weights,
+                passive_streak=passive_streak,
+                similarity=similarity,
+                appearance_comp=getattr(row, "appearance_comparison")
             )
             diversity_list.append(d)
             score_list.append(s)
@@ -206,23 +221,29 @@ def build_prototype_feed(
         remaining["diversity"] = diversity_list
         remaining["score"] = score_list
 
-        # If everything is blocked, relax the streak rule for ONE pick
         if remaining["score"].max() == float("-inf"):
+            # Relax the streak rule for one pick
             diversity_list = []
             score_list = []
             for row in remaining.itertuples(index=False):
-                d = diversity_counter(
-                    getattr(row, "topic"),
-                    getattr(row, "channel"),
-                    window_topics,
-                    window_channels,
-                )
+                topic = getattr(row, "topic")
+                
+                hypothetical_counts = dict(topic_counts)
+                hypothetical_counts[topic] += 1
+                new_gini = calculate_gini(list(hypothetical_counts.values()))
+                d = max(0.0, (base_gini - new_gini) * 2.0 + 0.1)
+
+                similarity = 1.0 if getattr(row, "creator_trait") == user_trait else -1.0
+                
                 s = score_parts(
                     e=getattr(row, "engagement"),
                     d=d,
                     p=getattr(row, "prosocial"),
                     r=getattr(row, "risk"),
                     w=weights,
+                    passive_streak=passive_streak,
+                    similarity=similarity,
+                    appearance_comp=getattr(row, "appearance_comparison")
                 )
                 diversity_list.append(d)
                 score_list.append(s)
