@@ -13,19 +13,20 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from algorithm import (
+from core.algorithm import (
     WEIGHTS,
-    get_mode_settings,
     night_mode_settings,
+    get_mode_settings,
     validate_and_clean,
     add_engagement,
     calculate_gini,
     score_parts,
     would_break_streak,
     rank_baseline,
-    build_prototype_feed,
+    build_prototype_feed
 )
-from metrics import (
+
+from core.metrics import (
     diversity_at_k,
     max_streak,
     prosocial_ratio,

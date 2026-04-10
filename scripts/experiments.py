@@ -13,15 +13,15 @@ import time
 import argparse
 import pandas as pd
 
-from algorithm import (
+from core.algorithm import (
     validate_and_clean,
-    add_engagement,
     get_mode_settings,
+    add_engagement,
     rank_baseline,
-    build_prototype_feed,
+    build_prototype_feed
 )
 
-from metrics import (
+from core.metrics import (
     diversity_at_k,
     max_streak,
     prosocial_ratio,

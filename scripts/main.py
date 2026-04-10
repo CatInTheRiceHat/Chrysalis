@@ -5,8 +5,8 @@ Main entry point for the Healthy Feed Algorithm project!
 from pathlib import Path
 import pandas as pd
 
-from algorithm import get_mode_settings, add_engagement, build_prototype_feed
-from metrics import diversity_at_k, max_streak, prosocial_ratio
+from core.algorithm import get_mode_settings, add_engagement, build_prototype_feed
+from core.metrics import diversity_at_k, max_streak, prosocial_ratio
 
 
 # -----------------------------

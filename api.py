@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import pandas as pd
 from pathlib import Path
-from algorithm import (
+from core.algorithm import (
     WEIGHTS,
     add_engagement,
     build_prototype_feed,
@@ -13,8 +13,8 @@ from algorithm import (
     rank_baseline,
     validate_and_clean,
 )
-from metrics import diversity_at_k, max_streak, prosocial_ratio
-from youtube_service import fetch_videos_by_topic, get_youtube_id_for_video, get_all_topics_cache_status
+from core.metrics import diversity_at_k, max_streak, prosocial_ratio
+from integrations.youtube_service import fetch_videos_by_topic, get_youtube_id_for_video, get_all_topics_cache_status
 
 app = FastAPI()
 
