@@ -50,3 +50,7 @@ results/figures/*.png
 
 # VK-LSVD
 VK-LSVD/
+
+# Morphomedia Data & DB
+datasets/
+morphomedia.db

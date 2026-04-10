@@ -57,10 +57,18 @@ def process_vklsvd_data(max_items=1000):
     np.random.seed(42)
     df["prosocial"] = np.random.choice([0, 1], p=[0.7, 0.3], size=len(df))
     df["risk"] = np.random.choice([0, 1], p=[0.8, 0.2], size=len(df))
-    
+
     # Simulate continuous comparison scores
     df["appearance_comparison"] = np.random.rand(len(df))
     df["opinion_comparison"] = np.random.rand(len(df))
+
+    # Research-backed additions (§2.1 and §2.4 of Morphomedia research doc)
+    # active_engagement_ratio: proxy for (comments + shares) / views — 0 to 1
+    # Lower is typical; skew toward 0 to reflect real platform distributions
+    df["active_engagement_ratio"] = np.random.beta(1.5, 8, size=len(df))
+
+    # creator_authenticity: consistency of creator voice; moderate default distribution
+    df["creator_authenticity"] = np.random.beta(5, 3, size=len(df))
     
     df.to_csv(PROCESSED_CSV, index=False)
     print(f"Saved {len(df)} records to {PROCESSED_CSV}")
