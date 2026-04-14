@@ -25,6 +25,18 @@ WEIGHTS: Dict[str, Dict[str, float]] = {
 
 NIGHT_MODE_K = 15
 
+# Topics that warrant tighter streak caps due to documented adolescent harm
+HIGH_RISK_TOPICS = frozenset({
+    "body_image", "eating_disorder", "self_harm", "depression",
+    "suicide", "anxiety", "weight_loss", "appearance",
+})
+
+# Topics that trigger crisis re-routing and wellness injection
+CRISIS_TOPICS = frozenset({
+    "self_harm", "suicide", "eating_disorder", "depression",
+    "crisis", "mental_health_crisis",
+})
+
 
 def night_mode_settings(w, risk_boost=0.05, prosocial_boost=0.03):
     """
@@ -247,6 +259,48 @@ def build_prototype_feed(
     novelty_tolerance      = max(0.0, min(1.0, novelty_tolerance))  # clamp
     serendipity_multiplier = 2.0 * (0.5 + novelty_tolerance)        # range [1.0, 3.0]
 
+    # --- Step 1: Age-differentiated protection ---
+    # age_group: "13-15", "16-17", or None (adult/unset)
+    age_group = user_profile.get("age_group", None)
+    _AGE_PROTECTION_FACTORS = {"13-15": 1.5, "16-17": 1.15, None: 1.0}
+    age_protection_factor = _AGE_PROTECTION_FACTORS.get(age_group, 1.0)
+    # Tighter streak cap for high-risk topics (13-15 → max 1 consecutive)
+    age_streak_cap = 1 if age_group == "13-15" else max_streak
+
+    # --- Step 4: Session duration fatigue protection ---
+    session_posts_served = int(user_profile.get("session_posts_served", 0))
+    _SESSION_CAPS = {"13-15": 40, "16-17": 60, None: 100}
+    session_cap = _SESSION_CAPS.get(age_group, 100)
+    effective_k = max(0, min(k, session_cap - session_posts_served))
+
+    # Escalating prosocial boost for fatigue (mirrors night_mode_settings pattern)
+    fatigue_onset = 25
+    weights = dict(weights)  # don't mutate caller's dict
+    if session_posts_served > fatigue_onset:
+        fatigue_factor = min(1.0, (session_posts_served - fatigue_onset) / 25.0)
+        fatigue_prosocial_boost = 0.08 * fatigue_factor * age_protection_factor
+        weights["p"] = weights.get("p", 0.0) + fatigue_prosocial_boost
+        weights["r"] = weights.get("r", 0.0) + (fatigue_prosocial_boost * 0.5)
+        _total = sum(weights.values())
+        if _total > 0:
+            weights = {_k: _v / _total for _k, _v in weights.items()}
+
+    # --- Step 3: Emotional valence tracking state ---
+    valence_window_size = 8
+    valence_history: List[float] = []
+    VALENCE_THRESHOLD = 0.45
+    negative_valence_index = 0.0
+
+    # --- Step 5: Crisis re-routing state ---
+    crisis_window_history: List[bool] = []
+    CRISIS_WINDOW = 5
+    CRISIS_TRIGGER_THRESHOLD = 2
+    crisis_signal_active = bool(user_profile.get("crisis_mode", False))
+
+    # --- Step 6: Emotional amplification rabbit hole state ---
+    emotional_amplification_streak = 0
+    EMOTIONAL_STREAK_INTERRUPT = 2
+
     def _score_row(row, topic, d, passive_streak_eff):
         """Helper that reads optional new columns safely (default 0.0 for legacy data)."""
         creator_trait = getattr(row, "creator_trait", "")
@@ -265,7 +319,7 @@ def build_prototype_feed(
             creator_authenticity=getattr(row, "creator_authenticity", 0.0),
         )
 
-    for _ in range(k):
+    for _ in range(effective_k):
         if remaining.empty:
             break
 
@@ -291,8 +345,15 @@ def build_prototype_feed(
                 score_list.append(float("-inf"))
                 continue
 
+            # Step 2: High-risk topics use tighter age-differentiated streak cap
+            topic_is_high_risk = (
+                topic in HIGH_RISK_TOPICS
+                or (getattr(row, "risk", 0.0) >= 0.7 and getattr(row, "appearance_comparison", 0.0) >= 0.6)
+            )
+            effective_streak_cap = age_streak_cap if topic_is_high_risk else max_streak
+
             if (
-                would_break_streak(recent_topics, topic, max_streak=max_streak)
+                would_break_streak(recent_topics, topic, max_streak=effective_streak_cap)
                 or would_break_streak(recent_channels, channel, max_streak=max_streak)
             ):
                 diversity_list.append(0.0)
@@ -311,7 +372,38 @@ def build_prototype_feed(
             if topic in boost_topics:
                 d *= 1.5
 
+            # Step 6: Boost diversity of safe content when in emotional amplification rabbit hole
+            row_risk = getattr(row, "risk", 0.0)
+            row_eng  = getattr(row, "engagement", 0.0)
+            if emotional_amplification_streak >= EMOTIONAL_STREAK_INTERRUPT and row_risk < 0.3:
+                d = d * (1.0 + 0.5 * age_protection_factor)
+
             s = _score_row(row, topic, d, passive_streak_eff)
+
+            # Step 3: Mood rebalancing when feed is trending emotionally negative
+            if negative_valence_index > VALENCE_THRESHOLD:
+                overage = negative_valence_index - VALENCE_THRESHOLD
+                mood_rebalance_bonus = 0.25 * overage * age_protection_factor
+                if getattr(row, "prosocial", 0) == 1:
+                    s += mood_rebalance_bonus
+                if row_risk > 0.5:
+                    s -= mood_rebalance_bonus * 0.5
+
+            # Step 5: Crisis re-routing — inject wellness, suppress further crisis content
+            if crisis_signal_active:
+                crisis_inject_bonus = 0.40 * age_protection_factor
+                if getattr(row, "is_wellness_resource", 0):
+                    s += crisis_inject_bonus
+                elif getattr(row, "prosocial", 0) == 1 and row_risk < 0.2:
+                    s += crisis_inject_bonus * 0.4
+                if row_risk >= 0.8 or topic in CRISIS_TOPICS:
+                    s -= 0.50
+
+            # Step 6: Penalize emotional amplification rabbit hole continuation
+            if emotional_amplification_streak >= EMOTIONAL_STREAK_INTERRUPT:
+                if row_eng > 0.6 and row_risk > 0.5:
+                    s -= 0.30 * age_protection_factor
+
             diversity_list.append(d)
             score_list.append(s)
 
@@ -354,6 +446,36 @@ def build_prototype_feed(
         feed_rows.append(best_row.to_dict())
         recent_topics.append(best_row["topic"])
         recent_channels.append(best_row["channel"])
+
+        # Step 3: Update valence history for next iteration's mood rebalancing
+        valence_history.append(float(best_row.get("risk", 0.0)))
+        if len(valence_history) > valence_window_size:
+            valence_history.pop(0)
+        negative_valence_index = (
+            sum(valence_history) / len(valence_history) if valence_history else 0.0
+        )
+
+        # Step 5: Update crisis window for next iteration
+        _is_crisis_post = (
+            best_row.get("topic", "") in CRISIS_TOPICS
+            or float(best_row.get("risk", 0.0)) >= 0.8
+        )
+        crisis_window_history.append(_is_crisis_post)
+        if len(crisis_window_history) > CRISIS_WINDOW:
+            crisis_window_history.pop(0)
+        crisis_signal_active = (
+            sum(crisis_window_history) >= CRISIS_TRIGGER_THRESHOLD
+            or bool(user_profile.get("crisis_mode", False))
+        )
+
+        # Step 6: Update emotional amplification streak for next iteration
+        _is_amplification = (
+            float(best_row.get("engagement", 0.0)) > 0.6
+            and float(best_row.get("risk", 0.0)) > 0.5
+        )
+        emotional_amplification_streak = (
+            emotional_amplification_streak + 1 if _is_amplification else 0
+        )
 
         remaining = remaining.drop(index=best_idx).reset_index(drop=True)
 

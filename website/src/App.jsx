@@ -1,28 +1,24 @@
-import { Navbar } from './components/Navbar';
-import { Hero } from './components/Hero';
-import { StartSection } from './components/StartSection';
-import { FeaturesChess } from './components/FeaturesChess';
-import { FeaturesGrid } from './components/FeaturesGrid';
-import { Stats } from './components/Stats';
-import { Testimonials } from './components/Testimonials';
-import { CtaFooter } from './components/CtaFooter';
+import { Navbar }       from './components/Navbar';
+import { Hero }         from './components/Hero';
+import { About }        from './components/About';
+import { ProjectStory } from './components/ProjectStory';
+import { LiveDemo }     from './components/LiveDemo';
+import { Journey }      from './components/Journey';
+import { FutureVision } from './components/FutureVision';
+import { Contact }      from './components/Contact';
 import './App.css';
 
 function App() {
   return (
-    <div className="bg-black min-h-screen">
-      <div className="relative z-10">
-        <Navbar />
-        <Hero />
-        <div className="bg-black">
-          <StartSection />
-          <FeaturesChess />
-          <FeaturesGrid />
-          <Stats />
-          <Testimonials />
-          <CtaFooter />
-        </div>
-      </div>
+    <div className="bg-background min-h-screen overflow-x-hidden">
+      <Navbar />
+      <Hero />
+      <About />
+      <ProjectStory />
+      <LiveDemo />
+      <Journey />
+      <FutureVision />
+      <Contact />
     </div>
   );
 }

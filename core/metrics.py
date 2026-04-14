@@ -135,3 +135,22 @@ def gini_distribution(feed, col, all_categories):
         return 0.0
     index = np.arange(1, n + 1)
     return (np.sum((2 * index - n - 1) * arr)) / (n * np.sum(arr))
+
+
+def feed_valence_index(feed, risk_col="risk"):
+    """
+    Mean risk score across the feed. Proxy for negative emotional tone.
+
+    Range: 0.0 (no negative valence) to 1.0 (maximally negative).
+    Research-informed targets:
+      - 13-15 year old feeds: < 0.20
+      - 16-17 year old feeds: < 0.30
+      - Adult feeds:          < 0.40
+    """
+    import pandas as pd
+    if feed is None or len(feed) == 0:
+        return 0.0
+    if risk_col not in feed.columns:
+        raise ValueError(f"Missing column '{risk_col}' in feed")
+    vals = pd.to_numeric(feed[risk_col], errors="coerce").fillna(0).clip(0, 1)
+    return float(vals.mean())
