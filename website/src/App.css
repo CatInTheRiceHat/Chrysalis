@@ -283,3 +283,26 @@ body {
 }
 .scroll-x::-webkit-scrollbar { display: none; }
 .scroll-x > * { scroll-snap-align: start; flex-shrink: 0; }
+
+/* ─── Butterfly flap animation ───────────────────────────────── */
+@keyframes flap-left {
+  0%, 100% { transform: perspective(900px) rotateY(0deg); }
+  50%       { transform: perspective(900px) rotateY(38deg); }
+}
+@keyframes flap-right {
+  0%, 100% { transform: perspective(900px) rotateY(0deg); }
+  50%       { transform: perspective(900px) rotateY(-38deg); }
+}
+@keyframes butterfly-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+.butterfly-float    { animation: butterfly-float 4s ease-in-out infinite; }
+.wing-left  {
+  transform-origin: right center;
+  animation: flap-left 2.6s ease-in-out infinite;
+}
+.wing-right {
+  transform-origin: left center;
+  animation: flap-right 2.6s ease-in-out infinite;
+}
