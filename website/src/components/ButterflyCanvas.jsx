@@ -20,7 +20,7 @@ export default function ButterflyCanvas({ width = 680, height = 480 }) {
         width: imgW,
         height: imgH,
         position: 'relative',
-        transform: 'rotate(30deg) scale(1.7)',
+        transform: 'rotate(30deg) scale(2.6) translate(-8%, 12%)',
         transformOrigin: 'center center',
       }}
       className="butterfly-float pointer-events-none"
