@@ -16,7 +16,13 @@ export default function ButterflyCanvas({ width = 680, height = 480 }) {
 
   return (
     <div
-      style={{ width: imgW, height: imgH, position: 'relative' }}
+      style={{
+        width: imgW,
+        height: imgH,
+        position: 'relative',
+        transform: 'rotate(30deg) scale(1.7)',
+        transformOrigin: 'center center',
+      }}
       className="butterfly-float pointer-events-none"
       aria-hidden="true"
     >
@@ -85,7 +91,7 @@ export default function ButterflyCanvas({ width = 680, height = 480 }) {
                 strokeWidth="0.8"
               />
               <circle cx={sx} cy={sy} r="2.5" fill="rgba(255,255,255,0.6)" />
-              <g transform={`translate(${ex},${ey})`}>
+              <g transform={`translate(${ex},${ey}) rotate(-30)`}>
                 {ann.label.map((line, li) => (
                   <text
                     key={li}

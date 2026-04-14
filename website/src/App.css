@@ -300,9 +300,9 @@ body {
 .butterfly-float    { animation: butterfly-float 4s ease-in-out infinite; }
 .wing-left  {
   transform-origin: right center;
-  animation: flap-left 2.6s ease-in-out infinite;
+  animation: flap-left 10.4s ease-in-out infinite;
 }
 .wing-right {
   transform-origin: left center;
-  animation: flap-right 2.6s ease-in-out infinite;
+  animation: flap-right 10.4s ease-in-out infinite;
 }
