@@ -110,22 +110,13 @@ export function Hero() {
           </div>
 
           {/* ── Butterfly column ── */}
-          <div className="flex-1 flex justify-center lg:justify-end items-center relative">
+          <div className="flex-1 flex justify-end items-center overflow-visible">
             <motion.div
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="relative"
             >
-              {/* Glow halo behind butterfly */}
-              <div
-                className="absolute inset-0 rounded-full opacity-40 blur-3xl pointer-events-none"
-                style={{
-                  background: 'radial-gradient(circle, hsla(280,80%,85%,0.6) 0%, hsla(185,80%,85%,0.3) 50%, transparent 70%)',
-                  transform: 'scale(1.3)',
-                }}
-              />
-              <ButterflyCanvas size={480} />
+              <ButterflyCanvas width={680} height={480} />
             </motion.div>
           </div>
         </div>
