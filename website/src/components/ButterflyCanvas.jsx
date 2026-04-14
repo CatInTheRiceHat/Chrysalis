@@ -1,21 +1,16 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-/**
- * Renders a floating iridescent glass butterfly using Three.js WebGL.
- * Wing geometry is built from a custom butterfly silhouette using
- * LatheGeometry + vertex displacement. Material uses MeshPhysicalMaterial
- * with transmission, iridescence, and rainbow dispersion.
- */
 export default function ButterflyCanvas({ size = 520 }) {
   const mountRef = useRef(null);
-  const mouseRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    const el = mountRef.current;
-    if (!el) return;
+    const mount = mountRef.current;
+    if (!mount) return;
 
-    // ── Renderer ──────────────────────────────────────────────────
+    // --- Renderer ---
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
@@ -23,205 +18,180 @@ export default function ButterflyCanvas({ size = 520 }) {
     renderer.setSize(size, size);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.4;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    el.appendChild(renderer.domElement);
+    mount.appendChild(renderer.domElement);
 
-    // ── Scene ─────────────────────────────────────────────────────
+    // --- Scene ---
     const scene = new THREE.Scene();
 
-    // ── Camera ─────────────────────────────────────────────────────
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 20);
-    camera.position.set(0, 0.1, 3.8);
-    camera.lookAt(0, 0, 0);
+    // --- Environment map for glass reflections (required for transmission to look good) ---
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const envTexture = pmremGenerator.fromScene(new RoomEnvironment()).texture;
+    scene.environment = envTexture;
+    pmremGenerator.dispose();
 
-    // ── Lights ─────────────────────────────────────────────────────
-    const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+    // --- Camera ---
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(0, 0, 3.5);
+
+    // --- Lights ---
+    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambient);
 
-    const pinkLight = new THREE.DirectionalLight(0xffcce8, 3.5);
-    pinkLight.position.set(2, 3, 2);
-    scene.add(pinkLight);
+    // Warm top-right key light
+    const keyLight = new THREE.DirectionalLight(0xffd6f0, 3.5);
+    keyLight.position.set(2, 3, 2);
+    scene.add(keyLight);
 
-    const tealLight = new THREE.DirectionalLight(0xb8f0ff, 2.5);
-    tealLight.position.set(-2, -1, 2);
-    scene.add(tealLight);
+    // Cool teal fill from lower-left
+    const fillLight = new THREE.DirectionalLight(0xb8f0ff, 2.0);
+    fillLight.position.set(-2, -1, 1);
+    scene.add(fillLight);
 
-    const purplePoint = new THREE.PointLight(0xd8b4fe, 6.0, 8);
-    purplePoint.position.set(0, 0, -1.5);
-    scene.add(purplePoint);
+    // Purple rim backlight — pulses to give a living glow
+    const rimLight = new THREE.PointLight(0xd8b4fe, 6.0, 10);
+    rimLight.position.set(0, 0, -1.5);
+    scene.add(rimLight);
 
-    const mintBack = new THREE.PointLight(0xa7f3d0, 3.0, 6);
-    mintBack.position.set(0, 2, -2);
-    scene.add(mintBack);
+    // Mint highlight from above
+    const topLight = new THREE.PointLight(0xa7f3d0, 3.0, 8);
+    topLight.position.set(0, 3, 1);
+    scene.add(topLight);
 
-    // ── Glass material ─────────────────────────────────────────────
+    // --- Glass material ---
+    // clearcoat + transmission = defined 3D glass look with visible structure
     const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0xffffff,
+      color: 0xc8e8ff,
+      transmission: 0.72,        // partial transparency — keeps wing silhouette defined
+      thickness: 1.8,            // optical depth, makes wings look thick/3D
+      roughness: 0.08,           // near-smooth but not mirror — catches edge light
       metalness: 0.0,
-      roughness: 0.0,
-      transmission: 0.95,
-      thickness: 0.4,
-      ior: 1.5,
-      iridescence: 1.0,
+      ior: 1.52,                 // glass index of refraction
+      clearcoat: 1.0,            // top gloss layer — the main driver of the 3D pop
+      clearcoatRoughness: 0.05,
+      iridescence: 1.0,          // rainbow thin-film shimmer
       iridescenceIOR: 1.38,
-      iridescenceThicknessRange: [80, 500],
-      reflectivity: 0.6,
-      envMapIntensity: 1.5,
+      iridescenceThicknessRange: [100, 600],
+      envMapIntensity: 2.2,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.95,
     });
 
-    // ── Wing shape builder ──────────────────────────────────────────
-    // Creates a wing mesh using a custom curve for the wing silhouette.
-    function makeWing(isUpper, isRight) {
-      // Control points for the wing outline (in local 2D space)
-      // Upper wing: large teardrop-ish shape
-      // Lower wing: smaller, rounder
-      const shape = new THREE.Shape();
-
-      if (isUpper) {
-        shape.moveTo(0, 0);
-        shape.bezierCurveTo( 0.05, 0.3,  0.6, 0.8,  0.8, 0.9);
-        shape.bezierCurveTo( 1.0,  1.0,  1.1, 0.85, 1.05, 0.6);
-        shape.bezierCurveTo( 1.0,  0.4,  0.7, 0.1,  0.5,  0.05);
-        shape.bezierCurveTo( 0.3,  0.0,  0.1, -0.05, 0,   0);
-      } else {
-        shape.moveTo(0, 0);
-        shape.bezierCurveTo( 0.05, -0.15, 0.5, -0.65, 0.7, -0.7);
-        shape.bezierCurveTo( 0.85, -0.72, 0.9, -0.55, 0.8, -0.35);
-        shape.bezierCurveTo( 0.65, -0.15, 0.3, -0.04, 0.1, -0.02);
-        shape.bezierCurveTo( 0.05, -0.01, 0.01, 0, 0,  0);
-      }
-
-      const geometry = new THREE.ShapeGeometry(shape, 32);
-
-      // Mirror for right side
-      if (isRight) {
-        const pos = geometry.attributes.position;
-        for (let i = 0; i < pos.count; i++) {
-          pos.setX(i, -pos.getX(i));
-        }
-        pos.needsUpdate = true;
-        geometry.computeVertexNormals();
-      }
-
-      return new THREE.Mesh(geometry, glassMat);
-    }
-
-    // ── Butterfly group ────────────────────────────────────────────
-    const butterfly = new THREE.Group();
-
-    // Left wings
-    const upperLeft  = makeWing(true,  false);
-    const lowerLeft  = makeWing(false, false);
-    // Right wings
-    const upperRight = makeWing(true,  true);
-    const lowerRight = makeWing(false, true);
-
-    // Wing hinges — pivot from body centre
-    const leftWingGroup  = new THREE.Group();
-    const rightWingGroup = new THREE.Group();
-
-    leftWingGroup.add(upperLeft, lowerLeft);
-    rightWingGroup.add(upperRight, lowerRight);
-
-    // Slight initial open angle
-    leftWingGroup.rotation.y  =  0.18;
-    rightWingGroup.rotation.y = -0.18;
-
-    butterfly.add(leftWingGroup, rightWingGroup);
-
-    // Body (thin dark capsule)
-    const bodyGeo = new THREE.CapsuleGeometry(0.04, 0.65, 8, 16);
+    // Darker, solid material for body/antennae
     const bodyMat = new THREE.MeshPhysicalMaterial({
-      color: 0x2a1a3a,
-      roughness: 0.2,
-      metalness: 0.4,
+      color: 0x1a0a2e,
+      roughness: 0.3,
+      metalness: 0.1,
+      clearcoat: 0.5,
+      clearcoatRoughness: 0.2,
     });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.rotation.z = Math.PI / 2;
-    body.position.set(0, 0.1, 0.01);
-    butterfly.add(body);
 
-    // Antennae
-    function makeAntenna(side) {
-      const pts = [
-        new THREE.Vector3(side * 0.03, 0.3, 0),
-        new THREE.Vector3(side * 0.18, 0.55, 0),
-        new THREE.Vector3(side * 0.28, 0.72, 0),
-      ];
-      const curve = new THREE.CatmullRomCurve3(pts);
-      const geo   = new THREE.TubeGeometry(curve, 12, 0.008, 6, false);
-      const mat   = new THREE.MeshPhysicalMaterial({ color: 0x2a1a3a, roughness: 0.3 });
-      const tube  = new THREE.Mesh(geo, mat);
+    // --- Load GLB ---
+    let mixer = null;
+    let butterfly = null;
+    const loader = new GLTFLoader();
 
-      // Tip dot
-      const dotGeo = new THREE.SphereGeometry(0.018, 8, 8);
-      const dot    = new THREE.Mesh(dotGeo, mat);
-      const tip    = pts[2];
-      dot.position.copy(tip);
+    loader.load(
+      '/animated_butterfly.glb',
+      (gltf) => {
+        butterfly = gltf.scene;
 
-      const grp = new THREE.Group();
-      grp.add(tube, dot);
-      return grp;
-    }
-    butterfly.add(makeAntenna(-1), makeAntenna(1));
+        // Auto-scale to fit nicely in view
+        const box = new THREE.Box3().setFromObject(butterfly);
+        const bSize = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(bSize.x, bSize.y, bSize.z);
+        const scale = 2.0 / maxDim;
+        butterfly.scale.setScalar(scale);
 
-    // Centre the butterfly vertically
-    butterfly.position.set(0, -0.15, 0);
-    scene.add(butterfly);
+        // Center the model
+        const center = box.getCenter(new THREE.Vector3());
+        butterfly.position.sub(center.multiplyScalar(scale));
 
-    // ── Mouse parallax ─────────────────────────────────────────────
-    const onMouseMove = (e) => {
-      const rect = el.getBoundingClientRect();
-      mouseRef.current = {
-        x: ((e.clientX - rect.left) / rect.width  - 0.5) * 2,
-        y: ((e.clientY - rect.top)  / rect.height - 0.5) * 2,
-      };
+        // Apply glass material to wings, body mat to small/dark meshes
+        butterfly.traverse((child) => {
+          if (!child.isMesh) return;
+          const isBody =
+            child.name.toLowerCase().includes('body') ||
+            child.name.toLowerCase().includes('thorax') ||
+            child.name.toLowerCase().includes('abdomen') ||
+            child.name.toLowerCase().includes('antenna');
+
+          child.material = isBody ? bodyMat : glassMat;
+          child.castShadow = false;
+          child.receiveShadow = false;
+        });
+
+        scene.add(butterfly);
+
+        // Hook up built-in GLB animations
+        if (gltf.animations && gltf.animations.length > 0) {
+          mixer = new THREE.AnimationMixer(butterfly);
+          gltf.animations.forEach((clip) => {
+            const action = mixer.clipAction(clip);
+            action.play();
+          });
+        }
+      },
+      undefined,
+      (err) => console.error('GLB load error:', err)
+    );
+
+    // --- Mouse parallax ---
+    let targetRotX = 0;
+    let targetRotY = 0;
+    const handleMouseMove = (e) => {
+      const { innerWidth, innerHeight } = window;
+      targetRotY = ((e.clientX / innerWidth) - 0.5) * 0.5;
+      targetRotX = ((e.clientY / innerHeight) - 0.5) * -0.3;
     };
-    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mousemove', handleMouseMove);
 
-    // ── Animation loop ─────────────────────────────────────────────
-    let animId;
+    // --- Animation loop ---
     const clock = new THREE.Clock();
+    let rafId;
 
     const animate = () => {
-      animId = requestAnimationFrame(animate);
+      rafId = requestAnimationFrame(animate);
       const t = clock.getElapsedTime();
+      const delta = clock.getDelta();
 
-      // Gentle floating
-      butterfly.position.y = -0.15 + Math.sin(t * 0.8) * 0.12;
+      // Tick GLB animation mixer
+      if (mixer) mixer.update(delta);
 
-      // Wing flutter — left opens/closes slightly
-      const flutter = Math.sin(t * 2.2) * 0.06;
-      leftWingGroup.rotation.y  =  0.18 + flutter;
-      rightWingGroup.rotation.y = -0.18 - flutter;
+      if (butterfly) {
+        // Floating bob
+        butterfly.position.y = Math.sin(t * 0.8) * 0.12;
 
-      // Slow sway
-      butterfly.rotation.y = Math.sin(t * 0.35) * 0.10;
-      butterfly.rotation.z = Math.sin(t * 0.5)  * 0.03;
+        // Smooth mouse parallax
+        butterfly.rotation.x += (targetRotX - butterfly.rotation.x) * 0.05;
+        butterfly.rotation.y += (targetRotY - butterfly.rotation.y) * 0.05;
 
-      // Mouse parallax (smooth)
-      butterfly.rotation.x += (mouseRef.current.y * -0.08 - butterfly.rotation.x) * 0.05;
-      butterfly.rotation.y += (mouseRef.current.x *  0.08 - butterfly.rotation.y) * 0.05;
+        // Gentle slow sway
+        butterfly.rotation.z = Math.sin(t * 0.35) * 0.04;
+      }
 
-      // Animate purple point light to pulse
-      purplePoint.intensity = 5.0 + Math.sin(t * 1.5) * 2.0;
+      // Pulse rim light
+      rimLight.intensity = 5.5 + Math.sin(t * 1.5) * 2.0;
 
       renderer.render(scene, camera);
     };
 
     animate();
 
-    // ── Cleanup ────────────────────────────────────────────────────
+    // --- Cleanup ---
     return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('mousemove', onMouseMove);
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (mixer) mixer.stopAllAction();
       renderer.dispose();
-      if (el.contains(renderer.domElement)) {
-        el.removeChild(renderer.domElement);
+      glassMat.dispose();
+      bodyMat.dispose();
+      envTexture.dispose();
+      if (mount.contains(renderer.domElement)) {
+        mount.removeChild(renderer.domElement);
       }
     };
   }, [size]);
@@ -230,7 +200,7 @@ export default function ButterflyCanvas({ size = 520 }) {
     <div
       ref={mountRef}
       style={{ width: size, height: size }}
-      className="pointer-events-none select-none"
+      className="pointer-events-none"
       aria-hidden="true"
     />
   );
