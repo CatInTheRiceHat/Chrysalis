@@ -47,9 +47,10 @@ export default function ButterflyCanvas({ width = 680, height = 480 }) {
     pmrem.dispose();
 
     // ── Camera ──
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-    camera.position.set(0, 0.4, 3.2);
-    camera.lookAt(0, 0, 0);
+    // Narrow FOV (telephoto macro) + pulled back = zoomed tight on the wing
+    const camera = new THREE.PerspectiveCamera(18, width / height, 0.1, 100);
+    camera.position.set(-0.3, 0.5, 5.5);
+    camera.lookAt(-0.2, 0.3, 0); // aim at upper wing area, not dead center
 
     // ── Lights ──
     scene.add(new THREE.AmbientLight(0xffffff, 0.8));
