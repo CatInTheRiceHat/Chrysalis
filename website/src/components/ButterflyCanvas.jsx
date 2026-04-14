@@ -111,7 +111,7 @@ export default function ButterflyCanvas({ width = 680, height = 480 }) {
     // ── Load GLB ──
     const loader = new GLTFLoader();
     loader.load(
-      '/monarch_butterfly.glb',
+      '/animated_butterfly.glb',
       (gltf) => {
         butterfly = gltf.scene;
 
