@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        heading: ["'Instrument Serif'", "serif"],
+        heading: ["'Story Script'", "serif"],
         body: ["'Barlow'", "sans-serif"],
       },
       colors: {
