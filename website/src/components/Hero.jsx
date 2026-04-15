@@ -17,6 +17,19 @@ export function Hero() {
       id="home"
       className="relative min-h-screen gradient-mesh flex items-center overflow-hidden"
     >
+      {/* ── Butterfly background layer ── */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1.5, delay: 0.3 }}
+        className="absolute right-0 top-0 w-full h-full pointer-events-none"
+        style={{ zIndex: 1 }}
+      >
+        <div className="absolute right-[-5%] top-1/2 -translate-y-1/2">
+          <ButterflyCanvas width={900} height={700} />
+        </div>
+      </motion.div>
+
       {/* ── Decorative background orbs ── */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="orb absolute w-64 h-64 opacity-40" style={{ top: '8%', right: '12%', animationDelay: '0s' }} />
@@ -25,7 +38,7 @@ export function Hero() {
       </div>
 
       {/* ── Main layout ── */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-8 lg:px-16 pt-32 pb-20">
+      <div className="relative w-full max-w-7xl mx-auto px-8 lg:px-16 pt-32 pb-20" style={{ zIndex: 2 }}>
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-0">
 
           {/* ── Text column ── */}
@@ -109,16 +122,8 @@ export function Hero() {
             </motion.div>
           </div>
 
-          {/* ── Butterfly column ── */}
-          <div className="flex-1 flex justify-end items-center overflow-visible">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1.2, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <ButterflyCanvas width={680} height={480} />
-            </motion.div>
-          </div>
+          {/* ── Butterfly (spacer so text doesn't overlap) ── */}
+          <div className="flex-1 hidden lg:block" />
         </div>
       </div>
 
