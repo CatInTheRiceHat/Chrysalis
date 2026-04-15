@@ -55,7 +55,7 @@ export function Journey() {
           className="flex flex-col gap-4"
         >
           <span className="section-badge liquid-glass self-start">The Journey</span>
-          <h2 className="font-heading italic text-5xl md:text-6xl text-foreground leading-[0.9] tracking-[-2px] max-w-xl">
+          <h2 className="font-heading text-5xl md:text-6xl text-foreground leading-[0.9] tracking-[-2px] max-w-xl">
             From idea to algorithm.
           </h2>
           <p className="font-body font-light text-base text-foreground/55 max-w-lg">

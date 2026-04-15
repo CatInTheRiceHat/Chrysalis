@@ -60,7 +60,7 @@ export function Hero() {
             <div className="max-w-2xl">
               <BlurText
                 text="Social Media Was Broken. So I Fixed the Algorithm."
-                className="font-heading italic text-5xl md:text-6xl lg:text-7xl leading-[0.88] tracking-[-2px] text-foreground"
+                className="font-heading text-5xl md:text-6xl lg:text-7xl leading-[0.88] tracking-[-2px] text-foreground"
                 delay={120}
                 direction="bottom"
               />
@@ -115,7 +115,7 @@ export function Hero() {
                 { val: '4×', label: 'scoring dimensions' },
               ].map(({ val, label }) => (
                 <div key={label} className="flex flex-col">
-                  <span className="font-heading italic text-2xl iridescent-text">{val}</span>
+                  <span className="font-heading text-2xl iridescent-text">{val}</span>
                   <span className="font-body font-light text-xs text-foreground/45 mt-0.5">{label}</span>
                 </div>
               ))}

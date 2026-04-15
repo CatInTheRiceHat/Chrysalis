@@ -40,7 +40,7 @@ export function About() {
               initial={{ opacity: 0, y: 20 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="font-heading italic text-4xl md:text-5xl text-foreground leading-[0.92] tracking-[-1px]"
+              className="font-heading text-4xl md:text-5xl text-foreground leading-[0.92] tracking-[-1px]"
             >
               Built by someone who was tired of the scrolling.
             </motion.h2>

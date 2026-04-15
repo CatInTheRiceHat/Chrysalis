@@ -65,7 +65,7 @@ export function Navbar() {
           className="flex items-center gap-2.5 group"
         >
           <ButterflyIcon />
-          <span className="font-heading italic text-lg text-foreground tracking-tight">
+          <span className="font-heading text-lg text-foreground tracking-tight">
             MorphoMedia
           </span>
         </button>

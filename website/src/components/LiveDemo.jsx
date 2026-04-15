@@ -35,7 +35,7 @@ function MetricCard({ label, improved, baseline, suffix = '' }) {
     <div className="liquid-glass rounded-xl p-4 flex flex-col gap-2">
       <span className="font-body text-xs text-foreground/45 font-medium uppercase tracking-wider">{label}</span>
       <div className="flex items-end gap-3">
-        <span className="font-heading italic text-3xl iridescent-text">{improved}{suffix}</span>
+        <span className="font-heading text-3xl iridescent-text">{improved}{suffix}</span>
         <div className="flex flex-col pb-1">
           <span className="font-body text-xs text-foreground/35">vs baseline</span>
           <span className="font-body text-xs text-foreground/45">{baseline}{suffix}</span>
@@ -138,7 +138,7 @@ export function LiveDemo() {
           className="flex flex-col gap-4 items-center text-center"
         >
           <span className="section-badge liquid-glass"><Play className="w-3 h-3" /> Live Demo</span>
-          <h2 className="font-heading italic text-5xl md:text-6xl text-foreground leading-[0.9] tracking-[-2px]">
+          <h2 className="font-heading text-5xl md:text-6xl text-foreground leading-[0.9] tracking-[-2px]">
             Try the algorithm.
           </h2>
           <p className="font-body font-light text-base text-foreground/55 max-w-lg">

@@ -10,7 +10,7 @@ function CountUp({ target, suffix = '', inView }) {
       initial={{ opacity: 0, y: 8 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.6, delay: 0.2 }}
-      className="font-heading italic text-4xl md:text-5xl iridescent-text"
+      className="font-heading text-4xl md:text-5xl iridescent-text"
     >
       {target}{suffix}
     </motion.span>
@@ -35,7 +35,7 @@ function Block({ icon: Icon, badge, heading, body, children, flip, delay }) {
           <Icon className="w-3 h-3" />
           {badge}
         </span>
-        <h3 className="font-heading italic text-3xl md:text-4xl text-foreground leading-[0.95] tracking-[-0.5px]">
+        <h3 className="font-heading text-3xl md:text-4xl text-foreground leading-[0.95] tracking-[-0.5px]">
           {heading}
         </h3>
         <p className="font-body font-light text-base text-foreground/60 leading-relaxed">
@@ -82,7 +82,7 @@ export function ProjectStory() {
           className="flex flex-col gap-4 items-center text-center"
         >
           <span className="section-badge liquid-glass">The Project</span>
-          <h2 className="font-heading italic text-5xl md:text-6xl text-foreground leading-[0.9] tracking-[-2px] max-w-2xl">
+          <h2 className="font-heading text-5xl md:text-6xl text-foreground leading-[0.9] tracking-[-2px] max-w-2xl">
             The problem. The research. The solution.
           </h2>
           <p className="font-body font-light text-base text-foreground/55 max-w-xl">
@@ -224,7 +224,7 @@ export function ProjectStory() {
                 <div className="flex items-end justify-between gap-4">
                   <div className="flex flex-col">
                     <span className="font-body text-xs text-foreground/40 mb-1">Baseline</span>
-                    <span className="font-heading italic text-xl text-foreground/40">{baseline}</span>
+                    <span className="font-heading text-xl text-foreground/40">{baseline}</span>
                   </div>
                   <div className="flex-1 flex items-center gap-2">
                     <div className="flex-1 h-1 rounded-full bg-foreground/10" />
@@ -232,7 +232,7 @@ export function ProjectStory() {
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="font-body text-xs text-foreground/40 mb-1">MorphoMedia</span>
-                    <span className="font-heading italic text-2xl iridescent-text">{improved}</span>
+                    <span className="font-heading text-2xl iridescent-text">{improved}</span>
                   </div>
                 </div>
                 {/* Progress bar */}

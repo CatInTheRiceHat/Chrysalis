@@ -79,7 +79,7 @@ export function Contact() {
           className="flex flex-col gap-5 items-center text-center"
         >
           <span className="section-badge liquid-glass">Contact</span>
-          <h2 className="font-heading italic text-6xl md:text-7xl text-foreground leading-[0.88] tracking-[-3px]">
+          <h2 className="font-heading text-6xl md:text-7xl text-foreground leading-[0.88] tracking-[-3px]">
             Let's talk.
           </h2>
           <p className="font-body font-light text-base text-foreground/55 max-w-md">

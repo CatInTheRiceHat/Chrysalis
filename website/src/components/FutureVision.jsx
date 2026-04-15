@@ -39,7 +39,7 @@ export function FutureVision() {
           className="flex flex-col gap-4 items-center text-center"
         >
           <span className="section-badge liquid-glass">What's Next</span>
-          <h2 className="font-heading italic text-5xl md:text-6xl text-foreground leading-[0.9] tracking-[-2px] max-w-2xl">
+          <h2 className="font-heading text-5xl md:text-6xl text-foreground leading-[0.9] tracking-[-2px] max-w-2xl">
             The algorithm is just the beginning.
           </h2>
           <p className="font-body font-light text-base text-foreground/55 max-w-xl">
@@ -67,7 +67,7 @@ export function FutureVision() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <h3 className="font-heading italic text-2xl text-foreground">{title}</h3>
+                <h3 className="font-heading text-2xl text-foreground">{title}</h3>
                 <p className="font-body font-light text-sm text-foreground/60 leading-relaxed">{body}</p>
               </div>
 
