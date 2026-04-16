@@ -30,14 +30,7 @@ export function Hero() {
         </div>
       </motion.div>
 
-      {/* ── Decorative background orbs ── */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="orb absolute w-64 h-64 opacity-40" style={{ top: '8%', right: '12%', animationDelay: '0s' }} />
-        <div className="orb absolute w-40 h-40 opacity-30" style={{ bottom: '20%', left: '5%', animationDelay: '2s' }} />
-        <div className="orb absolute w-24 h-24 opacity-25" style={{ top: '55%', right: '28%', animationDelay: '4s' }} />
-      </div>
-
-      {/* ── Main layout ── */}
+{/* ── Main layout ── */}
       <div className="relative w-full max-w-7xl mx-auto px-8 lg:px-16 pt-32 pb-20" style={{ zIndex: 2 }}>
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-0">
 
@@ -50,8 +43,8 @@ export function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: 'easeOut' }}
             >
-              <span className="section-badge liquid-glass">
-                <span className="iridescent-text font-semibold">✦</span>
+              <span className="section-badge-plain liquid-glass">
+                <span className="font-semibold">✦</span>
                 A new kind of algorithm
               </span>
             </motion.div>
@@ -61,7 +54,7 @@ export function Hero() {
               <BlurText
                 text="Social Media Was Broken. So I Fixed the Algorithm."
                 className="font-heading text-5xl md:text-6xl lg:text-7xl leading-[0.88] tracking-[-2px] text-foreground"
-                delay={120}
+                delay={60}
                 direction="bottom"
               />
             </div>
@@ -70,10 +63,10 @@ export function Hero() {
             <motion.p
               initial={{ opacity: 0, filter: 'blur(8px)', y: 16 }}
               animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-              transition={{ duration: 0.7, delay: 0.85, ease: 'easeOut' }}
+              transition={{ duration: 0.7, delay: 0.3, ease: 'easeOut' }}
               className="font-body font-light text-base md:text-lg text-foreground/60 max-w-lg leading-relaxed"
             >
-              MorphoMedia is a recommendation engine built on research,
+              Chrysalis is a recommendation engine built on research,
               designed for teenagers, and engineered to make you feel
               better&mdash;not worse.
             </motion.p>
@@ -82,7 +75,7 @@ export function Hero() {
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.1, ease: 'easeOut' }}
+              transition={{ duration: 0.6, delay: 0.45, ease: 'easeOut' }}
               className="flex items-center gap-5 flex-wrap"
             >
               <button
@@ -106,7 +99,7 @@ export function Hero() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 1.4 }}
+              transition={{ duration: 0.8, delay: 0.55 }}
               className="flex items-center gap-8 pt-4 flex-wrap"
             >
               {[
@@ -131,7 +124,7 @@ export function Hero() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1.8 }}
+        transition={{ delay: 0.7 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-foreground/30"
       >
         <span className="font-body text-xs tracking-widest uppercase">scroll</span>

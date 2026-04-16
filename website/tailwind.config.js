@@ -33,7 +33,7 @@ export default {
       animation: {
         'float':       'float 6s ease-in-out infinite',
         'shimmer':     'shimmer 5s ease infinite',
-        'mesh-shift':  'meshShift 12s ease-in-out infinite alternate',
+        'mesh-shift':  'meshShift 14s ease-in-out infinite alternate',
         'count-up':    'countUp 1s ease-out forwards',
         'fade-up':     'fadeUp 0.7s ease-out forwards',
         'pulse-soft':  'pulseSoft 3s ease-in-out infinite',

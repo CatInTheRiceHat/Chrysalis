@@ -66,7 +66,7 @@ export function Navbar() {
         >
           <ButterflyIcon />
           <span className="font-heading text-lg text-foreground tracking-tight">
-            MorphoMedia
+            Chrysalis
           </span>
         </button>
 

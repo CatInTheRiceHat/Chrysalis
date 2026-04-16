@@ -142,7 +142,7 @@ export function LiveDemo() {
             Try the algorithm.
           </h2>
           <p className="font-body font-light text-base text-foreground/55 max-w-lg">
-            This runs the real MorphoMedia algorithm against a live dataset.
+            This runs the real Chrysalis algorithm against a live dataset.
             Adjust the controls and see how the feed — and the metrics — change.
           </p>
         </motion.div>

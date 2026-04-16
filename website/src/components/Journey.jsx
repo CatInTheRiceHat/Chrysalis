@@ -16,26 +16,30 @@ const CARDS = [
   {
     label: 'Algorithm Output',
     desc: 'Improved vs baseline metric comparison across 100 runs',
-    bg: 'hsla(270,70%,88%,0.5)',
-    emoji: '📈',
+    src: '/screenshots/algorithm-output.png',
+    alt: 'Algorithm output comparison',
+    imgDesc: 'Algorithm output comparison',
   },
   {
     label: 'Dataset Exploration',
     desc: 'Processing and validating the VK-LSVD social media dataset',
-    bg: 'hsla(185,70%,82%,0.5)',
-    emoji: '🗃️',
+    src: '/screenshots/dataset-exploration.png',
+    alt: 'Dataset exploration',
+    imgDesc: 'Dataset exploration',
   },
   {
     label: 'Research Notes',
     desc: 'Mapping published findings to algorithmic interventions',
-    bg: 'hsla(330,80%,88%,0.5)',
-    emoji: '📝',
+    src: '/screenshots/research-notes.png',
+    alt: 'Research notes',
+    imgDesc: 'Research notes',
   },
   {
     label: 'Live Demo Running',
     desc: 'FastAPI server + React frontend working end-to-end',
-    bg: 'hsla(150,60%,85%,0.5)',
-    emoji: '⚡',
+    src: '/screenshots/live-demo.png',
+    alt: 'Live demo running',
+    imgDesc: 'Live demo running',
   },
 ];
 
@@ -98,7 +102,7 @@ export function Journey() {
             Build snapshots
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {CARDS.map(({ label, desc, bg, emoji }, i) => (
+            {CARDS.map(({ label, desc, src, alt, imgDesc }, i) => (
               <motion.div
                 key={label}
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -106,12 +110,17 @@ export function Journey() {
                 transition={{ duration: 0.55, delay: 0.3 + i * 0.08 }}
                 className="liquid-glass rounded-2xl overflow-hidden aspect-square flex flex-col"
               >
-                {/* Faux screenshot area */}
-                <div
-                  className="flex-1 flex items-center justify-center text-4xl"
-                  style={{ background: bg }}
-                >
-                  {emoji}
+                {/* Screenshot area */}
+                <div className="relative flex-1">
+                  <img
+                    src={src}
+                    alt={alt}
+                    className="w-full h-full object-cover rounded-xl"
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                  />
+                  <div className="hidden w-full h-full items-center justify-center rounded-xl bg-white/20 border border-white/30">
+                    <p className="font-body text-xs text-foreground/50 text-center px-4">{imgDesc}</p>
+                  </div>
                 </div>
                 {/* Caption */}
                 <div className="p-3 flex flex-col gap-0.5">

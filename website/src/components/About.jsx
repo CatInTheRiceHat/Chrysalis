@@ -57,7 +57,7 @@ export function About() {
                 },
                 {
                   delay: 0.4,
-                  text: "MorphoMedia is the result: a multi-dimensional recommendation algorithm grounded in psychology and data science, tested against a real dataset, and built with teenagers specifically in mind. I'm Elaine Che — a student, researcher, and builder who believes that technology can be designed to actually care.",
+                  text: "Chrysalis is the result: a multi-dimensional recommendation algorithm grounded in psychology and data science, tested against a real dataset, and built with teenagers specifically in mind. I'm Elaine Che — a student, researcher, and builder who believes that technology can be designed to actually care.",
                 },
               ].map(({ delay, text }) => (
                 <motion.p
@@ -98,7 +98,7 @@ export function About() {
             className="relative flex justify-center items-center"
           >
             {/* Main glass card */}
-            <div className="liquid-glass-strong rounded-3xl p-8 max-w-sm w-full flex flex-col gap-6">
+            <div className="glass-card rounded-3xl p-8 max-w-sm w-full flex flex-col gap-6">
               <div className="flex items-center gap-3">
                 <div
                   className="w-12 h-12 rounded-full flex items-center justify-center text-lg"
@@ -108,7 +108,7 @@ export function About() {
                 </div>
                 <div>
                   <p className="font-body font-semibold text-sm text-foreground">Elaine Che</p>
-                  <p className="font-body font-light text-xs text-foreground/50">Creator of MorphoMedia</p>
+                  <p className="font-body font-light text-xs text-foreground/50">Creator of Chrysalis</p>
                 </div>
               </div>
 

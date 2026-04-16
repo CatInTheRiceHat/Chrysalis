@@ -7,28 +7,28 @@ const LINKS = [
     icon: Github,
     label: 'GitHub',
     sub: 'See the code',
-    href: 'https://github.com/elainec',   // ← update with real handle
+    href: 'https://github.com/CatInTheRiceHat',
     color: '#818cf8',
   },
   {
     icon: Linkedin,
     label: 'LinkedIn',
     sub: "Let's connect",
-    href: 'https://linkedin.com/in/elainec', // ← update with real profile
+    href: 'https://www.linkedin.com/in/elaine-che-03647530a/',
     color: '#67e8f9',
   },
   {
     icon: Mail,
     label: 'Email',
     sub: 'Say hello',
-    href: 'mailto:hello@elainec.com',       // ← update with real email
+    href: 'mailto:elaineyouyuanche@gmail.com',
     color: '#f0abfc',
   },
   {
     icon: Instagram,
     label: 'Instagram',
     sub: 'Follow along',
-    href: 'https://instagram.com/elainec',  // ← update with real handle
+    href: 'https://www.instagram.com/elaineyouyuanche/',
     color: '#fda4af',
   },
 ];
@@ -104,7 +104,7 @@ export function Contact() {
               initial={{ opacity: 0, y: 16 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}
-              className="liquid-glass-strong rounded-2xl p-6 flex flex-col gap-4 group hover:scale-105 transition-transform duration-200"
+              className="glass-card rounded-2xl p-6 flex flex-col gap-4 group hover:scale-105 transition-transform duration-200"
             >
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center"
@@ -132,7 +132,7 @@ export function Contact() {
           style={{ borderTop: '1px solid rgba(0,0,0,0.07)' }}
         >
           <p className="font-body font-light text-xs text-foreground/35">
-            MorphoMedia © 2026 — Elaine Che
+            Chrysalis © 2026 — Elaine Che
           </p>
           <div className="flex items-center gap-2">
             <ButterflyFooterIcon />

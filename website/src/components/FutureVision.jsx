@@ -7,13 +7,13 @@ const GOALS = [
     icon: Globe,
     color: '#a78bfa',
     title: 'Open Platform',
-    body: 'Make MorphoMedia freely available — open-source code, open weights, open research. Anyone should be able to run a healthier feed without needing permission from a tech giant.',
+    body: 'Make Chrysalis freely available — open-source code, open weights, open research. Anyone should be able to run a healthier feed without needing permission from a tech giant.',
   },
   {
     icon: Plug,
     color: '#67e8f9',
     title: 'Real Content Integration',
-    body: 'Connect to real social feeds via APIs — Instagram, TikTok, YouTube — and reroute them through the MorphoMedia algorithm in real time. The same content, a fundamentally different experience.',
+    body: 'Connect to real social feeds via APIs — Instagram, TikTok, YouTube — and reroute them through the Chrysalis algorithm in real time. The same content, a fundamentally different experience.',
   },
   {
     icon: Eye,
@@ -43,7 +43,7 @@ export function FutureVision() {
             The algorithm is just the beginning.
           </h2>
           <p className="font-body font-light text-base text-foreground/55 max-w-xl">
-            MorphoMedia is a proof of concept today. The goal is a real product —
+            Chrysalis is a working prototype today. The goal is a real product —
             free, open, and in the hands of the teenagers who need it most.
           </p>
         </motion.div>
@@ -56,7 +56,7 @@ export function FutureVision() {
               initial={{ opacity: 0, y: 28 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.65, delay: 0.1 + i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="liquid-glass-strong rounded-2xl p-7 flex flex-col gap-5 group hover:scale-[1.02] transition-transform duration-300"
+              className="glass-card rounded-2xl p-7 flex flex-col gap-5 group hover:scale-[1.02] transition-transform duration-300"
             >
               {/* Icon */}
               <div

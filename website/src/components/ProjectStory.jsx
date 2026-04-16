@@ -135,7 +135,7 @@ export function ProjectStory() {
           icon={FlaskConical}
           badge="The Research"
           heading="Six documented harms. Six targeted fixes."
-          body="The research identified six specific mechanisms through which recommendation algorithms harm teenage mental health. MorphoMedia addresses each one with a dedicated algorithmic intervention — not a blanket content filter, but precise, tunable protections."
+          body="The research identified six specific mechanisms through which recommendation algorithms harm teenage mental health. Chrysalis addresses each one with a dedicated algorithmic intervention — not a blanket content filter, but precise, tunable protections."
           delay={0.1}
           flip={true}
         >
@@ -155,12 +155,12 @@ export function ProjectStory() {
           icon={Zap}
           badge="The Solution"
           heading="A multi-dimensional algorithm that actually cares."
-          body="Instead of ranking by a single engagement score, MorphoMedia combines four weighted dimensions — engagement, diversity, prosocial quality, and risk — and adapts dynamically based on who's watching and how long they've been scrolling."
+          body="Instead of ranking by a single engagement score, Chrysalis combines four weighted dimensions — engagement, diversity, prosocial quality, and risk — and adapts dynamically based on who's watching and how long they've been scrolling."
           delay={0.1}
           flip={false}
         >
           {/* Formula card */}
-          <div className="liquid-glass-strong rounded-2xl p-6 flex flex-col gap-5">
+          <div className="glass-card rounded-2xl p-6 flex flex-col gap-5">
             <p className="font-body text-xs font-medium text-foreground/40 uppercase tracking-wider">
               The scoring formula
             </p>
@@ -213,7 +213,7 @@ export function ProjectStory() {
           icon={TrendingUp}
           badge="The Results"
           heading="The numbers don't lie."
-          body="Tested against a real social media dataset with a baseline engagement-only algorithm as the control. MorphoMedia consistently outperforms on every well-being metric while maintaining content discovery quality."
+          body="Tested against a real social media dataset with a baseline engagement-only algorithm as the control. Chrysalis consistently outperforms on every well-being metric while maintaining content discovery quality."
           delay={0.1}
           flip={true}
         >
@@ -231,7 +231,7 @@ export function ProjectStory() {
                     <span className="font-body text-xs text-foreground/30">→</span>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="font-body text-xs text-foreground/40 mb-1">MorphoMedia</span>
+                    <span className="font-body text-xs text-foreground/40 mb-1">Chrysalis</span>
                     <span className="font-heading text-2xl iridescent-text">{improved}</span>
                   </div>
                 </div>
