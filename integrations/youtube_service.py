@@ -12,7 +12,7 @@ import urllib.error
 from pathlib import Path
 
 # Load .env file manually (zero dependencies)
-_env_path = Path(__file__).parent / ".env"
+_env_path = Path(__file__).parent.parent / ".env"
 if _env_path.exists():
     for line in _env_path.read_text().splitlines():
         line = line.strip()
@@ -35,16 +35,11 @@ TOPIC_TO_CATEGORY_ID = {
     "sports": "17",         # Sports
 }
 
-# Fallback IDs in case the API is unavailable (verified working as of 2026)
-FALLBACK_IDS = {
-    "entertainment": ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"],
-    "education": ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"],
-    "lifestyle": ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"],
-    "news": ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"],
-    "gaming": ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"],
-    "music": ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"],
-    "sports": ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"],
-}
+# Placeholder fallback IDs used when the API is unavailable
+_FALLBACK_IDS = ["dQw4w9WgXcQ", "9bZkp7q19f0", "kJQP7kiw5Fk"]
+FALLBACK_IDS = {topic: _FALLBACK_IDS for topic in (
+    "entertainment", "education", "lifestyle", "news", "gaming", "music", "sports"
+)}
 
 # In-memory cache: { topic: { "ids": [...], "fetched_at": timestamp } }
 _cache = {}

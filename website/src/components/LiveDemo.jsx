@@ -2,6 +2,8 @@ import { useState, useRef } from 'react';
 import { motion, useInView, AnimatePresence } from 'motion/react';
 import { Play, Moon, Users, BarChart2, RefreshCw } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+
 const PRESETS = ['entertainment', 'inspiration', 'learning'];
 const AGE_GROUPS = [
   { label: 'General', val: null },
@@ -106,14 +108,14 @@ export function LiveDemo() {
     setError(null);
     setResult(null);
     try {
-      const res = await fetch('http://localhost:8000/api/run/local', {
+      const res = await fetch(`${API_URL}/api/run/local`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           preset,
           night_mode: nightMode,
           passive_streak: 0,
-          user_profile: { age_group: ageGroup },
+          age_group: ageGroup,
         }),
       });
       if (!res.ok) throw new Error(`Server error: ${res.status}`);

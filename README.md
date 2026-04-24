@@ -21,7 +21,7 @@ python api.py
 
 ```
 MorphoMedia/
-├── algorithm.py          # Core ranking algorithm with Gini diversity, engagement decay
+├── core/algorithm.py          # Core ranking algorithm with Gini diversity, engagement decay
 ├── data.py               # Data processing utilities
 ├── metrics.py            # Evaluation metrics (diversity@k, streak detection, etc.)
 ├── graphs.py             # Visualization scripts for experiment results
@@ -72,7 +72,7 @@ python graphs.py --summary results/data/experiment_summary.csv
 
 ## Configuration
 
-Presets available in `algorithm.py`:
+Presets available in `core/algorithm.py`:
 - `baseline` - Engagement-only ranking
 - `entertainment` - Balanced weights (default)
 - `inspiration` - High diversity focus

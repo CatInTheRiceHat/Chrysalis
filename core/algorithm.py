@@ -11,6 +11,22 @@ from typing import Dict, List, Tuple
 import pandas as pd
 import numpy as np
 
+from .constants import (
+    PASSIVE_DECAY_RATE,
+    VALENCE_THRESHOLD,
+    AGE_PROTECTION_FACTORS,
+    SESSION_CAPS,
+    CRISIS_WINDOW,
+    CRISIS_THRESHOLD,
+    NIGHT_RISK_BOOST,
+    NIGHT_PROSOCIAL_BOOST,
+    NIGHT_FEED_CAP,
+    ACTIVE_ENGAGEMENT_BONUS,
+    OPINION_COMPARISON_BONUS,
+    FATIGUE_ONSET,
+    HIGH_RISK_THRESHOLD,
+)
+
 
 # -----------------------------
 # Presets / Modes
@@ -23,7 +39,7 @@ WEIGHTS: Dict[str, Dict[str, float]] = {
     "learning": {"e": 0.30, "d": 0.30, "p": 0.30, "r": 0.10},
 }
 
-NIGHT_MODE_K = 15
+# Feed length cap for night mode — imported from constants as NIGHT_FEED_CAP
 
 # Topics that warrant tighter streak caps due to documented adolescent harm
 HIGH_RISK_TOPICS = frozenset({
@@ -38,7 +54,7 @@ CRISIS_TOPICS = frozenset({
 })
 
 
-def night_mode_settings(w, risk_boost=0.05, prosocial_boost=0.03):
+def night_mode_settings(w, risk_boost=NIGHT_RISK_BOOST, prosocial_boost=NIGHT_PROSOCIAL_BOOST):
     """
     Adjusts weights for night-time viewing.
     Raises risk sensitivity AND prosocial weight (research: night mode should
@@ -54,7 +70,7 @@ def night_mode_settings(w, risk_boost=0.05, prosocial_boost=0.03):
         for key in w2:
             w2[key] = w2[key] / total
 
-    return w2, NIGHT_MODE_K
+    return w2, NIGHT_FEED_CAP
 
 
 def get_mode_settings(preset, night_mode=False, k_default=100):
@@ -157,8 +173,7 @@ def score_parts(e: float, d: float, p: float, r: float, w: Dict[str, float],
         healthy identity formation, unlike appearance comparison (research §2.3).
     """
     # 1. Passive-streak decay: shift weight from engagement to d+p
-    decay_rate = 0.8
-    decay_factor = decay_rate ** passive_streak   # in [0, 1]
+    decay_factor = PASSIVE_DECAY_RATE ** passive_streak   # in [0, 1]
     # engagement weight shrinks; the freed budget goes equally to d and p
     w_e = w["e"] * decay_factor
     freed = w["e"] - w_e                          # weight shed by engagement
@@ -168,7 +183,7 @@ def score_parts(e: float, d: float, p: float, r: float, w: Dict[str, float],
 
     # 2. Affinity bonus (user-trait match) + creator authenticity (both multiplicative)
     affinity_bonus = 0.20 * max(0.0, similarity)        # 0.20 if match, 0 if mismatch
-    auth_bonus     = 0.15 * creator_authenticity        # 0–0.15 based on creator consistency
+    auth_bonus     = ACTIVE_ENGAGEMENT_BONUS * creator_authenticity        # 0–0.15 based on creator consistency
     e_effective = e * (1.0 + affinity_bonus + auth_bonus)
 
     # 3. Similarity mindset on risk
@@ -179,10 +194,10 @@ def score_parts(e: float, d: float, p: float, r: float, w: Dict[str, float],
         r_effective = max(0.0, r_effective)
 
     # 4. Active engagement bonus — content that drives comments/shares, not just watch time
-    active_boost = 0.15 * active_engagement_ratio      # additive, 0–0.15
+    active_boost = ACTIVE_ENGAGEMENT_BONUS * active_engagement_ratio      # additive, 0–0.15
 
     # 5. Opinion comparison bonus — discourse content is identity-positive
-    opinion_bonus = 0.05 * opinion_comp if opinion_comp > 0.5 else 0.0
+    opinion_bonus = OPINION_COMPARISON_BONUS * opinion_comp if opinion_comp > 0.5 else 0.0
 
     return (
         (e_effective * w_e)
@@ -262,22 +277,19 @@ def build_prototype_feed(
     # --- Step 1: Age-differentiated protection ---
     # age_group: "13-15", "16-17", or None (adult/unset)
     age_group = user_profile.get("age_group", None)
-    _AGE_PROTECTION_FACTORS = {"13-15": 1.5, "16-17": 1.15, None: 1.0}
-    age_protection_factor = _AGE_PROTECTION_FACTORS.get(age_group, 1.0)
+    age_protection_factor = AGE_PROTECTION_FACTORS.get(age_group, 1.0)
     # Tighter streak cap for high-risk topics (13-15 → max 1 consecutive)
     age_streak_cap = 1 if age_group == "13-15" else max_streak
 
     # --- Step 4: Session duration fatigue protection ---
     session_posts_served = int(user_profile.get("session_posts_served", 0))
-    _SESSION_CAPS = {"13-15": 40, "16-17": 60, None: 100}
-    session_cap = _SESSION_CAPS.get(age_group, 100)
+    session_cap = SESSION_CAPS.get(age_group, 100)
     effective_k = max(0, min(k, session_cap - session_posts_served))
 
     # Escalating prosocial boost for fatigue (mirrors night_mode_settings pattern)
-    fatigue_onset = 25
     weights = dict(weights)  # don't mutate caller's dict
-    if session_posts_served > fatigue_onset:
-        fatigue_factor = min(1.0, (session_posts_served - fatigue_onset) / 25.0)
+    if session_posts_served > FATIGUE_ONSET:
+        fatigue_factor = min(1.0, (session_posts_served - FATIGUE_ONSET) / float(FATIGUE_ONSET))
         fatigue_prosocial_boost = 0.08 * fatigue_factor * age_protection_factor
         weights["p"] = weights.get("p", 0.0) + fatigue_prosocial_boost
         weights["r"] = weights.get("r", 0.0) + (fatigue_prosocial_boost * 0.5)
@@ -288,13 +300,11 @@ def build_prototype_feed(
     # --- Step 3: Emotional valence tracking state ---
     valence_window_size = 8
     valence_history: List[float] = []
-    VALENCE_THRESHOLD = 0.45
     negative_valence_index = 0.0
 
     # --- Step 5: Crisis re-routing state ---
     crisis_window_history: List[bool] = []
-    CRISIS_WINDOW = 5
-    CRISIS_TRIGGER_THRESHOLD = 2
+    CRISIS_TRIGGER_THRESHOLD = CRISIS_THRESHOLD
     crisis_signal_active = bool(user_profile.get("crisis_mode", False))
 
     # --- Step 6: Emotional amplification rabbit hole state ---
@@ -396,7 +406,7 @@ def build_prototype_feed(
                     s += crisis_inject_bonus
                 elif getattr(row, "prosocial", 0) == 1 and row_risk < 0.2:
                     s += crisis_inject_bonus * 0.4
-                if row_risk >= 0.8 or topic in CRISIS_TOPICS:
+                if row_risk >= HIGH_RISK_THRESHOLD or topic in CRISIS_TOPICS:
                     s -= 0.50
 
             # Step 6: Penalize emotional amplification rabbit hole continuation
@@ -458,7 +468,7 @@ def build_prototype_feed(
         # Step 5: Update crisis window for next iteration
         _is_crisis_post = (
             best_row.get("topic", "") in CRISIS_TOPICS
-            or float(best_row.get("risk", 0.0)) >= 0.8
+            or float(best_row.get("risk", 0.0)) >= HIGH_RISK_THRESHOLD
         )
         crisis_window_history.append(_is_crisis_post)
         if len(crisis_window_history) > CRISIS_WINDOW:

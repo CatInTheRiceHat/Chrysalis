@@ -13,14 +13,14 @@ from core.metrics import diversity_at_k, max_streak, prosocial_ratio
 # Config
 # -----------------------------
 
-DATA_PATH = Path(__file__).parent / "datasets" / "shorts_dataset_tagged.csv"
+DATA_PATH = Path(__file__).parent.parent / "datasets" / "processed_dataset.csv"
 
 PRESET = "entertainment"
 K_DEFAULT = 100
 RECENT_WINDOW = 10
 NIGHT_MODE = True
 
-SHOW_COLS = ["title", "topic", "channel", "prosocial",
+SHOW_COLS = ["video_id", "topic", "channel", "prosocial",
              "risk", "engagement", "diversity", "score"]
 
 
@@ -52,7 +52,8 @@ def run_demo(df, preset, night_mode):
         preset, night_mode=night_mode, k_default=K_DEFAULT)
     label = f"{preset} ({'night mode' if night_mode else 'normal'}, k={k})"
     feed = build_prototype_feed(
-        df, weights=weights, k=k, recent_window=RECENT_WINDOW)
+        df, weights=weights, k=k, recent_window=RECENT_WINDOW,
+        user_profile={"age_group": None})
 
     print(f"{label} top 10:")
     print(feed[SHOW_COLS].head(10))
