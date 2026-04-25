@@ -231,6 +231,7 @@ def build_prototype_feed(
     k: int = 100,
     recent_window: int = 10,
     max_streak: int = 2,
+    cocoon_cap: int | None = None,
 ) -> pd.DataFrame:
     """
     Prototype algorithm using Gini coefficient for diversity
@@ -283,7 +284,7 @@ def build_prototype_feed(
 
     # --- Step 4: Session duration fatigue protection ---
     session_posts_served = int(user_profile.get("session_posts_served", 0))
-    session_cap = SESSION_CAPS.get(age_group, 100)
+    session_cap = cocoon_cap if cocoon_cap is not None else SESSION_CAPS.get(age_group, 100)
     effective_k = max(0, min(k, session_cap - session_posts_served))
 
     # Escalating prosocial boost for fatigue (mirrors night_mode_settings pattern)
