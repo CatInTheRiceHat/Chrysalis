@@ -9,32 +9,6 @@ const NAV_LINKS = [
   { label: 'Future',  id: 'future' },
 ];
 
-function ButterflyIcon() {
-  return (
-    <svg width="22" height="18" viewBox="0 0 22 18" fill="none" aria-hidden="true">
-      <path d="M11 9 C8 6 2 4 1 7 C0 10 4 13 8 11 C9.5 10.2 10.5 9.5 11 9Z" fill="url(#lg1)" opacity="0.85"/>
-      <path d="M11 9 C14 6 20 4 21 7 C22 10 18 13 14 11 C12.5 10.2 11.5 9.5 11 9Z" fill="url(#lg2)" opacity="0.85"/>
-      <path d="M11 9 C9 11 3 12 2 10 C1 8 5 6 8.5 8 C9.5 8.5 10.5 9 11 9Z" fill="url(#lg3)" opacity="0.7"/>
-      <path d="M11 9 C13 11 19 12 20 10 C21 8 17 6 13.5 8 C12.5 8.5 11.5 9 11 9Z" fill="url(#lg4)" opacity="0.7"/>
-      <ellipse cx="11" cy="9" rx="0.6" ry="2.5" fill="#4a3060" opacity="0.6"/>
-      <defs>
-        <linearGradient id="lg1" x1="1" y1="7" x2="11" y2="9" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#a78bfa"/><stop offset="1" stopColor="#67e8f9"/>
-        </linearGradient>
-        <linearGradient id="lg2" x1="21" y1="7" x2="11" y2="9" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#f0abfc"/><stop offset="1" stopColor="#818cf8"/>
-        </linearGradient>
-        <linearGradient id="lg3" x1="2" y1="10" x2="11" y2="9" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fda4af"/><stop offset="1" stopColor="#a78bfa"/>
-        </linearGradient>
-        <linearGradient id="lg4" x1="20" y1="10" x2="11" y2="9" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#67e8f9"/><stop offset="1" stopColor="#f0abfc"/>
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
-
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive]     = useState('home');
@@ -62,9 +36,13 @@ export function Navbar() {
         {/* ── Logo ── */}
         <button
           onClick={() => scrollTo('home')}
-          className="flex items-center gap-2.5 group"
+          className="flex items-center gap-2 group"
         >
-          <ButterflyIcon />
+          <img
+            src="/butterflylogo.png"
+            alt="Chrysalis butterfly"
+            className="w-8 h-8 object-contain"
+          />
           <span className="font-heading text-lg text-foreground tracking-tight">
             Chrysalis
           </span>
