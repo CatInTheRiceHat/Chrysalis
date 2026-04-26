@@ -62,7 +62,7 @@ def process_vklsvd_data(max_items=1000):
     df["appearance_comparison"] = np.random.rand(len(df))
     df["opinion_comparison"] = np.random.rand(len(df))
 
-    # Research-backed additions (§2.1 and §2.4 of Morphomedia research doc)
+    # Research-backed additions (§2.1 and §2.4 of Chrysalis research doc)
     # active_engagement_ratio: proxy for (comments + shares) / views — 0 to 1
     # Lower is typical; skew toward 0 to reflect real platform distributions
     df["active_engagement_ratio"] = np.random.beta(1.5, 8, size=len(df))

@@ -1,4 +1,4 @@
-# MorphoMedia: Core Algorithm Logic
+# Chrysalis: Core Algorithm Logic
 
 This document consolidates the key mathematical formulas and ranking functions used within the `algorithm.py` Recommender System engine. This reference is designed for external UX/UI and Design firms (e.g., Flames.blue) to map visual feedback systems and transparency tags accurately to the underlying mathematics.
 

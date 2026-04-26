@@ -1,5 +1,5 @@
 """
-youtube_extractor.py — Morphomedia Full Data Pipeline
+youtube_extractor.py — Chrysalis Full Data Pipeline
 ======================================================
 Fetches real YouTube videos and classifies them into algorithm columns
 using a local Ollama LLM (qwen3.5 by default). No cloud AI cost.
@@ -19,7 +19,7 @@ Pipeline:
     Computed from raw stats:
         • active_engagement_ratio = (likes + comments) / views, scaled 0–1
         ↓
-    SQLite  →  morphomedia.db  (persistent; never re-fetches what it has)
+    SQLite  →  chrysalis.db  (persistent; never re-fetches what it has)
         ↓
     pandas DataFrame  →  ready for validate_and_clean() → build_prototype_feed()
 
@@ -67,9 +67,9 @@ OLLAMA_URL       = "http://localhost:11434"
 PREFERRED_MODEL  = "qwen3.5"   # smartest available
 FALLBACK_MODEL   = "qwen2.5"   # if qwen3.5 isn't listed
 
-DB_PATH          = Path(__file__).parent / "morphomedia.db"
+DB_PATH          = Path(__file__).parent / "chrysalis.db"
 
-# YouTube category ID ↔ Morphomedia topic mapping
+# YouTube category ID ↔ Chrysalis topic mapping
 # Note: some category IDs (e.g. 27-Education) are not available on the
 # mostPopular chart in all regions — we gracefully skip those.
 CATEGORY_TO_TOPIC: dict[str, str] = {
@@ -450,7 +450,7 @@ def extract_and_classify(
 
     Parameters
     ----------
-    topics       : List of Morphomedia topic names to fetch from YouTube's
+    topics       : List of Chrysalis topic names to fetch from YouTube's
                    mostPopular chart (e.g. ["gaming", "music"]).
     video_ids    : Specific YouTube video IDs to fetch and classify.
     max_per_topic: Max videos to fetch per topic (default 15, max 50).
@@ -627,7 +627,7 @@ def db_summary(db_path: Path = DB_PATH) -> None:
     conn = _get_conn(db_path)
     total = conn.execute("SELECT COUNT(*) FROM videos").fetchone()[0]
     print(f"\n{'='*50}")
-    print(f"  morphomedia.db  —  {total} videos total")
+    print(f"  chrysalis.db  —  {total} videos total")
     print(f"{'='*50}")
     rows = conn.execute(
         "SELECT topic, COUNT(*) as n FROM videos GROUP BY topic ORDER BY n DESC"
@@ -685,7 +685,7 @@ def load_from_db(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Morphomedia YouTube Extractor — fetch and AI-classify videos"
+        description="Chrysalis YouTube Extractor — fetch and AI-classify videos"
     )
     parser.add_argument(
         "--topics", nargs="+", default=None,

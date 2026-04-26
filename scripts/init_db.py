@@ -1,5 +1,5 @@
 """
-Schema migration: adds the migration_drops table to morphomedia.db.
+Schema migration: adds the migration_drops table to chrysalis.db.
 Safe to run multiple times — uses IF NOT EXISTS.
 
 Usage:
@@ -9,7 +9,7 @@ Usage:
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "morphomedia.db"
+DB_PATH = Path(__file__).parent.parent / "chrysalis.db"
 
 CREATE_MIGRATION_DROPS = """
 CREATE TABLE IF NOT EXISTS migration_drops (

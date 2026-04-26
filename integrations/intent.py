@@ -127,7 +127,7 @@ if __name__ == "__main__":
         "just show me whatever people are watching right now, no news though"
     ]
     
-    print("Testing Morphomedia Natural Language UCRS Control...")
+    print("Testing Chrysalis Natural Language UCRS Control...")
     print("=" * 60)
     for q in test_queries:
         print(f'USER INPUT: "{q}"')

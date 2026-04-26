@@ -1,4 +1,4 @@
-# MorphoMedia: Healthy Feed Algorithm
+# Chrysalis: Healthy Feed Algorithm
 
 A youth-centric social media recommender system that prioritizes digital well-being over engagement maximization.
 
@@ -20,7 +20,7 @@ python api.py
 ## Project Structure
 
 ```
-MorphoMedia/
+Chrysalis/
 ├── core/algorithm.py          # Core ranking algorithm with Gini diversity, engagement decay
 ├── data.py               # Data processing utilities
 ├── metrics.py            # Evaluation metrics (diversity@k, streak detection, etc.)

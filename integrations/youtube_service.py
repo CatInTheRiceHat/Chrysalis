@@ -1,5 +1,5 @@
 """
-YouTube Data API v3 Service for Morphomedia
+YouTube Data API v3 Service for Chrysalis
 Fetches real, embeddable video IDs by topic category.
 Uses in-memory caching to minimize quota usage.
 """
@@ -23,7 +23,7 @@ if _env_path.exists():
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
 
-# Map Morphomedia topics to YouTube video category IDs
+# Map Chrysalis topics to YouTube video category IDs
 # See: https://developers.google.com/youtube/v3/docs/videoCategories/list
 TOPIC_TO_CATEGORY_ID = {
     "entertainment": "24",  # Entertainment
@@ -63,7 +63,7 @@ def _api_request(endpoint: str, params: dict) -> dict | None:
 
 def fetch_videos_by_topic(topic: str, max_results: int = 12) -> list[str]:
     """
-    Fetch real YouTube video IDs for a given Morphomedia topic.
+    Fetch real YouTube video IDs for a given Chrysalis topic.
     Uses mostPopular chart filtered by category (costs 1 quota unit).
     Results are cached for CACHE_TTL_SECONDS.
     

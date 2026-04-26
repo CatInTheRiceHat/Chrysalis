@@ -28,7 +28,7 @@ from core.cocoon import (
     advance_week,
 )
 
-DB_PATH = Path(__file__).parent / "morphomedia.db"
+DB_PATH = Path(__file__).parent / "chrysalis.db"
 
 
 @asynccontextmanager

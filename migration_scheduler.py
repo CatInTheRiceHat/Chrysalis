@@ -2,7 +2,7 @@
 Migration Mode scheduler.
 
 Runs build_prototype_feed() twice daily (07:00 morning, 19:00 evening) using
-fixed, non-personalized weights. Each run freezes 10-15 posts to morphomedia.db
+fixed, non-personalized weights. Each run freezes 10-15 posts to chrysalis.db
 so every user sees the same curated drop for that period.
 
 Usage (imported by api.py):
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 ROOT = Path(__file__).parent
-DB_PATH = ROOT / "morphomedia.db"
+DB_PATH = ROOT / "chrysalis.db"
 DATASET_PATH = ROOT / "datasets" / "processed_dataset.csv"
 
 # ---------------------------------------------------------------------------
@@ -171,4 +171,4 @@ if __name__ == "__main__":
     else:
         run_evening_drop()
 
-    print("Done. Check morphomedia.db migration_drops table.")
+    print("Done. Check chrysalis.db migration_drops table.")

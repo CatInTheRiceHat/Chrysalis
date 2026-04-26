@@ -91,4 +91,4 @@ Chrysalis is a mental-health-aware social media recommendation algorithm. Two mo
 
 Python interpreter: `.venv/bin/python3.13` (system Python lacks pytest and project deps).
 Dataset: `datasets/processed_dataset.csv`.
-Database: `morphomedia.db` (SQLite, project root).
+Database: `chrysalis.db` (SQLite, project root).
