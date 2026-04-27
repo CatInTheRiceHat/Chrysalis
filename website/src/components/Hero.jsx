@@ -66,9 +66,8 @@ export function Hero() {
               transition={{ duration: 0.7, delay: 0.3, ease: 'easeOut' }}
               className="font-body font-light text-base md:text-lg text-foreground/60 max-w-lg leading-relaxed"
             >
-              Chrysalis is a recommendation engine built on research,
-              designed for teenagers, and engineered to make you feel
-              better&mdash;not worse.
+              Chrysalis is a recommendation algorithm built from research on what social media
+              actually does to young people — and redesigned from the ground up to do better.
             </motion.p>
 
             {/* CTA row */}

@@ -42,14 +42,14 @@ export function About() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="font-heading text-4xl md:text-5xl text-foreground leading-[0.92] tracking-[-1px]"
             >
-              Built by someone who was tired of the scrolling.
+              Built by someone who got tired of watching people scroll.
             </motion.h2>
 
             <div className="flex flex-col gap-5">
               {[
                 {
                   delay: 0.2,
-                  text: "I grew up watching the people around me — including myself — get pulled deeper into feeds that seemed designed to leave you feeling worse than when you started. The anxiety, the comparison, the doomscrolling at 2am. I couldn't stop wondering: does this have to be this way?",
+                  text: "I grew up watching the people around me — including myself — get pulled deeper into feeds that seemed designed to leave you feeling worse than when you started. The anxiety, the comparison, the doomscrolling at 2am. I kept wondering: does it have to be this way?",
                 },
                 {
                   delay: 0.3,
@@ -57,7 +57,7 @@ export function About() {
                 },
                 {
                   delay: 0.4,
-                  text: "Chrysalis is the result: a multi-dimensional recommendation algorithm grounded in psychology and data science, tested against a real dataset, and built with teenagers specifically in mind. I'm Elaine Che — a student, researcher, and builder who believes that technology can be designed to actually care.",
+                  text: "Chrysalis is what came out of that: a recommendation algorithm grounded in psychology and data science, tested on real data, and built specifically for teenagers. I'm Elaine Che — a student and builder who thinks technology can be designed to actually care about the people using it.",
                 },
               ].map(({ delay, text }) => (
                 <motion.p

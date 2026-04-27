@@ -3,10 +3,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Play, Moon, Users, BarChart2, RefreshCw } from 'lucide-react';
 import { FeedCard } from './FeedCard';
 
-const API_URL   = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
-const PRESETS   = ['entertainment', 'inspiration', 'learning'];
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+
+const PRESETS = [
+  { label: 'Entertain me',      val: 'entertainment' },
+  { label: 'Inspire me',        val: 'inspiration'   },
+  { label: 'Teach me something',val: 'learning'      },
+];
+
 const AGE_GROUPS = [
-  { label: 'General',    val: null },
+  { label: 'Anyone',     val: null    },
   { label: 'Teen 16–17', val: '16-17' },
   { label: 'Teen 13–15', val: '13-15' },
 ];
@@ -33,7 +39,7 @@ function WeightBar({ label, value, color }) {
   );
 }
 
-function MetricCard({ label, improved, baseline, suffix = '' }) {
+function MetricCard({ label, subtitle, improved, baseline, suffix = '' }) {
   const better = parseFloat(improved) > parseFloat(baseline);
   return (
     <div className="liquid-glass rounded-xl p-4 flex flex-col gap-2">
@@ -58,6 +64,9 @@ function MetricCard({ label, improved, baseline, suffix = '' }) {
       >
         {better ? '↑ improved' : '↓ reduced'}
       </span>
+      {subtitle && (
+        <span className="font-body text-xs text-foreground/35 leading-snug">{subtitle}</span>
+      )}
     </div>
   );
 }
@@ -95,22 +104,26 @@ export function AlgorithmDemo() {
       {/* ── Controls ── */}
       <div className="liquid-glass-strong rounded-2xl p-6 flex flex-col gap-7">
 
+        <p className="font-body text-sm text-foreground/50 leading-relaxed">
+          Configure the algorithm and run it against a real dataset — see exactly what Chrysalis would recommend.
+        </p>
+
         <div className="flex flex-col gap-3">
           <label className="font-body text-xs font-medium text-foreground/45 uppercase tracking-wider">
-            Preset mode
+            What brings you here?
           </label>
           <div className="flex flex-col gap-2">
-            {PRESETS.map((p) => (
+            {PRESETS.map(({ label, val }) => (
               <button
-                key={p}
-                onClick={() => setPreset(p)}
-                className={`rounded-full px-4 py-2 font-body text-sm font-medium text-left capitalize transition-all duration-200 ${
-                  preset === p
+                key={val}
+                onClick={() => setPreset(val)}
+                className={`rounded-full px-4 py-2 font-body text-sm font-medium text-left transition-all duration-200 ${
+                  preset === val
                     ? 'liquid-glass-strong text-foreground'
                     : 'text-foreground/50 hover:text-foreground hover:bg-white/30'
                 }`}
               >
-                {p}
+                {label}
               </button>
             ))}
           </div>
@@ -118,7 +131,7 @@ export function AlgorithmDemo() {
 
         <div className="flex flex-col gap-3">
           <label className="font-body text-xs font-medium text-foreground/45 uppercase tracking-wider flex items-center gap-1.5">
-            <Users className="w-3 h-3" /> Age protection
+            <Users className="w-3 h-3" /> Who's watching?
           </label>
           <div className="flex flex-col gap-2">
             {AGE_GROUPS.map(({ label, val }) => (
@@ -137,22 +150,25 @@ export function AlgorithmDemo() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <label className="font-body text-sm font-medium text-foreground/60 flex items-center gap-2">
-            <Moon className="w-4 h-4" /> Night mode
-          </label>
-          <button
-            onClick={() => setNightMode(!nightMode)}
-            className={`relative w-10 h-5 rounded-full transition-all duration-300 ${
-              nightMode ? 'bg-violet-400' : 'bg-foreground/15'
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-300 ${
-                nightMode ? 'left-5' : 'left-0.5'
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <label className="font-body text-sm font-medium text-foreground/60 flex items-center gap-2">
+              <Moon className="w-4 h-4" /> Late-night mode
+            </label>
+            <button
+              onClick={() => setNightMode(!nightMode)}
+              className={`relative w-10 h-5 rounded-full transition-all duration-300 ${
+                nightMode ? 'bg-violet-400' : 'bg-foreground/15'
               }`}
-            />
-          </button>
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-300 ${
+                  nightMode ? 'left-5' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+          <p className="font-body text-xs text-foreground/35">Reduces high-stimulation content after 10pm.</p>
         </div>
 
         <button
@@ -215,9 +231,9 @@ export function AlgorithmDemo() {
               {result.weights && (
                 <div className="liquid-glass rounded-xl p-5 flex flex-col gap-4">
                   <p className="font-body text-xs font-medium text-foreground/45 uppercase tracking-wider flex items-center gap-1.5">
-                    <BarChart2 className="w-3 h-3" /> Algorithm weights
+                    <BarChart2 className="w-3 h-3" /> Here's how Chrysalis scored your feed:
                   </p>
-                  <WeightBar label="Engagement"  value={result.weights.e ?? 0} color="#818cf8" />
+                  <WeightBar label="Relevance"   value={result.weights.e ?? 0} color="#818cf8" />
                   <WeightBar label="Diversity"   value={result.weights.d ?? 0} color="#67e8f9" />
                   <WeightBar label="Prosocial"   value={result.weights.p ?? 0} color="#a7f3d0" />
                   <WeightBar label="Risk shield" value={result.weights.r ?? 0} color="#fda4af" />
@@ -228,17 +244,20 @@ export function AlgorithmDemo() {
                 <div className="grid grid-cols-3 gap-3">
                   <MetricCard
                     label="Prosocial ratio"
+                    subtitle="Share of posts that build up rather than tear down"
                     improved={(result.improved_metrics.prosocial_ratio * 100).toFixed(0)}
                     baseline={(result.baseline_metrics.prosocial_ratio * 100).toFixed(0)}
                     suffix="%"
                   />
                   <MetricCard
                     label="Diversity@10"
+                    subtitle="How many different topics in your first 10 posts"
                     improved={result.improved_metrics.diversity_at_10?.toFixed(1) ?? '—'}
                     baseline={result.baseline_metrics.diversity_at_10?.toFixed(1) ?? '—'}
                   />
                   <MetricCard
                     label="Max streak"
+                    subtitle="Longest unbroken run of the same topic (lower = better)"
                     improved={result.improved_metrics.max_streak ?? '—'}
                     baseline={result.baseline_metrics.max_streak ?? '—'}
                   />
@@ -248,7 +267,7 @@ export function AlgorithmDemo() {
               {result.improved_feed?.length > 0 && (
                 <div className="flex flex-col gap-3">
                   <p className="font-body text-xs font-medium text-foreground/45 uppercase tracking-wider">
-                    Top 10 recommended items
+                    Your top recommendations:
                   </p>
                   <div className="scroll-x pb-2">
                     {result.improved_feed.slice(0, 10).map((item, i) => (

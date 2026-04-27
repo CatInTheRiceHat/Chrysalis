@@ -52,18 +52,18 @@ function Block({ icon: Icon, badge, heading, body, children, flip, delay }) {
 }
 
 const HARMS = [
-  { icon: '📱', label: 'Doomscrolling',        sub: 'Passive streak decay' },
-  { icon: '🪞', label: 'Body comparison',      sub: 'Similarity mindset modifier' },
-  { icon: '🌀', label: 'Filter bubbles',        sub: 'Gini-coefficient diversity' },
-  { icon: '😢', label: 'Emotional contagion',   sub: 'Valence tracking' },
-  { icon: '🚨', label: 'Crisis rabbit holes',   sub: 'Wellness injection' },
-  { icon: '🎯', label: 'Viral amplification',   sub: 'Rabbit hole interrupt' },
+  { icon: '📱', label: 'Doomscrolling',        sub: 'Passive streak decay',        tint: '#a78bfa' },
+  { icon: '🪞', label: 'Body comparison',      sub: 'Similarity mindset modifier', tint: '#f0abfc' },
+  { icon: '🌀', label: 'Filter bubbles',        sub: 'Gini-coefficient diversity',  tint: '#67e8f9' },
+  { icon: '😢', label: 'Emotional contagion',   sub: 'Valence tracking',            tint: '#fda4af' },
+  { icon: '🚨', label: 'Crisis rabbit holes',   sub: 'Wellness injection',          tint: '#a7f3d0' },
+  { icon: '🎯', label: 'Viral amplification',   sub: 'Rabbit hole interrupt',       tint: '#818cf8' },
 ];
 
 const METRICS = [
-  { label: 'Prosocial content ratio', improved: '31%', baseline: '18%', pct: 72 },
-  { label: 'Diversity@10 (unique topics)', improved: '6.4', baseline: '3.1', pct: 85 },
-  { label: 'Max same-topic streak', improved: '2',   baseline: '8+',  pct: 25, lower: true },
+  { label: 'Prosocial content ratio', subtitle: 'Share of posts that build up rather than tear down', improved: '31%', baseline: '18%', pct: 72 },
+  { label: 'Diversity@10', subtitle: 'How many different topics in your first 10 posts', improved: '6.4', baseline: '3.1', pct: 85 },
+  { label: 'Max same-topic streak', subtitle: 'Longest unbroken run of the same topic (lower = better)', improved: '2', baseline: '8+', pct: 25, lower: true },
 ];
 
 export function ProjectStory() {
@@ -86,8 +86,7 @@ export function ProjectStory() {
             The problem. The research. The solution.
           </h2>
           <p className="font-body font-light text-base text-foreground/55 max-w-xl">
-            A full narrative arc — from what's broken about social media, to the
-            research that explains it, to the algorithm that fixes it.
+            How I went from "the algorithm is hurting people" to building a different one.
           </p>
         </motion.div>
 
@@ -109,20 +108,20 @@ export function ProjectStory() {
               { label: 'Watch time', pct: 95, color: '#fda4af' },
               { label: 'Clicks',     pct: 88, color: '#f0abfc' },
               { label: 'Shares',     pct: 72, color: '#a78bfa' },
-              { label: 'Well-being', pct: 4,  color: '#67e8f9' },
-            ].map(({ label, pct, color }) => (
+              { label: 'Well-being', pct: 4,  color: '#67e8f9', muted: true },
+            ].map(({ label, pct, color, muted }, i) => (
               <div key={label} className="flex flex-col gap-1.5">
                 <div className="flex justify-between">
-                  <span className="font-body text-sm text-foreground/70">{label}</span>
-                  <span className="font-body text-sm font-medium text-foreground/50">{pct}%</span>
+                  <span className={`font-body text-sm ${muted ? 'text-foreground/40' : 'text-foreground/70'}`}>{label}</span>
+                  <span className={`font-body text-sm font-medium ${muted ? 'text-foreground/30' : 'text-foreground/50'}`}>{pct}%</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-foreground/8 overflow-hidden">
+                <div className="h-2 rounded-full bg-foreground/8 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={inView ? { width: `${pct}%` } : {}}
-                    transition={{ duration: 1, delay: 0.3, ease: 'easeOut' }}
+                    transition={{ duration: 1, delay: 0.3 + i * 0.08, ease: 'easeOut' }}
                     className="h-full rounded-full"
-                    style={{ background: color }}
+                    style={{ background: color, opacity: muted ? 0.5 : 1 }}
                   />
                 </div>
               </div>
@@ -135,13 +134,17 @@ export function ProjectStory() {
           icon={FlaskConical}
           badge="The Research"
           heading="Six documented harms. Six targeted fixes."
-          body="The research identified six specific mechanisms through which recommendation algorithms harm teenage mental health. Chrysalis addresses each one with a dedicated algorithmic intervention — not a blanket content filter, but precise, tunable protections."
+          body="The research pointed to six specific mechanisms through which recommendation algorithms harm teenage mental health. Chrysalis addresses each one with a targeted fix — not a content filter, but precise, tunable algorithmic interventions."
           delay={0.1}
           flip={true}
         >
           <div className="grid grid-cols-2 gap-3">
-            {HARMS.map(({ icon, label, sub }) => (
-              <div key={label} className="liquid-glass rounded-xl p-4 flex flex-col gap-2">
+            {HARMS.map(({ icon, label, sub, tint }) => (
+              <div
+                key={label}
+                className="rounded-xl p-4 flex flex-col gap-2 min-h-[100px]"
+                style={{ background: `${tint}10`, border: `1px solid ${tint}25` }}
+              >
                 <span className="text-xl">{icon}</span>
                 <p className="font-body font-medium text-sm text-foreground/80">{label}</p>
                 <p className="font-body font-light text-xs text-foreground/45">{sub}</p>
@@ -155,7 +158,7 @@ export function ProjectStory() {
           icon={Zap}
           badge="The Solution"
           heading="A multi-dimensional algorithm that actually cares."
-          body="Instead of ranking by a single engagement score, Chrysalis combines four weighted dimensions — engagement, diversity, prosocial quality, and risk — and adapts dynamically based on who's watching and how long they've been scrolling."
+          body="Instead of chasing a single engagement number, Chrysalis weighs four things at once: how relevant content is, how varied your feed is, whether what you're seeing builds you up or tears you down, and how risky it is. It also adapts in real time — based on your age, how long you've been scrolling, and the time of day."
           delay={0.1}
           flip={false}
         >
@@ -205,6 +208,9 @@ export function ProjectStory() {
                 </span>
               ))}
             </div>
+            <p className="font-body font-light text-xs text-foreground/35 italic leading-relaxed">
+              In plain terms: every post gets a score that balances engagement with wellbeing — and the balance shifts depending on who's watching and when.
+            </p>
           </div>
         </Block>
 
@@ -218,9 +224,12 @@ export function ProjectStory() {
           flip={true}
         >
           <div className="flex flex-col gap-4">
-            {METRICS.map(({ label, improved, baseline, pct, lower }) => (
+            {METRICS.map(({ label, subtitle, improved, baseline, pct, lower }) => (
               <div key={label} className="liquid-glass rounded-xl p-5 flex flex-col gap-3">
-                <p className="font-body text-sm font-medium text-foreground/70">{label}</p>
+                <div className="flex flex-col gap-0.5">
+                  <p className="font-body text-sm font-medium text-foreground/70">{label}</p>
+                  {subtitle && <p className="font-body text-xs text-foreground/35">{subtitle}</p>}
+                </div>
                 <div className="flex items-end justify-between gap-4">
                   <div className="flex flex-col">
                     <span className="font-body text-xs text-foreground/40 mb-1">Baseline</span>

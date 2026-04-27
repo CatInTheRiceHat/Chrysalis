@@ -7,19 +7,19 @@ const GOALS = [
     icon: Globe,
     color: '#a78bfa',
     title: 'Open Platform',
-    body: 'Make Chrysalis freely available — open-source code, open weights, open research. Anyone should be able to run a healthier feed without needing permission from a tech giant.',
+    body: 'The code, the weights, the research — all open. Anyone should be able to run a healthier feed without needing approval from a tech company or a $10/month subscription.',
   },
   {
     icon: Plug,
     color: '#67e8f9',
     title: 'Real Content Integration',
-    body: 'Connect to real social feeds via APIs — Instagram, TikTok, YouTube — and reroute them through the Chrysalis algorithm in real time. The same content, a fundamentally different experience.',
+    body: 'Connect Chrysalis directly to real social feeds — Instagram, TikTok, YouTube — and reroute them through the algorithm in real time. Same content you already follow. Completely different experience.',
   },
   {
     icon: Eye,
     color: '#f0abfc',
     title: 'Teen Transparency Dashboard',
-    body: 'Give teenagers a live view of what their algorithm is doing: which mechanisms fired, why certain content appeared, and direct controls to adjust it. Transparency as a feature, not an afterthought.',
+    body: "Let teenagers actually see what their algorithm is doing: which posts were boosted, which were filtered, and why. Real controls, not just settings menus. Transparency as a feature.",
   },
 ];
 

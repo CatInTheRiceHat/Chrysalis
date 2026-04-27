@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import json
+import os
 import sqlite3
 from datetime import date
 
@@ -43,7 +44,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:8001", "http://localhost:3000", "null"],
+    allow_origins=json.loads(os.getenv("CORS_ORIGINS", '["http://localhost:5173","http://localhost:8001","http://localhost:3000","null"]')),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
