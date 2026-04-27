@@ -51,15 +51,12 @@ app.add_middleware(
 )
 
 ROOT = Path(__file__).parent
-WEBSITE_DIR = ROOT / "website"
+WEBSITE_DIR = ROOT / "website" / "dist"
 DEFAULT_DATASET = ROOT / "datasets" / "processed_dataset.csv"
 
-# Serve the website frontend
 @app.get("/")
 def serve_index():
     return FileResponse(WEBSITE_DIR / "index.html")
-
-app.mount("/static", StaticFiles(directory=WEBSITE_DIR), name="static")
 
 from pydantic import BaseModel, Field
 
@@ -323,6 +320,8 @@ def cocoon_advance(user_id: str):
         "graduated": graduating,
     }
 
+
+app.mount("/", StaticFiles(directory=WEBSITE_DIR, html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn
