@@ -29,7 +29,7 @@ from core.cocoon import (
     advance_week,
 )
 
-DB_PATH = Path(__file__).parent / "chrysalis.db"
+DB_PATH = Path(os.environ.get("DATABASE_PATH", str(Path(__file__).parent / "chrysalis.db")))
 
 
 @asynccontextmanager

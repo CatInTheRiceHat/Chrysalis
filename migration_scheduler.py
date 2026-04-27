@@ -19,6 +19,7 @@ Standalone test run (writes one drop immediately):
 
 import json
 import logging
+import os
 import sqlite3
 from datetime import date, datetime
 from pathlib import Path
@@ -35,7 +36,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 ROOT = Path(__file__).parent
-DB_PATH = ROOT / "chrysalis.db"
+DB_PATH = Path(os.environ.get("DATABASE_PATH", str(ROOT / "chrysalis.db")))
 DATASET_PATH = ROOT / "datasets" / "processed_dataset.csv"
 
 # ---------------------------------------------------------------------------
