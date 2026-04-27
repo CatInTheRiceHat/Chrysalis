@@ -1,3 +1,13 @@
+---
+title: Chrysalis
+emoji: 🦋
+colorFrom: purple
+colorTo: green
+sdk: docker
+app_port: 8080
+pinned: false
+---
+
 # Chrysalis: Healthy Feed Algorithm
 
 A youth-centric social media recommender system that prioritizes digital well-being over engagement maximization.
