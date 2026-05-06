@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: chrysalis
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/migration/today
+    envVars:
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: '["https://chrysalis.onrender.com","http://localhost:5173","http://localhost:3000"]'

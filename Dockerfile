@@ -12,4 +12,4 @@ RUN pip install -r requirements.txt
 COPY . .
 COPY --from=frontend /build/dist ./website/dist
 EXPOSE 8080
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8080}"]
