@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Clock, ArrowRight, CheckCircle2, RefreshCw, ChevronRight } from 'lucide-react';
 
-const API_URL             = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL ?? '';
 const GRADUATION_THRESHOLD = 45;
 const DECAY_RATE           = 0.8;
 

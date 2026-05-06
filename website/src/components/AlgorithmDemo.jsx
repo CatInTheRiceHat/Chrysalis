@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Play, Moon, Users, BarChart2, RefreshCw } from 'lucide-react';
 import { FeedCard } from './FeedCard';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL ?? '';
 
 const PRESETS = [
   { label: 'Entertain me',      val: 'entertainment' },

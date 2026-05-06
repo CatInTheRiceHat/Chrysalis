@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sun, Moon, RefreshCw, Calendar, Sparkles } from 'lucide-react';
 import { FeedCard } from './FeedCard';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL ?? '';
 
 function StatPill({ label, value, accent }) {
   return (
