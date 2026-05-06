@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 
 const NAV_LINKS = [
-  { label: 'Home',    id: 'home' },
-  { label: 'About',   id: 'about' },
-  { label: 'Project', id: 'project' },
-  { label: 'Demo',    id: 'demo' },
-  { label: 'Future',  id: 'future' },
+  { label: 'Home',    path: '/' },
+  { label: 'About',   path: '/about' },
+  { label: 'Project', path: '/project' },
+  { label: 'Demo',    path: '/demo' },
+  { label: 'Future',  path: '/future' },
 ];
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
-  const [active, setActive]     = useState('home');
+  const { pathname } = useLocation();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -19,10 +20,8 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-    setActive(id);
-  };
+  const isActive = (path) =>
+    path === '/' ? pathname === '/' : pathname.startsWith(path);
 
   return (
     <motion.nav
@@ -33,11 +32,8 @@ export function Navbar() {
     >
       <div className="flex items-center justify-between">
 
-        {/* ── Logo ── */}
-        <button
-          onClick={() => scrollTo('home')}
-          className="flex items-center gap-2 group"
-        >
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2 group">
           <img
             src="/butterflylogo.png"
             alt="Chrysalis butterfly"
@@ -46,9 +42,9 @@ export function Navbar() {
           <span className="font-heading text-lg text-foreground tracking-tight">
             Chrysalis
           </span>
-        </button>
+        </Link>
 
-        {/* ── Nav pill ── */}
+        {/* Nav pill */}
         <div
           className="hidden md:flex items-center gap-0.5 rounded-full px-1.5 py-1 transition-all duration-300"
           style={{
@@ -59,28 +55,28 @@ export function Navbar() {
             boxShadow: '0 4px 20px rgba(180,160,220,0.12)',
           }}
         >
-          {NAV_LINKS.map(({ label, id }) => (
-            <button
-              key={id}
-              onClick={() => scrollTo(id)}
+          {NAV_LINKS.map(({ label, path }) => (
+            <Link
+              key={path}
+              to={path}
               className={`px-3.5 py-2 rounded-full text-sm font-body font-medium transition-all duration-200 ${
-                active === id
+                isActive(path)
                   ? 'bg-white/80 text-foreground shadow-sm'
                   : 'text-foreground/60 hover:text-foreground hover:bg-white/40'
               }`}
             >
               {label}
-            </button>
+            </Link>
           ))}
         </div>
 
-        {/* ── Contact CTA ── */}
-        <button
-          onClick={() => scrollTo('contact')}
-          className="liquid-glass-strong rounded-full px-4 py-2 text-sm font-body font-medium text-foreground hover:scale-105 transition-transform duration-200"
+        {/* Contact CTA */}
+        <Link
+          to="/contact"
+          className="liquid-glass-strong rounded-full px-4 py-2 text-sm font-body font-medium text-foreground hover:scale-105 transition-transform duration-200 inline-block"
         >
           Contact
-        </button>
+        </Link>
       </div>
     </motion.nav>
   );
