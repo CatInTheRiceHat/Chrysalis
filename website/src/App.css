@@ -324,3 +324,19 @@ body {
 .heading-italic {
   font-style: italic;
 }
+
+/* ── Cinematic layout upgrades ── */
+section {
+  padding-top: 7rem;
+  padding-bottom: 7rem;
+}
+
+.section-heading {
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.hero-section {
+  min-height: 100svh;
+}

@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 import { Brain, Zap, FlaskConical, TrendingUp } from 'lucide-react';
+import { AnimatedSection, AnimatedItem } from './AnimatedSection';
 
 function CountUp({ target, suffix = '', inView }) {
   const ref = useRef(null);
@@ -138,19 +139,20 @@ export function ProjectStory() {
           delay={0.1}
           flip={true}
         >
-          <div className="grid grid-cols-2 gap-3">
+          <AnimatedSection stagger className="grid grid-cols-2 gap-3">
             {HARMS.map(({ icon, label, sub, tint }) => (
-              <div
-                key={label}
-                className="rounded-xl p-4 flex flex-col gap-2 min-h-[100px]"
-                style={{ background: `${tint}10`, border: `1px solid ${tint}25` }}
-              >
-                <span className="text-xl">{icon}</span>
-                <p className="font-body font-medium text-sm text-foreground/80">{label}</p>
-                <p className="font-body font-light text-xs text-foreground/45">{sub}</p>
-              </div>
+              <AnimatedItem key={label}>
+                <div
+                  className="rounded-xl p-4 flex flex-col gap-2 min-h-[100px]"
+                  style={{ background: `${tint}10`, border: `1px solid ${tint}25` }}
+                >
+                  <span className="text-xl">{icon}</span>
+                  <p className="font-body font-medium text-sm text-foreground/80">{label}</p>
+                  <p className="font-body font-light text-xs text-foreground/45">{sub}</p>
+                </div>
+              </AnimatedItem>
             ))}
-          </div>
+          </AnimatedSection>
         </Block>
 
         {/* ── Block 3: THE SOLUTION ── */}
@@ -223,39 +225,41 @@ export function ProjectStory() {
           delay={0.1}
           flip={true}
         >
-          <div className="flex flex-col gap-4">
+          <AnimatedSection stagger className="flex flex-col gap-4">
             {METRICS.map(({ label, subtitle, improved, baseline, pct, lower }) => (
-              <div key={label} className="liquid-glass rounded-xl p-5 flex flex-col gap-3">
-                <div className="flex flex-col gap-0.5">
-                  <p className="font-body text-sm font-medium text-foreground/70">{label}</p>
-                  {subtitle && <p className="font-body text-xs text-foreground/35">{subtitle}</p>}
-                </div>
-                <div className="flex items-end justify-between gap-4">
-                  <div className="flex flex-col">
-                    <span className="font-body text-xs text-foreground/40 mb-1">Baseline</span>
-                    <span className="font-heading text-xl text-foreground/40">{baseline}</span>
+              <AnimatedItem key={label}>
+                <div className="liquid-glass rounded-xl p-5 flex flex-col gap-3">
+                  <div className="flex flex-col gap-0.5">
+                    <p className="font-body text-sm font-medium text-foreground/70">{label}</p>
+                    {subtitle && <p className="font-body text-xs text-foreground/35">{subtitle}</p>}
                   </div>
-                  <div className="flex-1 flex items-center gap-2">
-                    <div className="flex-1 h-1 rounded-full bg-foreground/10" />
-                    <span className="font-body text-xs text-foreground/30">→</span>
+                  <div className="flex items-end justify-between gap-4">
+                    <div className="flex flex-col">
+                      <span className="font-body text-xs text-foreground/40 mb-1">Baseline</span>
+                      <span className="font-heading text-xl text-foreground/40">{baseline}</span>
+                    </div>
+                    <div className="flex-1 flex items-center gap-2">
+                      <div className="flex-1 h-1 rounded-full bg-foreground/10" />
+                      <span className="font-body text-xs text-foreground/30">→</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="font-body text-xs text-foreground/40 mb-1">Chrysalis</span>
+                      <span className="font-heading text-2xl iridescent-text">{improved}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <span className="font-body text-xs text-foreground/40 mb-1">Chrysalis</span>
-                    <span className="font-heading text-2xl iridescent-text">{improved}</span>
+                  {/* Progress bar */}
+                  <div className="h-1 rounded-full bg-foreground/8 overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={inView ? { width: `${lower ? 100 - pct : pct}%` } : {}}
+                      transition={{ duration: 1.2, delay: 0.4, ease: 'easeOut' }}
+                      className="h-full rounded-full metric-bar"
+                    />
                   </div>
                 </div>
-                {/* Progress bar */}
-                <div className="h-1 rounded-full bg-foreground/8 overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={inView ? { width: `${lower ? 100 - pct : pct}%` } : {}}
-                    transition={{ duration: 1.2, delay: 0.4, ease: 'easeOut' }}
-                    className="h-full rounded-full metric-bar"
-                  />
-                </div>
-              </div>
+              </AnimatedItem>
             ))}
-          </div>
+          </AnimatedSection>
         </Block>
 
       </div>

@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 import { Globe, Plug, Eye, ArrowUpRight } from 'lucide-react';
+import { AnimatedSection, AnimatedItem } from './AnimatedSection';
 
 const GOALS = [
   {
@@ -49,7 +50,7 @@ export function FutureVision() {
         </motion.div>
 
         {/* Goal cards */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <AnimatedSection stagger className="grid md:grid-cols-3 gap-6">
           {GOALS.map(({ icon: Icon, color, title, body }, i) => (
             <motion.div
               key={title}
@@ -78,7 +79,7 @@ export function FutureVision() {
               />
             </motion.div>
           ))}
-        </div>
+        </AnimatedSection>
 
         {/* CTA */}
         <motion.div

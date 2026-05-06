@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
+import { AnimatedSection, AnimatedItem } from './AnimatedSection';
 
 const PILLS = ['Student', 'Researcher', 'Builder'];
 
@@ -112,19 +113,21 @@ export function About() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-4">
+              <AnimatedSection stagger className="flex flex-col gap-4">
                 {[
                   { label: 'Focus', val: 'Youth mental health & tech ethics' },
                   { label: 'Stack', val: 'Python · React · Three.js · FastAPI' },
                   { label: 'Approach', val: 'Research-first, data-backed' },
                   { label: 'Goal', val: 'Algorithms that heal, not harm' },
                 ].map(({ label, val }) => (
-                  <div key={label} className="flex flex-col gap-0.5">
-                    <span className="font-body text-xs font-medium text-foreground/40 uppercase tracking-wider">{label}</span>
-                    <span className="font-body text-sm text-foreground/80">{val}</span>
-                  </div>
+                  <AnimatedItem key={label}>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-body text-xs font-medium text-foreground/40 uppercase tracking-wider">{label}</span>
+                      <span className="font-body text-sm text-foreground/80">{val}</span>
+                    </div>
+                  </AnimatedItem>
                 ))}
-              </div>
+              </AnimatedSection>
 
               {/* Iridescent accent line */}
               <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, #a78bfa, #67e8f9, #f0abfc)', opacity: 0.4 }} />

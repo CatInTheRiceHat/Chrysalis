@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
+import { AnimatedSection, AnimatedItem } from './AnimatedSection';
 
 const MILESTONES = [
   { icon: '📂', label: 'First dataset loaded',         sub: 'VK-LSVD social media dataset' },
@@ -97,7 +98,7 @@ export function Journey() {
         </div>
 
         {/* Screenshot gallery — stylized cards since we don't have real screenshots */}
-        <div className="flex flex-col gap-6">
+        <AnimatedSection delay={0.1} className="flex flex-col gap-6">
           <p className="font-body text-xs font-medium text-foreground/40 uppercase tracking-wider">
             Build snapshots
           </p>
@@ -130,7 +131,7 @@ export function Journey() {
               </motion.div>
             ))}
           </div>
-        </div>
+        </AnimatedSection>
 
       </div>
     </section>

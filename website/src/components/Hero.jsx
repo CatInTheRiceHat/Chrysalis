@@ -21,7 +21,7 @@ export function Hero() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 1.5, delay: 0.3 }}
+        transition={{ duration: 1.4, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
         className="absolute right-0 top-0 w-full h-full pointer-events-none"
         style={{ zIndex: 1 }}
       >
@@ -39,9 +39,9 @@ export function Hero() {
 
             {/* Badge */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
+              initial={{ opacity: 0, y: 50, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
             >
               <span className="section-badge-plain liquid-glass">
                 <span className="font-semibold">✦</span>
@@ -61,9 +61,9 @@ export function Hero() {
 
             {/* Subheadline */}
             <motion.p
-              initial={{ opacity: 0, filter: 'blur(8px)', y: 16 }}
-              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-              transition={{ duration: 0.7, delay: 0.3, ease: 'easeOut' }}
+              initial={{ opacity: 0, filter: 'blur(8px)', y: 50, scale: 0.97 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', y: 0, scale: 1 }}
+              transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
               className="font-body font-light text-base md:text-lg text-foreground/60 max-w-lg leading-relaxed"
             >
               Chrysalis is a recommendation algorithm built from research on what social media
@@ -72,9 +72,9 @@ export function Hero() {
 
             {/* CTA row */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.45, ease: 'easeOut' }}
+              initial={{ opacity: 0, y: 50, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 1.2, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
               className="flex items-center gap-5 flex-wrap"
             >
               <button
@@ -96,9 +96,9 @@ export function Hero() {
 
             {/* Stats strip */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.55 }}
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 1.2, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
               className="flex items-center gap-8 pt-4 flex-wrap"
             >
               {[
@@ -121,9 +121,9 @@ export function Hero() {
 
       {/* ── Scroll indicator ── */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.7 }}
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1.0, delay: 1.0, ease: [0.22, 1, 0.36, 1] }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-foreground/30"
       >
         <span className="font-body text-xs tracking-widest uppercase">scroll</span>

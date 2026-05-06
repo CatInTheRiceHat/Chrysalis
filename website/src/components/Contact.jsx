@@ -72,56 +72,56 @@ export function Contact() {
       <div className="max-w-5xl mx-auto flex flex-col gap-16" ref={ref}>
 
         {/* Heading */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7 }}
-          className="flex flex-col gap-5 items-center text-center"
-        >
-          <span className="section-badge liquid-glass">Contact</span>
-          <h2 className="font-heading text-6xl md:text-7xl text-foreground leading-[0.88] tracking-[-3px]">
-            Let's talk.
-          </h2>
-          <p className="font-body font-light text-base text-foreground/55 max-w-md">
-            Whether you're a researcher, a recruiter, or just someone who cares
-            about the same things I do — I'd love to hear from you.
-          </p>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.7 }}
+            className="flex flex-col gap-5 items-center text-center"
+          >
+            <span className="section-badge liquid-glass">Contact</span>
+            <h2 className="font-heading text-6xl md:text-7xl text-foreground leading-[0.88] tracking-[-3px]">
+              Let's talk.
+            </h2>
+            <p className="font-body font-light text-base text-foreground/55 max-w-md">
+              Whether you're a researcher, a recruiter, or just someone who cares
+              about the same things I do — I'd love to hear from you.
+            </p>
+          </motion.div>
 
         {/* Contact links */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7, delay: 0.15 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4"
-        >
-          {LINKS.map(({ icon: Icon, label, sub, href, color }, i) => (
-            <motion.a
-              key={label}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              initial={{ opacity: 0, y: 16 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}
-              className="glass-card rounded-2xl p-6 flex flex-col gap-4 group hover:scale-105 transition-transform duration-200"
-            >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ background: `${color}18`, border: `1px solid ${color}35` }}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.15 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-4"
+          >
+            {LINKS.map(({ icon: Icon, label, sub, href, color }, i) => (
+              <motion.a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                initial={{ opacity: 0, y: 16 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}
+                className="glass-card rounded-2xl p-6 flex flex-col gap-4 group hover:scale-105 transition-transform duration-200"
               >
-                <Icon className="w-4 h-4" style={{ color }} />
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <p className="font-body font-medium text-sm text-foreground/80">{label}</p>
-                <p className="font-body font-light text-xs text-foreground/45">{sub}</p>
-              </div>
-              <ArrowUpRight
-                className="w-4 h-4 text-foreground/25 group-hover:text-foreground/60 transition-colors ml-auto mt-auto"
-              />
-            </motion.a>
-          ))}
-        </motion.div>
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ background: `${color}18`, border: `1px solid ${color}35` }}
+                >
+                  <Icon className="w-4 h-4" style={{ color }} />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <p className="font-body font-medium text-sm text-foreground/80">{label}</p>
+                  <p className="font-body font-light text-xs text-foreground/45">{sub}</p>
+                </div>
+                <ArrowUpRight
+                  className="w-4 h-4 text-foreground/25 group-hover:text-foreground/60 transition-colors ml-auto mt-auto"
+                />
+              </motion.a>
+            ))}
+          </motion.div>
 
         {/* Footer bar */}
         <motion.div
