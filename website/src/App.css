@@ -14,10 +14,10 @@ body {
 
 /* ─── CSS custom properties ─────────────────────────────────── */
 :root {
-  --gradient-lavender: hsla(270, 70%, 88%, 0.75);
-  --gradient-pink:     hsla(330, 80%, 88%, 0.65);
-  --gradient-teal:     hsla(185, 70%, 82%, 0.60);
-  --gradient-mint:     hsla(150, 60%, 85%, 0.45);
+  --gradient-pink:     hsla(330, 80%, 98%, 0.0);
+  --gradient-lavender: hsla(270, 70%, 98%, 0.0);
+  --gradient-teal:     hsla(185, 70%, 98%, 0.0);
+  --gradient-mint:     hsla(150, 60%, 98%, 0.0);
 
   --glass-bg:     rgba(255, 255, 255, 0.55);
   --glass-border: rgba(255, 255, 255, 0.80);
@@ -90,12 +90,12 @@ body {
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(
-    160deg,
-    rgba(255,255,255,0.90) 0%,
-    rgba(255,255,255,0.30) 25%,
-    rgba(200,180,255,0.10) 50%,
-    rgba(255,255,255,0.30) 75%,
-    rgba(255,255,255,0.90) 100%
+  160deg,
+  rgba(167, 139, 250, 0.55) 0%,
+  rgba(103, 232, 249, 0.40) 25%,
+  rgba(240, 171, 252, 0.45) 50%,
+  rgba(103, 232, 249, 0.40) 75%,
+  rgba(167, 139, 250, 0.55) 100%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -131,12 +131,12 @@ body {
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(
-    160deg,
-    rgba(255,255,255,1.0) 0%,
-    rgba(255,255,255,0.40) 25%,
-    rgba(200,180,255,0.15) 50%,
-    rgba(255,255,255,0.40) 75%,
-    rgba(255,255,255,1.0) 100%
+  160deg,
+  rgba(167, 139, 250, 0.55) 0%,
+  rgba(103, 232, 249, 0.40) 25%,
+  rgba(240, 171, 252, 0.45) 50%,
+  rgba(103, 232, 249, 0.40) 75%,
+  rgba(167, 139, 250, 0.55) 100%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -339,4 +339,22 @@ section {
 
 .hero-section {
   min-height: 100svh;
+}
+
+/* ── Butterfly iridescent overlay ── */
+.butterfly-iridescent {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(167, 139, 250, 0.35) 0%,
+    rgba(103, 232, 249, 0.35) 25%,
+    rgba(240, 171, 252, 0.35) 50%,
+    rgba(253, 164, 175, 0.25) 75%,
+    rgba(167, 139, 250, 0.35) 100%
+  );
+  background-size: 300% 300%;
+  animation: shimmer 6s ease infinite;
+  mix-blend-mode: color;
+  pointer-events: none;
 }

@@ -1,53 +1,60 @@
-import { motion } from 'motion/react';
-import { ArrowUpRight, ChevronDown } from 'lucide-react';
+import { useRef } from 'react';
+import { motion, useScroll, useTransform } from 'motion/react';
+import { ArrowUpRight } from 'lucide-react';
 import ButterflyCanvas from './ButterflyCanvas';
 import { BlurText } from './BlurText';
 
 export function Hero() {
-  const scrollToProject = () => {
-    document.getElementById('project')?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const heroRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ['start start', 'end start'],
+  });
 
-  const scrollToDemo = () => {
-    document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
+  const butterflyY = useTransform(scrollYProgress, [0, 1], [0, -160]);
+
+  const scrollToProject = () => {
+    document.getElementById('problem')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
     <section
+      ref={heroRef}
       id="home"
-      className="relative min-h-screen gradient-mesh flex items-center overflow-hidden"
+      className="relative min-h-screen bg-white flex items-center overflow-hidden"
     >
-      {/* ── Butterfly background layer ── */}
+      {/* Parallax layer — butterfly drifts up as hero scrolls out */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1.4, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="absolute right-0 top-0 w-full h-full pointer-events-none"
-        style={{ zIndex: 1 }}
+        style={{
+          y: butterflyY,
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 1,
+        }}
       >
-        <div className="absolute right-[-5%] top-1/2 -translate-y-1/2">
-          <ButterflyCanvas width={900} height={700} />
-        </div>
+        {/* Entrance fade — separate from parallax so both work independently */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.4, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full h-full"
+        >
+          <div className="absolute right-[-5%] top-1/2 -translate-y-1/2">
+            <ButterflyCanvas width={1100} height={700} />
+          </div>
+        </motion.div>
       </motion.div>
 
-{/* ── Main layout ── */}
+      {/* ── Main layout ── */}
       <div className="relative w-full max-w-7xl mx-auto px-8 lg:px-16 pt-32 pb-20" style={{ zIndex: 2 }}>
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-0">
 
           {/* ── Text column ── */}
           <div className="flex-1 flex flex-col items-start gap-7">
-
-            {/* Badge */}
-            <motion.div
-              initial={{ opacity: 0, y: 50, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <span className="section-badge-plain liquid-glass">
-                <span className="font-semibold">✦</span>
-                A new kind of algorithm
-              </span>
-            </motion.div>
 
             {/* Headline */}
             <div className="max-w-2xl">
@@ -70,66 +77,32 @@ export function Hero() {
               actually does to young people — and redesigned from the ground up to do better.
             </motion.p>
 
-            {/* CTA row */}
+            {/* CTA */}
             <motion.div
               initial={{ opacity: 0, y: 50, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 1.2, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
               className="flex items-center gap-5 flex-wrap"
             >
-              <button
+              <motion.button
                 onClick={scrollToProject}
-                className="liquid-glass-strong rounded-full px-6 py-3 flex items-center gap-2 font-body font-medium text-sm text-foreground hover:scale-105 transition-transform duration-200"
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                className="liquid-glass-strong rounded-full px-6 py-3 flex items-center gap-2 font-body font-medium text-sm text-foreground"
               >
                 See the Project
                 <ArrowUpRight className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={scrollToDemo}
-                className="flex items-center gap-2 font-body font-light text-sm text-foreground/60 hover:text-foreground transition-colors group"
-              >
-                Try it live
-                <span className="group-hover:translate-x-1 transition-transform duration-200">→</span>
-              </button>
+              </motion.button>
             </motion.div>
 
-            {/* Stats strip */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1.2, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              className="flex items-center gap-8 pt-4 flex-wrap"
-            >
-              {[
-                { val: '78', label: 'tests passing' },
-                { val: '6', label: 'protection mechanisms' },
-                { val: '4×', label: 'scoring dimensions' },
-              ].map(({ val, label }) => (
-                <div key={label} className="flex flex-col">
-                  <span className="font-heading text-2xl iridescent-text">{val}</span>
-                  <span className="font-body font-light text-xs text-foreground/45 mt-0.5">{label}</span>
-                </div>
-              ))}
-            </motion.div>
           </div>
 
-          {/* ── Butterfly (spacer so text doesn't overlap) ── */}
+          {/* ── Butterfly spacer ── */}
           <div className="flex-1 hidden lg:block" />
         </div>
       </div>
 
-      {/* ── Scroll indicator ── */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1.0, delay: 1.0, ease: [0.22, 1, 0.36, 1] }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-foreground/30"
-      >
-        <span className="font-body text-xs tracking-widest uppercase">scroll</span>
-        <div className="scroll-line" />
-        <ChevronDown className="w-3 h-3 animate-bounce" />
-      </motion.div>
     </section>
   );
 }

@@ -64,6 +64,9 @@ export default function ButterflyCanvas({ width = 900, height = 700 }) {
           />
         </div>
 
+        {/* Iridescent shimmer */}
+        <div className="butterfly-iridescent" />
+
         {/* SVG annotations */}
         <svg
           style={{
