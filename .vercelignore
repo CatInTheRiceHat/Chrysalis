@@ -1,0 +1,6 @@
+.venv
+chrysalis.db
+reports
+__pycache__
+.pytest_cache
+website/node_modules
