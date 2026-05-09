@@ -6,7 +6,7 @@ export function Problem() {
   const inView = useInView(ref, { once: true, margin: '-100px' });
 
   return (
-    <section id="problem" ref={ref} className="min-h-screen flex items-center px-6 lg:px-20 py-32">
+    <section id="problem" ref={ref} className="px-6 lg:px-20 py-28 lg:py-40">
       <div className="max-w-4xl">
         <motion.span
           initial={{ opacity: 0, x: -30 }}
