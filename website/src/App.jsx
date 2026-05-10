@@ -12,18 +12,27 @@ import { ProjectStory } from './components/ProjectStory';
 import { Journey } from './components/Journey';
 import { FutureVision } from './components/FutureVision';
 import { CustomCursor } from './components/CustomCursor';
+import { CardiaPanel } from './components/CardiaPanel';
 import './App.css';
 
 function MainPage() {
   return (
     <>
       <Hero />
-      <Problem />
-      <Solution />
+      <div className="homepage-panel-stack">
+        <CardiaPanel color="pink">
+          <Problem />
+        </CardiaPanel>
+        <CardiaPanel color="blue">
+          <Solution />
+        </CardiaPanel>
+      </div>
       <ProjectStory />
       <Journey />
       <FutureVision />
-      <Contact />
+      <CardiaPanel color="green" className="cardia-panel-shell--final">
+        <Contact />
+      </CardiaPanel>
     </>
   );
 }

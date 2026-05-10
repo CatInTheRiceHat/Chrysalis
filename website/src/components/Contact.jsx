@@ -53,7 +53,7 @@ function ButterflyFooterIcon() {
       <path d="M16 13 C20 9 29 6 31 10 C33 14 27 19 21 16 C19 15 17 14 16 13Z" fill="url(#fl2)" opacity="0.7"/>
       <path d="M16 13 C13 16 4 17 2 14 C0 11 6 8 11.5 11 C13 12 15 13 16 13Z" fill="url(#fl3)" opacity="0.55"/>
       <path d="M16 13 C19 16 28 17 30 14 C32 11 26 8 20.5 11 C19 12 17 13 16 13Z" fill="url(#fl4)" opacity="0.55"/>
-      <ellipse cx="16" cy="13" rx="0.8" ry="3.5" fill="#4a3060" opacity="0.5"/>
+      <ellipse cx="16" cy="13" rx="0.8" ry="3.5" fill="var(--wing-ink)" opacity="0.62"/>
       <defs>
         <linearGradient id="fl1" x1="1" y1="10" x2="16" y2="13" gradientUnits="userSpaceOnUse">
           <stop stopColor="var(--wing-green)"/><stop offset="1" stopColor="var(--wing-blue)"/>
@@ -122,10 +122,10 @@ export function Contact() {
               <h3 className="font-body font-semibold text-lg text-foreground leading-tight">Elaine</h3>
               <p className="font-body font-light text-sm text-foreground/50">Creator &amp; Developer, Chrysalis</p>
               <div className="flex gap-3 mt-2">
-                <a href="#" aria-label="Substack" className="text-orange-500 hover:text-orange-600 transition-colors">
+                <a href="#" aria-label="Substack" className="transition-colors" style={{ color: 'var(--wing-yellow)' }}>
                   <SubstackIcon className="w-4 h-4" />
                 </a>
-                <a href="https://www.linkedin.com/in/elaine-che-03647530a/" aria-label="LinkedIn" className="text-indigo-400 hover:text-indigo-500 transition-colors">
+                <a href="https://www.linkedin.com/in/elaine-che-03647530a/" aria-label="LinkedIn" className="transition-colors" style={{ color: 'var(--wing-blue)' }}>
                   <Linkedin className="w-4 h-4" />
                 </a>
                 <a href="https://github.com/CatInTheRiceHat" aria-label="GitHub" className="text-foreground/50 hover:text-foreground/80 transition-colors">

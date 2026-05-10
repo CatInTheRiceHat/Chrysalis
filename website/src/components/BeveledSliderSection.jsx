@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useInView, useMotionValueEvent, useReducedMotion, useScroll } from 'motion/react';
+import { motion, useInView, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination } from 'swiper/modules';
@@ -43,6 +43,7 @@ export function BeveledCard({ slide, active = true, index = 0 }) {
         y: active ? 0 : 20,
         scale: active ? 1 : 0.94,
         rotateX: active ? 0 : 8,
+        filter: active ? 'blur(0px)' : 'blur(4px)',
       }}
       transition={{ duration: 0.55, delay: active ? index * 0.02 : 0, ease: [0.22, 1, 0.36, 1] }}
     >
@@ -83,12 +84,16 @@ export function BeveledSliderSection({ id, label, heading, intro, slides }) {
     target: ref,
     offset: ['start start', 'end end'],
   });
+  const stageScale = useTransform(scrollYProgress, [0.78, 1], [1, 0.96]);
+  const stageOpacity = useTransform(scrollYProgress, [0.84, 1], [1, 0.42]);
+  const stageBlur = useTransform(scrollYProgress, [0.78, 1], [0, 5]);
+  const stageFilter = useTransform(stageBlur, (value) => `blur(${value}px)`);
 
   useMotionValueEvent(scrollYProgress, 'change', (latest) => {
     if (!isDesktop || reduceMotion) {
       return;
     }
-    const nextIndex = Math.min(slides.length - 1, Math.max(0, Math.floor(latest * slides.length)));
+    const nextIndex = Math.min(slides.length - 1, Math.max(0, Math.round(latest * (slides.length - 1))));
     setActiveIndex(nextIndex);
   });
 
@@ -106,7 +111,10 @@ export function BeveledSliderSection({ id, label, heading, intro, slides }) {
       className="beveled-slider-section"
       style={{ '--slide-count': slides.length, '--section-accent': COLOR_MAP[activeSlide.color] ?? COLOR_MAP.blue }}
     >
-      <div className="beveled-slider__stage">
+      <motion.div
+        className="beveled-slider__stage"
+        style={reduceMotion ? undefined : { scale: stageScale, opacity: stageOpacity, filter: stageFilter }}
+      >
         <motion.div
           ref={headerRef}
           className="beveled-slider__copy"
@@ -129,11 +137,16 @@ export function BeveledSliderSection({ id, label, heading, intro, slides }) {
               />
             ))}
           </div>
+          <div className="beveled-slider__counter" aria-live="polite">
+            <span>{String(activeIndex + 1).padStart(2, '0')}</span>
+            <i />
+            <span>{String(slides.length).padStart(2, '0')}</span>
+          </div>
           <div className="beveled-slider__controls">
-            <button type="button" onClick={() => goTo(-1)} disabled={activeIndex === 0} aria-label="Previous card">
+            <button type="button" data-cursor="soft" onClick={() => goTo(-1)} disabled={activeIndex === 0} aria-label="Previous card">
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <button type="button" onClick={() => goTo(1)} disabled={activeIndex === slides.length - 1} aria-label="Next card">
+            <button type="button" data-cursor="soft" onClick={() => goTo(1)} disabled={activeIndex === slides.length - 1} aria-label="Next card">
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -152,9 +165,10 @@ export function BeveledSliderSection({ id, label, heading, intro, slides }) {
                     pointerEvents: index === activeIndex ? 'auto' : 'none',
                   }}
                   animate={{
-                    x: offset * 22,
-                    y: Math.abs(offset) * 18,
-                    rotate: offset * 1.8,
+                    x: offset * 30,
+                    y: Math.abs(offset) * 22,
+                    rotate: offset * 2.2,
+                    scale: index === activeIndex ? 1 : 0.96 - Math.min(Math.abs(offset), 3) * 0.025,
                   }}
                   transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                 >
@@ -180,7 +194,7 @@ export function BeveledSliderSection({ id, label, heading, intro, slides }) {
             ))}
           </Swiper>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }
