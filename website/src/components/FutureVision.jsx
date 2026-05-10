@@ -1,105 +1,51 @@
-import { useRef } from 'react';
-import { motion, useInView } from 'motion/react';
-import { Globe, Plug, Eye, ArrowUpRight } from 'lucide-react';
-import { AnimatedSection, AnimatedItem } from './AnimatedSection';
+import { Eye, Globe, Plug } from 'lucide-react';
+import { BeveledSliderSection } from './BeveledSliderSection';
 
-const GOALS = [
+function FutureSignal({ items }) {
+  return (
+    <div className="beveled-signal-list">
+      {items.map((item) => (
+        <span key={item}>{item}</span>
+      ))}
+    </div>
+  );
+}
+
+const SLIDES = [
   {
+    color: 'green',
     icon: Globe,
-    color: '#a78bfa',
-    title: 'Open Platform',
-    body: 'The code, the weights, the research — all open. Anyone should be able to run a healthier feed without needing approval from a tech company or a $10/month subscription.',
+    eyebrow: 'Open Platform',
+    title: 'The code, the weights, and the research should be open.',
+    body: 'A healthier feed should not depend on a closed platform deciding that care is profitable enough to ship.',
+    visual: <FutureSignal items={['Open source core', 'Transparent weights', 'Research citations']} />,
   },
   {
+    color: 'blue',
     icon: Plug,
-    color: '#67e8f9',
-    title: 'Real Content Integration',
-    body: 'Connect Chrysalis directly to real social feeds — Instagram, TikTok, YouTube — and reroute them through the algorithm in real time. Same content you already follow. Completely different experience.',
+    eyebrow: 'Real Feeds',
+    title: 'The next version should sit between people and real content.',
+    body: 'The goal is to reroute existing feeds through Chrysalis so users can keep the creators they follow and change the ranking logic.',
+    visual: <FutureSignal items={['YouTube', 'TikTok', 'Instagram', 'Custom APIs']} />,
   },
   {
+    color: 'pink',
     icon: Eye,
-    color: '#f0abfc',
-    title: 'Teen Transparency Dashboard',
-    body: "Let teenagers actually see what their algorithm is doing: which posts were boosted, which were filtered, and why. Real controls, not just settings menus. Transparency as a feature.",
+    eyebrow: 'Transparency',
+    title: 'Teenagers deserve to see what their algorithm is doing.',
+    body: 'The interface should reveal why posts were boosted, softened, delayed, or filtered so control becomes understandable.',
+    visual: <FutureSignal items={['Why this post?', 'Boosted for balance', 'Muted for risk']} />,
   },
 ];
 
 export function FutureVision() {
-  const ref    = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-60px' });
-
   return (
-    <section id="future" className="py-32 px-8 lg:px-16 gradient-mesh overflow-hidden">
-      <div className="max-w-7xl mx-auto flex flex-col gap-14" ref={ref}>
-
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="flex flex-col gap-4 items-center text-center"
-        >
-          <span className="section-badge liquid-glass">What's Next</span>
-          <h2 className="font-heading text-5xl md:text-6xl text-foreground leading-[0.9] tracking-[-2px] max-w-2xl">
-            The algorithm is just the beginning.
-          </h2>
-          <p className="font-body font-light text-base text-foreground/55 max-w-xl">
-            Chrysalis is a working prototype today. The goal is a real product —
-            free, open, and in the hands of the teenagers who need it most.
-          </p>
-        </motion.div>
-
-        {/* Goal cards */}
-        <AnimatedSection stagger className="grid md:grid-cols-3 gap-6">
-          {GOALS.map(({ icon: Icon, color, title, body }, i) => (
-            <motion.div
-              key={title}
-              initial={{ opacity: 0, y: 28 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.65, delay: 0.1 + i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="glass-card rounded-2xl p-7 flex flex-col gap-5 group hover:scale-[1.02] transition-transform duration-300"
-            >
-              {/* Icon */}
-              <div
-                className="w-11 h-11 rounded-full flex items-center justify-center"
-                style={{ background: `${color}20`, border: `1px solid ${color}40` }}
-              >
-                <Icon className="w-5 h-5" style={{ color }} />
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <h3 className="font-heading text-2xl text-foreground">{title}</h3>
-                <p className="font-body font-light text-sm text-foreground/60 leading-relaxed">{body}</p>
-              </div>
-
-              {/* Iridescent bottom line on hover */}
-              <div
-                className="h-px rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-400 mt-auto"
-                style={{ background: `linear-gradient(90deg, ${color}, transparent)` }}
-              />
-            </motion.div>
-          ))}
-        </AnimatedSection>
-
-        {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.45 }}
-          className="flex flex-col items-center gap-4 text-center pt-4"
-        >
-          <p className="font-body font-light text-base text-foreground/55">
-            Want to help build it?
-          </p>
-          <button
-            onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
-            className="liquid-glass-strong rounded-full px-7 py-3 font-body font-medium text-sm text-foreground flex items-center gap-2 hover:scale-105 transition-transform duration-200"
-          >
-            Get in touch <ArrowUpRight className="w-4 h-4" />
-          </button>
-        </motion.div>
-
-      </div>
-    </section>
+    <BeveledSliderSection
+      id="future"
+      label="What's Next"
+      heading="The algorithm is just the beginning."
+      intro="Chrysalis is a prototype today. The larger vision is a feed layer that is open, transparent, and built for the people using it."
+      slides={SLIDES}
+    />
   );
 }

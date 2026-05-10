@@ -2,34 +2,47 @@ import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 import { Github, Linkedin, Mail, Instagram, ArrowUpRight } from 'lucide-react';
 
+const SubstackIcon = ({ className }) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M22.539 8.242H1.46V6.741h21.08v1.501zm0 2.286H1.46V12h21.08v-1.471zM1.46 15.272h21.08v-1.5H1.46v1.5zM1.46 1.5v1.501h21.08V1.5H1.46zm0 20.998L12 17.085l10.54 5.413V9.836H1.46v12.662z"/>
+  </svg>
+);
+
 const LINKS = [
   {
     icon: Github,
     label: 'GitHub',
     sub: 'See the code',
     href: 'https://github.com/CatInTheRiceHat',
-    color: '#818cf8',
+    color: 'var(--wing-green)',
   },
   {
     icon: Linkedin,
     label: 'LinkedIn',
     sub: "Let's connect",
     href: 'https://www.linkedin.com/in/elaine-che-03647530a/',
-    color: '#67e8f9',
+    color: 'var(--wing-blue)',
   },
   {
     icon: Mail,
     label: 'Email',
     sub: 'Say hello',
     href: 'mailto:elaineyouyuanche@gmail.com',
-    color: '#f0abfc',
+    color: 'var(--wing-pink)',
   },
   {
     icon: Instagram,
     label: 'Instagram',
     sub: 'Follow along',
     href: 'https://www.instagram.com/elaineyouyuanche/',
-    color: '#fda4af',
+    color: 'var(--wing-yellow)',
+  },
+  {
+    icon: SubstackIcon,
+    label: 'Substack',
+    sub: 'Read the blog',
+    href: '#',
+    color: '#f97316',
   },
 ];
 
@@ -43,16 +56,16 @@ function ButterflyFooterIcon() {
       <ellipse cx="16" cy="13" rx="0.8" ry="3.5" fill="#4a3060" opacity="0.5"/>
       <defs>
         <linearGradient id="fl1" x1="1" y1="10" x2="16" y2="13" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#a78bfa"/><stop offset="1" stopColor="#67e8f9"/>
+          <stop stopColor="var(--wing-green)"/><stop offset="1" stopColor="var(--wing-blue)"/>
         </linearGradient>
         <linearGradient id="fl2" x1="31" y1="10" x2="16" y2="13" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#f0abfc"/><stop offset="1" stopColor="#818cf8"/>
+          <stop stopColor="var(--wing-pink)"/><stop offset="1" stopColor="var(--wing-green)"/>
         </linearGradient>
         <linearGradient id="fl3" x1="2" y1="14" x2="16" y2="13" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fda4af"/><stop offset="1" stopColor="#a78bfa"/>
+          <stop stopColor="var(--wing-yellow)"/><stop offset="1" stopColor="var(--wing-green)"/>
         </linearGradient>
         <linearGradient id="fl4" x1="30" y1="14" x2="16" y2="13" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#67e8f9"/><stop offset="1" stopColor="#f0abfc"/>
+          <stop stopColor="var(--wing-blue)"/><stop offset="1" stopColor="var(--wing-pink)"/>
         </linearGradient>
       </defs>
     </svg>
@@ -72,56 +85,91 @@ export function Contact() {
       <div className="max-w-5xl mx-auto flex flex-col gap-16" ref={ref}>
 
         {/* Heading */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.7 }}
-            className="flex flex-col gap-5 items-center text-center"
-          >
-            <span className="section-badge liquid-glass">Contact</span>
-            <h2 className="font-heading text-6xl md:text-7xl text-foreground leading-[0.88] tracking-[-3px]">
-              Let's talk.
-            </h2>
-            <p className="font-body font-light text-base text-foreground/55 max-w-md">
-              Whether you're a researcher, a recruiter, or just someone who cares
-              about the same things I do — I'd love to hear from you.
-            </p>
-          </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7 }}
+          className="flex flex-col gap-5 items-center text-center"
+        >
+          <span className="section-badge liquid-glass">Contact</span>
+          <h2 className="font-heading text-6xl md:text-7xl text-foreground leading-[0.88] tracking-[-3px]">
+            Let's talk.
+          </h2>
+          <p className="font-body font-light text-base text-foreground/55 max-w-md">
+            Whether you're a researcher, a recruiter, or just someone who cares
+            about the same things I do — I'd love to hear from you.
+          </p>
+        </motion.div>
+
+        {/* Creator card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7, delay: 0.1 }}
+          className="flex justify-center"
+        >
+          <div className="liquid-glass rounded-2xl p-6 flex items-center gap-5 max-w-sm w-full">
+            <div
+              className="rounded-full flex-shrink-0"
+              style={{
+                width: 72,
+                height: 72,
+                background: 'linear-gradient(135deg, var(--wing-green) 0%, var(--wing-blue) 42%, var(--wing-pink) 72%, var(--wing-yellow) 100%)',
+              }}
+              aria-hidden="true"
+            />
+            <div className="flex flex-col gap-1">
+              <h3 className="font-body font-semibold text-lg text-foreground leading-tight">Elaine</h3>
+              <p className="font-body font-light text-sm text-foreground/50">Creator &amp; Developer, Chrysalis</p>
+              <div className="flex gap-3 mt-2">
+                <a href="#" aria-label="Substack" className="text-orange-500 hover:text-orange-600 transition-colors">
+                  <SubstackIcon className="w-4 h-4" />
+                </a>
+                <a href="https://www.linkedin.com/in/elaine-che-03647530a/" aria-label="LinkedIn" className="text-indigo-400 hover:text-indigo-500 transition-colors">
+                  <Linkedin className="w-4 h-4" />
+                </a>
+                <a href="https://github.com/CatInTheRiceHat" aria-label="GitHub" className="text-foreground/50 hover:text-foreground/80 transition-colors">
+                  <Github className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Contact links */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.7, delay: 0.15 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4"
-          >
-            {LINKS.map(({ icon: Icon, label, sub, href, color }, i) => (
-              <motion.a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                initial={{ opacity: 0, y: 16 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}
-                className="glass-card rounded-2xl p-6 flex flex-col gap-4 group hover:scale-105 transition-transform duration-200"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7, delay: 0.15 }}
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4"
+        >
+          {LINKS.map(({ icon: Icon, label, sub, href, color }, i) => (
+            <motion.a
+              key={label}
+              href={href}
+              target={href.startsWith('http') ? '_blank' : undefined}
+              rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+              initial={{ opacity: 0, y: 16 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}
+              className="glass-card rounded-2xl p-6 flex flex-col gap-4 group hover:scale-105 transition-transform duration-200"
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ background: `${color}18`, border: `1px solid ${color}35` }}
               >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{ background: `${color}18`, border: `1px solid ${color}35` }}
-                >
-                  <Icon className="w-4 h-4" style={{ color }} />
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <p className="font-body font-medium text-sm text-foreground/80">{label}</p>
-                  <p className="font-body font-light text-xs text-foreground/45">{sub}</p>
-                </div>
-                <ArrowUpRight
-                  className="w-4 h-4 text-foreground/25 group-hover:text-foreground/60 transition-colors ml-auto mt-auto"
-                />
-              </motion.a>
-            ))}
-          </motion.div>
+                <Icon className="w-4 h-4" style={{ color }} />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <p className="font-body font-medium text-sm text-foreground/80">{label}</p>
+                <p className="font-body font-light text-xs text-foreground/45">{sub}</p>
+              </div>
+              <ArrowUpRight
+                className="w-4 h-4 text-foreground/25 group-hover:text-foreground/60 transition-colors ml-auto mt-auto"
+              />
+            </motion.a>
+          ))}
+        </motion.div>
 
         {/* Footer bar */}
         <motion.div

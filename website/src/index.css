@@ -26,6 +26,27 @@
   --glass-border: rgba(255, 255, 255, 0.25);
   --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
   --glass-blur: 16px;
+  --step-6: clamp(2.986rem, calc(0.7966rem + 7.6154vw), 19.0735rem);
+  --step-5: clamp(2.4883rem, calc(0.7503rem + 6.0452vw), 15.2588rem);
+  --step-4: clamp(2.0736rem, calc(0.6945rem + 4.7969vw), 12.207rem);
+  --step-3: clamp(1.728rem, calc(0.6341rem + 3.8048vw), 9.7656rem);
+  --step-2: clamp(1.44rem, calc(0.5727rem + 3.0166vw), 7.8125rem);
+  --step-1: clamp(1.2rem, calc(0.5127rem + 2.3905vw), 6.25rem);
+  --step-0: clamp(1rem, calc(0.4556rem + 1.8935vw), 5rem);
+  --step--1: clamp(0.8333rem, calc(0.4024rem + 1.499vw), 4rem);
+  --step--2: clamp(0.6944rem, calc(0.3535rem + 1.1861vw), 3.2rem);
+  --step--3: clamp(0.5787rem, calc(0.3091rem + 0.9379vw), 2.56rem);
+  --space-3xl: clamp(6rem, calc(2.7337rem + 11.3609vw), 30rem);
+  --space-2xl: clamp(4rem, calc(1.8225rem + 7.574vw), 20rem);
+  --space-xl: clamp(3rem, calc(1.3669rem + 5.6805vw), 15rem);
+  --space-l: clamp(2rem, calc(0.9112rem + 3.787vw), 10rem);
+  --space-m: clamp(1.5rem, calc(0.6834rem + 2.8402vw), 7.5rem);
+  --space-s: clamp(1rem, calc(0.4556rem + 1.8935vw), 5rem);
+  --space-xs: clamp(0.75rem, calc(0.3417rem + 1.4201vw), 3.75rem);
+  --space-2xs: clamp(0.5rem, calc(0.2278rem + 0.9467vw), 2.5rem);
+  --space-3xs: clamp(0.25rem, calc(0.1139rem + 0.4734vw), 1.25rem);
+  --border-radius-top: 40px;
+  --section-padding: var(--space-l);
 }
 
 body {

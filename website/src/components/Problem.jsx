@@ -1,9 +1,41 @@
-import { useRef } from 'react';
-import { motion, useInView } from 'motion/react';
+import { useRef, useEffect } from 'react';
+import { motion, useInView, useMotionValue, useTransform, animate } from 'motion/react';
+
+function StatCounter({ value, suffix, label, delay = 0 }) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const count = useMotionValue(0);
+  const displayed = useTransform(count, (v) => {
+    const fixed = suffix === ' hrs/day' ? v.toFixed(1) : Math.round(v);
+    return `${fixed}${suffix}`;
+  });
+
+  useEffect(() => {
+    if (isInView) {
+      const controls = animate(count, value, {
+        duration: 1.8,
+        delay,
+        ease: [0.22, 1, 0.36, 1],
+      });
+      return controls.stop;
+    }
+  }, [isInView, count, value, delay]);
+
+  return (
+    <div ref={ref} className="flex flex-col gap-2">
+      <motion.span className="font-heading text-5xl lg:text-6xl tracking-tight text-foreground">
+        {displayed}
+      </motion.span>
+      <span className="font-body font-light text-sm text-foreground/45 leading-snug max-w-[160px]">
+        {label}
+      </span>
+    </div>
+  );
+}
 
 export function Problem() {
   const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-100px' });
+  const inView = useInView(ref, { once: true, amount: 0.15 });
 
   return (
     <section id="problem" ref={ref} className="px-6 lg:px-20 py-28 lg:py-40">
@@ -41,9 +73,28 @@ export function Problem() {
           initial={{ scaleX: 0 }}
           animate={inView ? { scaleX: 1 } : {}}
           transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          style={{ transformOrigin: 'left' }}
-          className="mt-16 h-px w-32 bg-gradient-to-r from-violet-400 via-cyan-300 to-pink-400 opacity-60"
+          className="mt-16 h-px w-32 opacity-70"
+          style={{
+            transformOrigin: 'left',
+            background: 'linear-gradient(90deg, var(--wing-green), var(--wing-blue), var(--wing-pink))',
+          }}
         />
+
+        {/* Stat counters */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.8, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-10 mt-14 pt-10 border-t border-black/8"
+        >
+          {[
+            { value: 2.5, suffix: ' hrs/day', label: 'avg. daily teen social media use' },
+            { value: 43, suffix: '%', label: 'of teens say it worsens their mental health' },
+            { value: 17, suffix: 'M', label: 'US teens actively on social platforms' },
+          ].map((stat, i) => (
+            <StatCounter key={i} {...stat} delay={0.7 + i * 0.15} />
+          ))}
+        </motion.div>
       </div>
     </section>
   );

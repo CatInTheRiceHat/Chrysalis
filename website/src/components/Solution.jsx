@@ -3,10 +3,10 @@ import { motion, useInView } from 'motion/react';
 
 export function Solution() {
   const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-100px' });
+  const inView = useInView(ref, { once: true, amount: 0.15 });
 
   return (
-    <section id="solution" ref={ref} className="px-6 lg:px-20 py-28 lg:py-40">
+    <section id="solution" ref={ref} className="bg-white px-6 lg:px-20 py-28 lg:py-40">
       <div className="max-w-4xl">
         <motion.span
           initial={{ opacity: 0, x: -30 }}
@@ -45,8 +45,14 @@ export function Solution() {
           style={{ transformOrigin: 'left' }}
           className="mt-16 flex gap-3"
         >
-          <div className="h-px flex-1 max-w-xs bg-gradient-to-r from-violet-400 via-cyan-300 to-pink-400 opacity-60" />
-          <div className="h-px w-8 bg-gradient-to-r from-pink-400 to-violet-400 opacity-40" />
+          <div
+            className="h-px flex-1 max-w-xs opacity-70"
+            style={{ background: 'linear-gradient(90deg, var(--wing-blue), var(--wing-green), var(--wing-yellow))' }}
+          />
+          <div
+            className="h-px w-8 opacity-50"
+            style={{ background: 'linear-gradient(90deg, var(--wing-pink), var(--wing-yellow))' }}
+          />
         </motion.div>
       </div>
     </section>
