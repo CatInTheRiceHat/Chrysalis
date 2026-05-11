@@ -379,3 +379,98 @@ def cron_drop(mode: str, authorization: str = Header(None)):
     feed = _run_drop(weights)
     _write_drop(mode, feed, scheduled_at)
     return {"ok": True, "mode": mode, "items": len(feed)}
+
+
+@app.get("/api/cron/extract")
+def cron_extract(authorization: str = Header(None)):
+    cron_secret = os.environ.get("CRON_SECRET", "")
+    if cron_secret and authorization != f"Bearer {cron_secret}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    sys.path.insert(0, str(ROOT / "integrations"))
+    from integrations.youtube_extractor import (
+        _fetch_ids_by_topic,
+        _fetch_stats_batch,
+        _classify_heuristic,
+        _compute_active_ratio,
+        _infer_creator_trait,
+        ALL_TOPICS,
+        CATEGORY_TO_TOPIC,
+    )
+    import time
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Fetch IDs for all topics (15 per topic)
+    all_ids: list[str] = []
+    for topic in ALL_TOPICS:
+        all_ids += _fetch_ids_by_topic(topic, max_results=15)
+
+    # Deduplicate
+    seen: set[str] = set()
+    all_ids = [i for i in all_ids if not (i in seen or seen.add(i))]
+
+    # Skip already-stored videos
+    if all_ids:
+        cur.execute(
+            "SELECT video_id FROM videos WHERE video_id = ANY(%s)",
+            (all_ids,),
+        )
+        cached = {r[0] for r in cur.fetchall()}
+    else:
+        cached = set()
+
+    new_ids = [i for i in all_ids if i not in cached]
+    inserted = 0
+
+    BATCH_SIZE = 50
+    for i in range(0, len(new_ids), BATCH_SIZE):
+        batch = new_ids[i : i + BATCH_SIZE]
+        stats_map = _fetch_stats_batch(batch)
+
+        for vid_id in batch:
+            info = stats_map.get(vid_id)
+            if not info:
+                continue
+            snip  = info["snippet"]
+            stats = info["statistics"]
+
+            title         = snip.get("title", "")
+            description   = snip.get("description", "")
+            channel_id    = snip.get("channelId", "")
+            channel_title = snip.get("channelTitle", "")
+            category_id   = snip.get("categoryId", "24")
+            published_at  = snip.get("publishedAt", "")
+            topic         = CATEGORY_TO_TOPIC.get(category_id, "entertainment")
+            active_ratio  = _compute_active_ratio(stats)
+            scores        = _classify_heuristic(title, description)
+
+            cur.execute(
+                """
+                INSERT INTO videos VALUES (
+                    %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
+                ) ON CONFLICT (video_id) DO NOTHING
+                """,
+                (
+                    vid_id, title, description,
+                    channel_id, channel_title,
+                    topic, category_id,
+                    int(stats.get("viewCount", 0) or 0),
+                    int(stats.get("likeCount",  0) or 0),
+                    int(stats.get("commentCount",0) or 0),
+                    published_at,
+                    active_ratio,
+                    scores["appearance_comparison"],
+                    scores["opinion_comparison"],
+                    scores["prosocial"],
+                    scores["risk"],
+                    scores["creator_authenticity"],
+                    time.time(), time.time(),
+                ),
+            )
+            inserted += 1
+
+    conn.commit()
+    conn.close()
+    return {"ok": True, "new_videos": inserted, "skipped": len(cached)}
