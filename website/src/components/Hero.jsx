@@ -4,9 +4,9 @@ import { ArrowUpRight } from 'lucide-react';
 import ButterflyCanvas from './ButterflyCanvas';
 
 const TAGLINES = [
-  'Social Media Was Broken. So I Fixed the Algorithm.',
-  "The Algorithm Didn't Care About You.",
-  'What If Your Feed Actually Helped You?',
+  'Rewriting the Feed for Human Wellbeing',
+  'A Healthier Algorithm for a Noisier Internet',
+  'Recommendation Logic That Can Actually Care',
 ];
 
 function CyclingHeadline() {
@@ -20,7 +20,7 @@ function CyclingHeadline() {
   }, []);
 
   return (
-    <div className="max-w-2xl w-full" style={{ minHeight: '5.5rem' }}>
+    <div className="hero-headline-frame">
       <AnimatePresence mode="wait">
         <motion.h1
           key={index}
@@ -28,7 +28,7 @@ function CyclingHeadline() {
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           exit={{ opacity: 0, y: -18, filter: 'blur(4px)' }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-          className="font-heading text-5xl md:text-6xl lg:text-7xl leading-[0.88] tracking-[-2px] text-foreground"
+          className="hero-heading"
         >
           {TAGLINES[index]}
         </motion.h1>
@@ -50,10 +50,13 @@ export function Hero() {
   });
 
   const butterflyY = useTransform(scrollYProgress, [0, 1], [0, -160]);
-  const butterflyX = useTransform(smoothX, [-1, 1], [-28, 28]);
-  const butterflyTilt = useTransform(smoothX, [-1, 1], [-5, 5]);
-  const butterflyLift = useTransform(smoothY, [-1, 1], [-22, 22]);
-  const textY = useTransform(scrollYProgress, [0, 1], [0, -70]);
+  const butterflyX = useTransform(smoothX, [-1, 1], [-64, 64]);
+  const butterflyTilt = useTransform(smoothX, [-1, 1], [-9, 9]);
+  const butterflyLift = useTransform(smoothY, [-1, 1], [-46, 46]);
+  const butterflyScale = useTransform(scrollYProgress, [0, 1], [1, 0.9]);
+  const networkX = useTransform(smoothX, [-1, 1], [28, -28]);
+  const networkY = useTransform(smoothY, [-1, 1], [18, -18]);
+  const textY = useTransform(scrollYProgress, [0, 1], [0, -90]);
   const textBlur = useTransform(scrollYProgress, [0.55, 1], [0, 6]);
   const textFilter = useTransform(textBlur, (value) => `blur(${value}px)`);
 
@@ -77,15 +80,25 @@ export function Hero() {
     <section
       ref={heroRef}
       id="home"
-      className="relative min-h-screen bg-white flex items-center overflow-hidden"
+      className="hero-cardiatec"
       onPointerMove={handlePointerMove}
     >
-      {/* Parallax layer — butterfly drifts up as hero scrolls out */}
+      <motion.div
+        aria-hidden="true"
+        className="hero-wave-field"
+        style={reduceMotion ? undefined : { x: networkX, y: networkY }}
+      >
+        <span />
+        <span />
+        <span />
+      </motion.div>
+
       <motion.div
         style={{
           y: butterflyY,
           x: reduceMotion ? 0 : butterflyX,
           rotate: reduceMotion ? 0 : butterflyTilt,
+          scale: reduceMotion ? 1 : butterflyScale,
           position: 'absolute',
           right: 0,
           top: 0,
@@ -95,15 +108,14 @@ export function Hero() {
           zIndex: 1,
         }}
       >
-        {/* Entrance fade */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.4, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          initial={{ opacity: 0, scale: 0.74, filter: 'blur(16px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          transition={{ duration: 1.25, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
           className="w-full h-full"
         >
           <motion.div
-            className="absolute right-[-5%] top-1/2 -translate-y-1/2"
+            className="hero-butterfly-stage"
             style={{ pointerEvents: 'auto', y: reduceMotion ? 0 : butterflyLift }}
           >
             <ButterflyCanvas width={1100} height={700} />
@@ -111,61 +123,57 @@ export function Hero() {
         </motion.div>
       </motion.div>
 
-      {/* ── Main layout ── */}
       <motion.div
-        className="relative w-full max-w-7xl mx-auto px-8 lg:px-16 pt-32 pb-20"
+        className="hero-cardiatec__content"
         style={{
           zIndex: 2,
           y: reduceMotion ? 0 : textY,
           filter: reduceMotion ? undefined : textFilter,
         }}
       >
-        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-0">
+        <motion.p
+          className="hero-kicker"
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.75, delay: 0.15 }}
+        >
+          Chrysalis Algorithm Project
+        </motion.p>
+        <CyclingHeadline />
+        <motion.p
+          initial={{ opacity: 0, filter: 'blur(8px)', y: 50, scale: 0.97 }}
+          animate={{ opacity: 1, filter: 'blur(0px)', y: 0, scale: 1 }}
+          transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="hero-subhead"
+        >
+          Chrysalis is a research-backed recommendation algorithm that changes what a feed optimizes for:
+          less passive scrolling, more diversity, safer timing, and clearer control.
+        </motion.p>
 
-          {/* ── Text column ── */}
-          <div className="flex-1 flex flex-col items-start gap-7">
-
-            {/* Cycling headline */}
-            <CyclingHeadline />
-
-            {/* Subheadline */}
-            <motion.p
-              initial={{ opacity: 0, filter: 'blur(8px)', y: 50, scale: 0.97 }}
-              animate={{ opacity: 1, filter: 'blur(0px)', y: 0, scale: 1 }}
-              transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="font-body font-light text-base md:text-lg text-foreground/60 max-w-lg leading-relaxed"
-            >
-              Chrysalis is a recommendation algorithm built from research on what social media
-              actually does to young people — and redesigned from the ground up to do better.
-            </motion.p>
-
-            {/* CTA */}
-            <motion.div
-              initial={{ opacity: 0, y: 50, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 1.2, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="flex items-center gap-5 flex-wrap"
-            >
-              <motion.button
-                onClick={scrollToProject}
-                data-cursor="soft"
-                whileHover={{ scale: 1.06 }}
-                whileTap={{ scale: 0.96 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                className="liquid-glass-strong rounded-full px-6 py-3 flex items-center gap-2 font-body font-medium text-sm text-foreground"
-              >
-                See the Project
-                <ArrowUpRight className="w-4 h-4" />
-              </motion.button>
-            </motion.div>
-
+        <motion.div
+          initial={{ opacity: 0, y: 50, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 1.2, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="hero-actions"
+        >
+          <motion.button
+            onClick={scrollToProject}
+            data-cursor="soft"
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            className="hero-primary-button"
+          >
+            See the Research
+            <ArrowUpRight className="w-4 h-4" />
+          </motion.button>
+          <div className="hero-pagination" aria-hidden="true">
+            <span>01</span>
+            <i />
+            <span>06</span>
           </div>
-
-          {/* ── Butterfly spacer ── */}
-          <div className="flex-1 hidden lg:block" />
-        </div>
+        </motion.div>
       </motion.div>
-
     </section>
   );
 }

@@ -1,44 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Lenis from 'lenis';
 import { AnimatePresence } from 'motion/react';
 import { Navbar } from './components/Navbar';
-import { Hero } from './components/Hero';
-import { Problem } from './components/Problem';
-import { Solution } from './components/Solution';
-import { Contact } from './components/Contact';
 import { LiveDemo } from './components/LiveDemo';
 import { IntroScreen } from './components/IntroScreen';
-import { ProjectStory } from './components/ProjectStory';
-import { Journey } from './components/Journey';
-import { FutureVision } from './components/FutureVision';
 import { CustomCursor } from './components/CustomCursor';
-import { CardiaPanel } from './components/CardiaPanel';
+import { RebootPage } from './components/RebootPage';
 import './App.css';
 
 function MainPage() {
-  return (
-    <>
-      <Hero />
-      <div className="homepage-panel-stack">
-        <CardiaPanel color="pink">
-          <Problem />
-        </CardiaPanel>
-        <CardiaPanel color="blue">
-          <Solution />
-        </CardiaPanel>
-      </div>
-      <ProjectStory />
-      <Journey />
-      <FutureVision />
-      <CardiaPanel color="green" className="cardia-panel-shell--final">
-        <Contact />
-      </CardiaPanel>
-    </>
-  );
+  return <RebootPage />;
 }
 
 function App() {
+  useEffect(() => {
+    const lenis = new Lenis();
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    const rafId = requestAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.location.hash) {
+      return;
+    }
+    const id = window.location.hash.slice(1);
+    const timeout = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'auto' });
+    }, 100);
+    return () => clearTimeout(timeout);
+  }, []);
+
   const [showIntro, setShowIntro] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      return false;
+    }
     if (typeof window !== 'undefined' && sessionStorage.getItem('chrysalis-intro-seen')) {
       return false;
     }
@@ -55,7 +58,7 @@ function App() {
           <IntroScreen key="intro" onDone={() => setShowIntro(false)} />
         )}
       </AnimatePresence>
-      <div className="bg-white min-h-screen overflow-x-hidden">
+      <div className="min-h-screen overflow-x-hidden">
         <CustomCursor />
         <Navbar />
         <Routes>

@@ -77,11 +77,7 @@ export function Contact() {
   const inView = useInView(ref, { once: true, margin: '-60px' });
 
   return (
-    <section id="contact" className="relative py-32 px-8 lg:px-16 gradient-mesh overflow-hidden">
-      {/* Decorative orbs */}
-      <div className="orb absolute w-72 h-72 opacity-30 pointer-events-none" style={{ top: '5%', right: '-6%', animationDelay: '1s' }} />
-      <div className="orb absolute w-48 h-48 opacity-20 pointer-events-none" style={{ bottom: '10%', left: '-4%', animationDelay: '3.5s' }} />
-
+    <section id="contact" className="contact-section">
       <div className="max-w-5xl mx-auto flex flex-col gap-16" ref={ref}>
 
         {/* Heading */}
@@ -91,7 +87,7 @@ export function Contact() {
           transition={{ duration: 0.7 }}
           className="flex flex-col gap-5 items-center text-center"
         >
-          <span className="section-badge liquid-glass">Contact</span>
+          <span className="contact-section__kicker">Contact</span>
           <h2 className="font-heading text-6xl md:text-7xl text-foreground leading-[0.88] tracking-[-3px]">
             Let's talk.
           </h2>
@@ -152,7 +148,7 @@ export function Contact() {
               initial={{ opacity: 0, y: 16 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.2 + i * 0.08 }}
-              className="glass-card rounded-2xl p-6 flex flex-col gap-4 group hover:scale-105 transition-transform duration-200"
+              className="contact-link-card group"
             >
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center"

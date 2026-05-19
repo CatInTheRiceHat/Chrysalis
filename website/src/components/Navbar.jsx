@@ -6,9 +6,9 @@ import { Menu, X } from 'lucide-react';
 const SCROLL_LINKS = [
   { label: 'Problem', id: 'problem' },
   { label: 'Solution', id: 'solution' },
-  { label: 'Project', id: 'project' },
   { label: 'Journey', id: 'journey' },
   { label: 'Future', id: 'future' },
+  { label: 'Creator', id: 'creator' },
   { label: 'Contact', id: 'contact' },
 ];
 
@@ -60,48 +60,33 @@ export function Navbar() {
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
-        className="fixed top-4 left-0 right-0 z-50 px-5 lg:px-14"
+        className={`ct-nav ${scrolled ? 'ct-nav--scrolled' : ''}`}
       >
-        <div className="flex items-center justify-between">
+        <div className="ct-nav__inner">
 
           <button
             type="button"
             onClick={goHome}
             data-cursor="soft"
-            className="liquid-glass rounded-full px-3 py-2 flex items-center gap-2 group"
+            className="ct-nav__brand"
             aria-label="Go to homepage"
           >
             <img
               src="/butterflylogo.png"
               alt=""
-              className="w-8 h-8 object-contain"
+              className="ct-nav__logo"
               aria-hidden="true"
             />
-            <span className="font-heading text-lg text-foreground tracking-tight pr-1">
-              Chrysalis
-            </span>
+            <span>Chrysalis</span>
           </button>
 
-          <div
-            className="hidden xl:flex items-center gap-0.5 rounded-full px-1.5 py-1 transition-all duration-300"
-            style={{
-              background: scrolled ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.60)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.80)',
-              boxShadow: '0 4px 20px rgba(180,160,220,0.10)',
-            }}
-          >
+          <div className="ct-nav__links">
             {SCROLL_LINKS.map(({ label, id }) => (
               <button
                 key={id}
                 onClick={() => scrollTo(id)}
                 data-cursor="wide"
-                className={`px-3.5 py-2 rounded-full text-sm font-body font-medium transition-all duration-200 ${
-                  !onDemo && active === id
-                    ? 'bg-white/80 text-foreground shadow-sm'
-                    : 'text-foreground/60 hover:text-foreground hover:bg-white/40'
-                }`}
+                className={!onDemo && active === id ? 'is-active' : ''}
               >
                 {label}
               </button>
@@ -110,21 +95,17 @@ export function Navbar() {
             <Link
               to="/demo"
               data-cursor="wide"
-              className={`px-3.5 py-2 rounded-full text-sm font-body font-medium transition-all duration-200 ${
-                onDemo
-                  ? 'bg-white/80 text-foreground shadow-sm'
-                  : 'text-foreground/60 hover:text-foreground hover:bg-white/40'
-              }`}
+              className={onDemo ? 'is-active' : ''}
             >
               Demo
             </Link>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="ct-nav__actions">
             <button
               onClick={() => scrollTo('contact')}
               data-cursor="soft"
-              className="hidden sm:flex liquid-glass-strong rounded-full px-4 py-2 text-sm font-body font-medium text-foreground hover:scale-105 transition-transform duration-200"
+              className="ct-nav__contact"
             >
               Contact
             </button>
@@ -132,10 +113,10 @@ export function Navbar() {
               type="button"
               onClick={() => setMenuOpen(true)}
               data-cursor="soft"
-              className="liquid-glass-strong rounded-full w-11 h-11 flex items-center justify-center text-foreground"
+              className="ct-nav__menu"
               aria-label="Open navigation menu"
             >
-              <Menu className="w-5 h-5" />
+              <Menu size={19} />
             </button>
           </div>
         </div>
@@ -158,9 +139,9 @@ export function Navbar() {
               transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="nav-overlay__top">
-                <div className="flex items-center gap-3">
-                  <img src="/butterflylogo.png" alt="" className="w-9 h-9 brightness-0 invert" aria-hidden="true" />
-                  <span className="font-heading text-2xl text-white">Chrysalis</span>
+                <div className="ct-overlay-brand">
+                  <img src="/butterflylogo.png" alt="" aria-hidden="true" />
+                  <span>Chrysalis</span>
                 </div>
                 <button
                   type="button"
@@ -168,7 +149,7 @@ export function Navbar() {
                   className="nav-overlay__close"
                   aria-label="Close navigation menu"
                 >
-                  <X className="w-5 h-5" />
+                  <X size={19} />
                 </button>
               </div>
 

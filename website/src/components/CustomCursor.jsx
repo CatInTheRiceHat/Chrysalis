@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react';
 import { motion, useMotionValue, useSpring, useReducedMotion } from 'motion/react';
 
-const HOVER_SELECTOR = 'a, button, [data-cursor], .glass-card, .liquid-glass, .liquid-glass-strong';
+const REVEAL_SELECTOR = '[data-reveal-color], .ct-reveal-color';
+const HOVER_SELECTOR = `a, button, [data-cursor], .glass-card, .liquid-glass, .liquid-glass-strong, ${REVEAL_SELECTOR}`;
+const TRAIL_COLORS = [
+  'rgba(151, 223, 207, 0.32)',
+  'rgba(216, 160, 200, 0.28)',
+  'rgba(232, 200, 120, 0.26)',
+  'rgba(185, 194, 138, 0.28)',
+];
 
 export function CustomCursor() {
   const reduceMotion = useReducedMotion();
   const [enabled, setEnabled] = useState(false);
   const [variant, setVariant] = useState('idle');
+  const [trail, setTrail] = useState([]);
   const x = useMotionValue(-100);
   const y = useMotionValue(-100);
   const smoothX = useSpring(x, { stiffness: 500, damping: 42, mass: 0.4 });
@@ -21,13 +29,96 @@ export function CustomCursor() {
   }, [reduceMotion]);
 
   useEffect(() => {
+    const root = document.documentElement;
+    const query = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const updateMode = () => {
+      root.classList.toggle('has-color-cursor', query.matches && !reduceMotion);
+      root.classList.toggle('has-scroll-reveal', !query.matches && !reduceMotion);
+    };
+
+    updateMode();
+    query.addEventListener('change', updateMode);
+    return () => {
+      query.removeEventListener('change', updateMode);
+      root.classList.remove('has-color-cursor', 'has-scroll-reveal', 'is-reveal-active');
+      root.style.removeProperty('--reveal-x');
+      root.style.removeProperty('--reveal-y');
+    };
+  }, [reduceMotion]);
+
+  useEffect(() => {
+    if (enabled || reduceMotion) {
+      return undefined;
+    }
+
+    const targets = Array.from(document.querySelectorAll(REVEAL_SELECTOR));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          entry.target.classList.toggle('is-revealed', entry.isIntersecting);
+        });
+      },
+      { rootMargin: '-18% 0px -22%', threshold: 0.08 },
+    );
+
+    targets.forEach((target) => observer.observe(target));
+    return () => {
+      observer.disconnect();
+      targets.forEach((target) => target.classList.remove('is-revealed'));
+    };
+  }, [enabled, reduceMotion]);
+
+  useEffect(() => {
     if (!enabled) {
       return undefined;
     }
 
+    const root = document.documentElement;
+    let revealTargets = Array.from(document.querySelectorAll(REVEAL_SELECTOR));
+    let lastTrailAt = 0;
+    let lastTargetRefresh = 0;
+
     const onMove = (event) => {
       x.set(event.clientX);
       y.set(event.clientY);
+      root.classList.add('is-reveal-active');
+      root.style.setProperty('--reveal-x', `${event.clientX}px`);
+      root.style.setProperty('--reveal-y', `${event.clientY}px`);
+
+      const now = performance.now();
+      if (now - lastTargetRefresh > 1200) {
+        revealTargets = Array.from(document.querySelectorAll(REVEAL_SELECTOR));
+        lastTargetRefresh = now;
+      }
+
+      revealTargets.forEach((target) => {
+        const rect = target.getBoundingClientRect();
+        target.style.setProperty('--local-reveal-x', `${event.clientX - rect.left}px`);
+        target.style.setProperty('--local-reveal-y', `${event.clientY - rect.top}px`);
+      });
+
+      if (now - lastTrailAt < 48) {
+        return;
+      }
+
+      lastTrailAt = now;
+      const id = `${now}-${event.clientX}-${event.clientY}`;
+      const color = TRAIL_COLORS[Math.floor(now / 48) % TRAIL_COLORS.length];
+
+      setTrail((items) => [
+        ...items.slice(-7),
+        {
+          id,
+          x: event.clientX,
+          y: event.clientY,
+          color,
+          variant,
+        },
+      ]);
+
+      window.setTimeout(() => {
+        setTrail((items) => items.filter((item) => item.id !== id));
+      }, 760);
     };
 
     const onOver = (event) => {
@@ -46,30 +137,58 @@ export function CustomCursor() {
       setVariant('idle');
     };
 
+    const onLeaveWindow = () => {
+      root.classList.remove('is-reveal-active');
+      setVariant('idle');
+    };
+
     window.addEventListener('mousemove', onMove, { passive: true });
+    window.addEventListener('mouseleave', onLeaveWindow);
     document.addEventListener('mouseover', onOver);
     document.addEventListener('mouseout', onOut);
 
     return () => {
       window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseleave', onLeaveWindow);
       document.removeEventListener('mouseover', onOver);
       document.removeEventListener('mouseout', onOut);
+      root.classList.remove('is-reveal-active');
+      root.style.removeProperty('--reveal-x');
+      root.style.removeProperty('--reveal-y');
+      revealTargets.forEach((target) => {
+        target.style.removeProperty('--local-reveal-x');
+        target.style.removeProperty('--local-reveal-y');
+      });
     };
-  }, [enabled, x, y]);
+  }, [enabled, variant, x, y]);
 
   if (!enabled) {
     return null;
   }
 
   return (
-    <motion.div
-      aria-hidden="true"
-      className={`custom-cursor custom-cursor--${variant}`}
-      style={{ x: smoothX, y: smoothY }}
-    >
-      <span className="custom-cursor__core" />
-      <span className="custom-cursor__wing custom-cursor__wing--left" />
-      <span className="custom-cursor__wing custom-cursor__wing--right" />
-    </motion.div>
+    <>
+      <div className="butterfly-trail" aria-hidden="true">
+        {trail.map((item) => (
+          <span
+            key={item.id}
+            className={`butterfly-trail__mark butterfly-trail__mark--${item.variant}`}
+            style={{
+              left: item.x,
+              top: item.y,
+              '--trail-color': item.color,
+            }}
+          />
+        ))}
+      </div>
+      <motion.div
+        aria-hidden="true"
+        className={`custom-cursor custom-cursor--${variant}`}
+        style={{ x: smoothX, y: smoothY }}
+      >
+        <span className="custom-cursor__aura" />
+        <img className="custom-cursor__butterfly" src="/butter.png" alt="" />
+      </motion.div>
+    </>
   );
 }
