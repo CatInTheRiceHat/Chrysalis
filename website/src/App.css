@@ -181,6 +181,10 @@ a {
   display: flex;
   align-items: stretch;
   padding: clamp(6rem, 14vh, 10rem) var(--ct-pad) clamp(3.5rem, 9vh, 7rem);
+  background:
+    linear-gradient(90deg, rgba(245, 243, 234, 0.98) 0%, rgba(245, 243, 234, 0.94) 34%, rgba(245, 243, 234, 0.62) 66%, rgba(245, 243, 234, 0.3) 100%),
+    linear-gradient(180deg, rgba(255, 253, 247, 0.35), rgba(245, 243, 234, 0.7)),
+    url("/images/back1.jpeg") center right / cover no-repeat;
 }
 
 .ct-hero::before {
@@ -729,6 +733,8 @@ a {
 }
 
 .ct-footer {
+  position: relative;
+  isolation: isolate;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
@@ -736,8 +742,22 @@ a {
   padding: clamp(6rem, 12vw, 9rem) var(--ct-pad) clamp(1.6rem, 4vw, 3rem);
   color: var(--ct-white);
   background:
-    radial-gradient(circle at 80% 18%, rgba(255, 253, 247, 0.08), transparent 28rem),
-    linear-gradient(135deg, #151513, #20201d);
+    linear-gradient(90deg, rgba(16, 16, 14, 0.94) 0%, rgba(24, 24, 21, 0.82) 44%, rgba(24, 24, 21, 0.56) 100%),
+    linear-gradient(180deg, rgba(16, 16, 14, 0.82), rgba(16, 16, 14, 0.92)),
+    url("/images/back2.jpeg") center right / cover no-repeat;
+}
+
+.ct-footer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 80% 18%, rgba(255, 253, 247, 0.16), transparent 28rem),
+    linear-gradient(rgba(255, 253, 247, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 253, 247, 0.03) 1px, transparent 1px);
+  background-size: auto, 58px 58px, 58px 58px;
 }
 
 .ct-footer__heading {
