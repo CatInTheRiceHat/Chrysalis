@@ -46,7 +46,7 @@ export function AboutCreator() {
           data-cursor="soft"
         >
           <div className="creator-card__portrait" aria-hidden="true">
-            <img src="/Me.png" alt="" />
+            <img src="/me.png" alt="" />
           </div>
           <div>
             <span>Creator & Developer</span>
