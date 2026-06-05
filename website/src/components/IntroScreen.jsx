@@ -6,6 +6,7 @@ export function IntroScreen({ onDone }) {
   const reduceMotion = useReducedMotion();
   const maxDays = 14;
   const value = Math.round(100 * Math.pow(0.8, day));
+  const progress = Math.min(100, Math.round((day / maxDays) * 100));
   const doneRef = useRef(false);
 
   useEffect(() => {
@@ -84,7 +85,7 @@ export function IntroScreen({ onDone }) {
         <div className="intro-bar-track">
           <motion.div
             className="intro-bar-fill"
-            animate={{ width: `${value}%` }}
+            animate={{ width: `${progress}%` }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
           />
         </div>
