@@ -1418,7 +1418,7 @@ a {
   height: 4rem;
   display: inline-flex;
   flex-shrink: 0;
-  background: url("/logo.png") center / contain no-repeat;
+  background: url("/images/logo.png") center / contain no-repeat;
   filter:
     drop-shadow(0 12px 20px rgba(43, 38, 49, 0.12))
     drop-shadow(0 0 18px rgba(124, 109, 140, 0.18));

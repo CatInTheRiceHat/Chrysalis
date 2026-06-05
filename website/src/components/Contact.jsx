@@ -107,7 +107,7 @@ export function Contact() {
           <div className="liquid-glass rounded-2xl p-6 flex items-center gap-5 max-w-sm w-full">
             <img
               className="rounded-full flex-shrink-0 object-cover"
-              src="/me.png"
+              src="/images/me.png"
               alt="Portrait of Elaine"
               style={{
                 width: 72,

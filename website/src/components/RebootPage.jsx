@@ -164,9 +164,9 @@ function HeroVisual() {
   return (
     <div className="ct-hero-visual" aria-hidden="true">
       <div className="ct-hero-canvas ct-reveal-color">
-        <img className="ct-hero-logo ct-hero-logo--back" src="/logo.png" alt="" />
-        <img className="ct-hero-logo ct-hero-logo--middle" src="/logo.png" alt="" />
-        <img className="ct-hero-logo ct-hero-logo--front" src="/logo.png" alt="" />
+        <img className="ct-hero-logo ct-hero-logo--back" src="/images/logo.png" alt="" />
+        <img className="ct-hero-logo ct-hero-logo--middle" src="/images/logo.png" alt="" />
+        <img className="ct-hero-logo ct-hero-logo--front" src="/images/logo.png" alt="" />
       </div>
       <div className="ct-pulse-card ct-pulse-card--top ct-reveal-color">
         <span>Session load</span>
@@ -286,10 +286,10 @@ function FutureSection() {
       <div className="ct-data-layout">
         <Reveal className="ct-data-collage">
           <div className="ct-data-image ct-data-image--large ct-reveal-color">
-            <img src="/logo.png" alt="" />
+            <img src="/images/logo.png" alt="" />
           </div>
           <div className="ct-data-image ct-data-image--small ct-reveal-color">
-            <img src="/logo.png" alt="" />
+            <img src="/images/logo.png" alt="" />
           </div>
           <div className="ct-data-terminal ct-reveal-color">
             <span>ranking_delta.json</span>
@@ -331,7 +331,7 @@ function CreatorSection() {
         </Reveal>
         <Reveal className="ct-profile-card ct-reveal-color" delay={0.12}>
           <div className="ct-profile-card__mark ct-reveal-color">
-            <img src="/me.png" alt="Portrait of Elaine Che" />
+            <img src="/images/me.png" alt="Portrait of Elaine Che" />
           </div>
           <span>Creator & Developer</span>
           <h3>Elaine Che</h3>
