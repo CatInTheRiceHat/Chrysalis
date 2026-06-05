@@ -1,11 +1,10 @@
 import { motion } from 'motion/react';
 
-const EMOJIS   = ['🎬','🎵','📚','🌿','🎨','💬','🌏','🏃','🍳','🔬'];
 const PALETTES = [
-  'hsla(270,70%,88%,0.6)',
-  'hsla(185,70%,82%,0.6)',
-  'hsla(330,80%,88%,0.6)',
-  'hsla(150,60%,85%,0.6)',
+  'rgba(207,203,211,0.72)',
+  'rgba(173,158,184,0.48)',
+  'rgba(147,142,151,0.32)',
+  'rgba(124,109,140,0.18)',
 ];
 
 export function FeedCard({ item, index }) {
@@ -19,11 +18,10 @@ export function FeedCard({ item, index }) {
       <div
         className="w-full h-24 rounded-lg flex items-center justify-center text-2xl"
         style={{
-          background: `linear-gradient(135deg, ${PALETTES[index % 4]}, rgba(255,255,255,0.3))`,
+          background: `linear-gradient(135deg, ${PALETTES[index % 4]}, rgba(250,249,246,0.54))`,
+          border: '1px solid rgba(147,142,151,0.26)',
         }}
-      >
-        {EMOJIS[index % 10]}
-      </div>
+      />
 
       <div className="flex flex-col gap-1">
         <span className="font-body text-xs font-medium text-foreground/70 capitalize">
@@ -33,7 +31,7 @@ export function FeedCard({ item, index }) {
           {item.prosocial === 1 && (
             <span
               className="rounded-full px-2 py-0.5 font-body text-xs"
-              style={{ background: 'rgba(167,243,208,0.3)', color: '#059669' }}
+              style={{ background: 'rgba(124,109,140,0.14)', color: '#7C6D8C' }}
             >
               prosocial
             </span>
@@ -41,7 +39,7 @@ export function FeedCard({ item, index }) {
           {item.risk > 0.5 && (
             <span
               className="rounded-full px-2 py-0.5 font-body text-xs"
-              style={{ background: 'rgba(253,164,175,0.25)', color: '#e11d48' }}
+              style={{ background: 'rgba(207,203,211,0.45)', color: '#938E97' }}
             >
               risk
             </span>

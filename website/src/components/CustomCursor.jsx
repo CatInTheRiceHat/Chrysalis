@@ -3,18 +3,10 @@ import { motion, useMotionValue, useSpring, useReducedMotion } from 'motion/reac
 
 const REVEAL_SELECTOR = '[data-reveal-color], .ct-reveal-color';
 const HOVER_SELECTOR = `a, button, [data-cursor], .glass-card, .liquid-glass, .liquid-glass-strong, ${REVEAL_SELECTOR}`;
-const TRAIL_COLORS = [
-  'rgba(151, 223, 207, 0.32)',
-  'rgba(216, 160, 200, 0.28)',
-  'rgba(232, 200, 120, 0.26)',
-  'rgba(185, 194, 138, 0.28)',
-];
-
 export function CustomCursor() {
   const reduceMotion = useReducedMotion();
   const [enabled, setEnabled] = useState(false);
   const [variant, setVariant] = useState('idle');
-  const [trail, setTrail] = useState([]);
   const x = useMotionValue(-100);
   const y = useMotionValue(-100);
   const smoothX = useSpring(x, { stiffness: 500, damping: 42, mass: 0.4 });
@@ -75,7 +67,6 @@ export function CustomCursor() {
 
     const root = document.documentElement;
     let revealTargets = Array.from(document.querySelectorAll(REVEAL_SELECTOR));
-    let lastTrailAt = 0;
     let lastTargetRefresh = 0;
 
     const onMove = (event) => {
@@ -97,28 +88,6 @@ export function CustomCursor() {
         target.style.setProperty('--local-reveal-y', `${event.clientY - rect.top}px`);
       });
 
-      if (now - lastTrailAt < 48) {
-        return;
-      }
-
-      lastTrailAt = now;
-      const id = `${now}-${event.clientX}-${event.clientY}`;
-      const color = TRAIL_COLORS[Math.floor(now / 48) % TRAIL_COLORS.length];
-
-      setTrail((items) => [
-        ...items.slice(-7),
-        {
-          id,
-          x: event.clientX,
-          y: event.clientY,
-          color,
-          variant,
-        },
-      ]);
-
-      window.setTimeout(() => {
-        setTrail((items) => items.filter((item) => item.id !== id));
-      }, 760);
     };
 
     const onOver = (event) => {
@@ -168,26 +137,13 @@ export function CustomCursor() {
 
   return (
     <>
-      <div className="butterfly-trail" aria-hidden="true">
-        {trail.map((item) => (
-          <span
-            key={item.id}
-            className={`butterfly-trail__mark butterfly-trail__mark--${item.variant}`}
-            style={{
-              left: item.x,
-              top: item.y,
-              '--trail-color': item.color,
-            }}
-          />
-        ))}
-      </div>
       <motion.div
         aria-hidden="true"
         className={`custom-cursor custom-cursor--${variant}`}
         style={{ x: smoothX, y: smoothY }}
       >
         <span className="custom-cursor__aura" />
-        <img className="custom-cursor__butterfly" src="/butter.png" alt="" />
+        <span className="custom-cursor__dot" />
       </motion.div>
     </>
   );

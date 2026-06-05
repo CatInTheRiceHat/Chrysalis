@@ -71,12 +71,7 @@ export function Navbar() {
             className="ct-nav__brand"
             aria-label="Go to homepage"
           >
-            <img
-              src="/butterflylogo.png"
-              alt=""
-              className="ct-nav__logo"
-              aria-hidden="true"
-            />
+            <span className="ct-nav__mark" aria-hidden="true" />
             <span>Chrysalis</span>
           </button>
 
@@ -140,7 +135,7 @@ export function Navbar() {
             >
               <div className="nav-overlay__top">
                 <div className="ct-overlay-brand">
-                  <img src="/butterflylogo.png" alt="" aria-hidden="true" />
+                  <span className="ct-overlay-brand__mark" aria-hidden="true" />
                   <span>Chrysalis</span>
                 </div>
                 <button

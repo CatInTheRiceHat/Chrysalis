@@ -23,11 +23,11 @@ function DropCard({ drop, label, Icon, accentColor, scheduledTime }) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         className="liquid-glass rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center min-h-[280px]"
-        style={{ border: '1px solid rgba(255,255,255,0.6)' }}
+        style={{ border: '1px solid rgba(147,142,151,0.3)' }}
       >
         <div
           className="w-12 h-12 rounded-full flex items-center justify-center"
-          style={{ background: `${accentColor}18` }}
+          style={{ background: `${accentColor}22` }}
         >
           <Icon className="w-5 h-5" style={{ color: `${accentColor}99` }} />
         </div>
@@ -44,14 +44,14 @@ function DropCard({ drop, label, Icon, accentColor, scheduledTime }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className="liquid-glass rounded-2xl p-6 flex flex-col gap-5"
-      style={{ border: '1px solid rgba(255,255,255,0.6)' }}
+      style={{ border: '1px solid rgba(147,142,151,0.3)' }}
     >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ background: `${accentColor}18` }}
+          style={{ background: `${accentColor}22` }}
           >
             <Icon className="w-5 h-5" style={{ color: accentColor }} />
           </div>
@@ -62,7 +62,7 @@ function DropCard({ drop, label, Icon, accentColor, scheduledTime }) {
         </div>
         <span
           className="rounded-full px-3 py-1 font-body text-xs font-medium"
-          style={{ background: 'rgba(167,243,208,0.3)', color: '#059669' }}
+          style={{ background: 'rgba(124,109,140,0.14)', color: '#7C6D8C' }}
         >
           ✓ delivered
         </span>
@@ -80,7 +80,7 @@ function DropCard({ drop, label, Icon, accentColor, scheduledTime }) {
       {/* Stats */}
       <div
         className="rounded-xl px-4 py-3 flex items-center gap-5"
-        style={{ background: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.6)' }}
+        style={{ background: 'rgba(250,249,246,0.52)', border: '1px solid rgba(147,142,151,0.28)' }}
       >
         <StatPill label="Items" value={drop.item_count} accent={accentColor} />
         <div className="w-px h-8 bg-foreground/8" />
@@ -122,7 +122,7 @@ export function MigrationMode() {
       <div className="flex items-center justify-between">
         <div
           className="flex items-center gap-2 rounded-full px-4 py-2"
-          style={{ background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.75)' }}
+          style={{ background: 'rgba(250,249,246,0.72)', border: '1px solid rgba(147,142,151,0.34)' }}
         >
           <Calendar className="w-3.5 h-3.5 text-foreground/45" />
           <span className="font-body text-sm text-foreground/60">{today}</span>
@@ -141,11 +141,11 @@ export function MigrationMode() {
       <div
         className="rounded-2xl px-5 py-4 flex items-start gap-4"
         style={{
-          background: 'linear-gradient(135deg, rgba(167,139,250,0.08), rgba(103,232,249,0.08))',
-          border: '1px solid rgba(167,139,250,0.15)',
+          background: 'linear-gradient(135deg, rgba(124,109,140,0.08), rgba(173,158,184,0.14))',
+          border: '1px solid rgba(147,142,151,0.24)',
         }}
       >
-        <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#a78bfa' }} />
+        <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#7C6D8C' }} />
         <p className="font-body font-light text-sm text-foreground/55 leading-relaxed">
           Migration Mode replaces your personalized feed with two non-personalized daily drops — one in the
           morning, one in the evening — curated for diversity and positivity. Same content for everyone.
@@ -181,7 +181,7 @@ export function MigrationMode() {
                 </p>
                 <code
                   className="rounded-lg px-4 py-2 font-mono text-sm text-foreground/60"
-                  style={{ background: 'rgba(0,0,0,0.04)' }}
+                  style={{ background: 'rgba(147,142,151,0.14)' }}
                 >
                   python api.py
                 </code>
@@ -205,10 +205,8 @@ export function MigrationMode() {
             <motion.div
               animate={{ y: [0, -6, 0] }}
               transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-              className="text-5xl"
-            >
-              🌅
-            </motion.div>
+              className="demo-blank-mark"
+            />
             <div className="flex flex-col gap-2">
               <p className="font-heading text-xl text-foreground/50">No drops yet today</p>
               <p className="font-body font-light text-sm text-foreground/35 max-w-sm">
@@ -219,7 +217,7 @@ export function MigrationMode() {
             </div>
             <code
               className="rounded-xl px-5 py-3 font-mono text-sm text-foreground/50"
-              style={{ background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.06)' }}
+              style={{ background: 'rgba(147,142,151,0.14)', border: '1px solid rgba(147,142,151,0.22)' }}
             >
               python api.py
             </code>
@@ -236,14 +234,14 @@ export function MigrationMode() {
               drop={data.morning}
               label="Morning Drop"
               Icon={Sun}
-              accentColor="#f59e0b"
+              accentColor="#AD9EB8"
               scheduledTime="07:00"
             />
             <DropCard
               drop={data.evening}
               label="Evening Drop"
               Icon={Moon}
-              accentColor="#818cf8"
+              accentColor="#7C6D8C"
               scheduledTime="19:00"
             />
           </motion.div>

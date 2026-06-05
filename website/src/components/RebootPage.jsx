@@ -108,9 +108,9 @@ function SectionFrame({ id, tone = 'paper', label, children }) {
     scrollYProgress,
     [0, 0.55, 1],
     [
-      '0 0 0 rgba(23, 36, 32, 0)',
-      '0 -18px 42px rgba(23, 36, 32, 0.08)',
-      '0 -34px 86px rgba(23, 36, 32, 0.18)',
+      '0 0 0 rgba(43, 38, 49, 0)',
+      '0 -18px 42px rgba(43, 38, 49, 0.08)',
+      '0 -34px 86px rgba(43, 38, 49, 0.18)',
     ],
   );
   const filingStyle = reduceMotion || !isDesktop
@@ -168,7 +168,7 @@ function HeroVisual() {
       <div className="ct-hero-orbit ct-hero-orbit--two ct-reveal-color" />
       <div className="ct-hero-orbit ct-hero-orbit--three ct-reveal-color" />
       <div className="ct-hero-canvas ct-reveal-color">
-        <img src="/butterfly.png" alt="" />
+        <div className="ct-hero-blank" />
       </div>
       <div className="ct-pulse-card ct-pulse-card--top ct-reveal-color">
         <span>Session load</span>
@@ -288,10 +288,8 @@ function FutureSection() {
       <div className="ct-data-layout">
         <Reveal className="ct-data-collage">
           <div className="ct-data-image ct-data-image--large ct-reveal-color">
-            <img src="/images/hero_bg.jpeg" alt="" />
           </div>
           <div className="ct-data-image ct-data-image--small ct-reveal-color">
-            <img src="/butterfly.png" alt="" />
           </div>
           <div className="ct-data-terminal ct-reveal-color">
             <span>ranking_delta.json</span>

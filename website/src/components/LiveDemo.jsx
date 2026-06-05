@@ -47,23 +47,23 @@ export function LiveDemo() {
 
           {/* Tab switcher — mirrors the Navbar pill pattern */}
           <div
-            className="flex items-center gap-1 p-1.5 rounded-full"
+            className="demo-tab-list flex items-center gap-1 p-1.5 rounded-full"
             style={{
-              background:           'rgba(255,255,255,0.55)',
+              background:           'rgba(250,249,246,0.76)',
               backdropFilter:       'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
-              border:               '1px solid rgba(255,255,255,0.82)',
-              boxShadow:            '0 4px 20px rgba(180,160,220,0.12)',
+              border:               '1px solid rgba(147,142,151,0.34)',
+              boxShadow:            '0 4px 20px rgba(43,38,49,0.08)',
             }}
           >
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActive(tab.id)}
-                className={`rounded-full px-4 py-2 font-body text-sm font-medium transition-all duration-200 ${
+                className={`demo-tab rounded-full px-4 py-2 font-body text-sm font-medium transition-all duration-200 ${
                   active === tab.id
-                    ? 'bg-white/80 text-foreground shadow-sm'
-                    : 'text-foreground/50 hover:text-foreground hover:bg-white/40'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-foreground/50 hover:text-foreground hover:bg-secondary/45'
                 }`}
               >
                 {tab.label}
@@ -81,7 +81,7 @@ export function LiveDemo() {
               transition={{ duration: 0.25 }}
               className="flex flex-col gap-2 items-center"
             >
-              <h2 className="font-heading text-5xl md:text-6xl text-foreground leading-[0.9] tracking-[-2px]">
+              <h2 className="demo-title font-heading text-4xl md:text-6xl text-foreground leading-[0.98] tracking-normal">
                 {meta.title}
               </h2>
               <p className="font-body font-light text-base text-foreground/55 max-w-lg">

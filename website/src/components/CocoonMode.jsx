@@ -40,24 +40,24 @@ function DecayCurve({ startMinutes, currentWeek }) {
     >
       <defs>
         <linearGradient id="ccLine" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#a78bfa" />
-          <stop offset="50%"  stopColor="#818cf8" />
-          <stop offset="100%" stopColor="#fda4af" />
+          <stop offset="0%"   stopColor="#7C6D8C" />
+          <stop offset="50%"  stopColor="#AD9EB8" />
+          <stop offset="100%" stopColor="#938E97" />
         </linearGradient>
         <linearGradient id="ccFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#a78bfa" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
+          <stop offset="0%"   stopColor="#7C6D8C" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#7C6D8C" stopOpacity="0" />
         </linearGradient>
       </defs>
 
       {/* Threshold line */}
       <line
         x1={0} y1={thresholdY} x2={W} y2={thresholdY}
-        stroke="rgba(253,164,175,0.55)" strokeWidth="1" strokeDasharray="4 3"
+        stroke="rgba(124,109,140,0.48)" strokeWidth="1" strokeDasharray="4 3"
       />
       <text
         x={W + 5} y={thresholdY + 4}
-        fill="rgba(225,29,72,0.45)" fontSize="8"
+        fill="rgba(124,109,140,0.58)" fontSize="8"
         fontFamily="system-ui, -apple-system, sans-serif"
       >
         45m
@@ -87,14 +87,14 @@ function DecayCurve({ startMinutes, currentWeek }) {
             <circle
               cx={cx} cy={cy}
               r={isCurrent ? 5 : 3}
-              fill={isCurrent ? '#a78bfa' : isPast ? '#818cf8' : 'rgba(180,160,220,0.3)'}
+              fill={isCurrent ? '#7C6D8C' : isPast ? '#AD9EB8' : 'rgba(207,203,211,0.72)'}
               stroke={isCurrent ? 'white' : 'none'}
               strokeWidth="1.5"
             />
             <text
               x={cx} y={H + 14}
               textAnchor="middle"
-              fill={isCurrent ? '#a78bfa' : 'rgba(160,140,200,0.45)'}
+              fill={isCurrent ? '#7C6D8C' : 'rgba(147,142,151,0.58)'}
               fontSize="8"
               fontWeight={isCurrent ? 'bold' : 'normal'}
               fontFamily="system-ui, -apple-system, sans-serif"
@@ -199,7 +199,7 @@ export function CocoonMode() {
             placeholder="e.g. elaine_2026"
             disabled={!!profile}
             className="rounded-full px-4 py-2.5 font-body text-sm text-foreground placeholder:text-foreground/30 outline-none transition-all duration-200 disabled:opacity-50"
-            style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.9)' }}
+            style={{ background: 'rgba(250,249,246,0.78)', border: '1px solid rgba(147,142,151,0.34)' }}
           />
         </div>
 
@@ -218,7 +218,8 @@ export function CocoonMode() {
             value={startMinutes}
             onChange={(e) => setStartMinutes(Number(e.target.value))}
             disabled={!!profile}
-            className="w-full accent-violet-400 disabled:opacity-50"
+            className="w-full disabled:opacity-50"
+            style={{ accentColor: '#7C6D8C' }}
           />
           <div className="flex justify-between font-body text-xs text-foreground/30">
             <span>60 min</span><span>360 min</span>
@@ -252,7 +253,7 @@ export function CocoonMode() {
               onClick={advanceWeek}
               disabled={advLoading || profile.should_graduate || profile.graduated}
               className="rounded-full py-2.5 font-body font-medium text-sm text-foreground/60 flex items-center justify-center gap-2 hover:text-foreground transition-all duration-200 disabled:opacity-35 disabled:cursor-not-allowed"
-              style={{ border: '1px solid rgba(0,0,0,0.08)' }}
+              style={{ border: '1px solid rgba(147,142,151,0.3)' }}
             >
               {advLoading
                 ? <div className="butterfly-spinner scale-75" />
@@ -270,7 +271,7 @@ export function CocoonMode() {
         )}
 
         {error && (
-          <p className="font-body text-xs text-center" style={{ color: 'rgba(225,29,72,0.7)' }}>
+          <p className="font-body text-xs text-center" style={{ color: '#7C6D8C' }}>
             {error === 'offline' ? 'Backend offline — run python api.py' : error}
           </p>
         )}
@@ -289,11 +290,8 @@ export function CocoonMode() {
               <motion.div
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                className="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
-                style={{ background: 'linear-gradient(135deg, rgba(167,139,250,0.15), rgba(103,232,249,0.15))' }}
-              >
-                🐛
-              </motion.div>
+                className="demo-blank-mark"
+              />
               <div className="flex flex-col gap-1.5">
                 <p className="font-heading text-xl text-foreground/55">Enter your details to begin</p>
                 <p className="font-body font-light text-sm text-foreground/35 max-w-xs">
@@ -304,7 +302,7 @@ export function CocoonMode() {
 
             <div
               className="glass-card rounded-2xl px-6 py-5 flex flex-col gap-3 w-full max-w-xs"
-              style={{ border: '1px solid rgba(167,139,250,0.2)' }}
+              style={{ border: '1px solid rgba(147,142,151,0.28)' }}
             >
               <p className="font-body text-xs text-foreground/40 uppercase tracking-wider">Decay formula</p>
               <p className="font-heading text-2xl text-foreground/70">
@@ -314,7 +312,7 @@ export function CocoonMode() {
                 Your cap reduces by 20% each week until it reaches 45 min/day,
                 at which point you graduate to Migration Mode.
               </p>
-              <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, #a78bfa, #67e8f9, transparent)', opacity: 0.35 }} />
+              <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, #7C6D8C, #AD9EB8, transparent)', opacity: 0.35 }} />
               <div className="flex justify-between">
                 {[180, 144, 115, 92, '…', '≤45'].map((v, i) => (
                   <div key={i} className="flex flex-col items-center gap-1">
@@ -341,8 +339,8 @@ export function CocoonMode() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   className="rounded-2xl p-5 flex items-center gap-4"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(167,139,250,0.12), rgba(103,232,249,0.12))',
-                    border: '1px solid rgba(167,139,250,0.28)',
+                    background: 'linear-gradient(135deg, rgba(124,109,140,0.12), rgba(173,158,184,0.16))',
+                    border: '1px solid rgba(124,109,140,0.28)',
                   }}
                 >
                   <motion.span
@@ -350,7 +348,7 @@ export function CocoonMode() {
                     transition={{ repeat: Infinity, duration: 2.5 }}
                     className="text-3xl"
                   >
-                    🦋
+                    <span className="demo-blank-mark demo-blank-mark--small" />
                   </motion.span>
                   <div>
                     <p className="font-body font-semibold text-sm text-foreground/80">
@@ -360,7 +358,7 @@ export function CocoonMode() {
                       Daily cap has reached ≤ 45 min — you've completed Cocoon Mode.
                     </p>
                   </div>
-                  <CheckCircle2 className="w-5 h-5 ml-auto flex-shrink-0" style={{ color: '#a78bfa' }} />
+                  <CheckCircle2 className="w-5 h-5 ml-auto flex-shrink-0" style={{ color: '#7C6D8C' }} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -395,13 +393,13 @@ export function CocoonMode() {
                   <span>{profile.start_minutes} min start</span>
                   <span>45 min goal</span>
                 </div>
-                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.06)' }}>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(147,142,151,0.2)' }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${taperProgress}%` }}
                     transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
                     className="h-full rounded-full"
-                    style={{ background: 'linear-gradient(90deg, #a78bfa, #67e8f9)' }}
+                    style={{ background: 'linear-gradient(90deg, #7C6D8C, #AD9EB8)' }}
                   />
                 </div>
                 <p className="font-body text-xs text-foreground/30 text-right">
@@ -446,24 +444,24 @@ export function CocoonMode() {
                     className="rounded-xl p-3 flex flex-col gap-0.5 transition-all duration-200"
                     style={{
                       background: i === profile.current_week
-                        ? 'linear-gradient(135deg, rgba(167,139,250,0.18), rgba(103,232,249,0.12))'
+                        ? 'linear-gradient(135deg, rgba(124,109,140,0.16), rgba(173,158,184,0.18))'
                         : i < profile.current_week
-                          ? 'rgba(167,139,250,0.06)'
-                          : 'rgba(0,0,0,0.03)',
+                          ? 'rgba(124,109,140,0.08)'
+                          : 'rgba(147,142,151,0.12)',
                       border: i === profile.current_week
-                        ? '1px solid rgba(167,139,250,0.3)'
+                        ? '1px solid rgba(124,109,140,0.3)'
                         : '1px solid transparent',
                     }}
                   >
                     <span className="font-body text-xs text-foreground/35">Wk {i}</span>
                     <span
                       className="font-heading text-sm"
-                      style={{ color: i === profile.current_week ? '#a78bfa' : i < profile.current_week ? 'rgba(167,139,250,0.55)' : 'rgba(0,0,0,0.4)' }}
+                      style={{ color: i === profile.current_week ? '#7C6D8C' : i < profile.current_week ? 'rgba(124,109,140,0.6)' : 'rgba(43,38,49,0.44)' }}
                     >
                       {cap}m
                     </span>
                     {i === weeklyCaps.length - 1 && (
-                      <span className="text-xs">🦋</span>
+                      <span className="demo-blank-mark demo-blank-mark--tiny" />
                     )}
                   </div>
                 ))}

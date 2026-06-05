@@ -26,7 +26,7 @@ function WeightBar({ label, value, color }) {
           {(value * 100).toFixed(0)}%
         </span>
       </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.06)' }}>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(147,142,151,0.2)' }}>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${value * 100}%` }}
@@ -58,8 +58,8 @@ function MetricCard({ label, subtitle, improved, baseline, suffix = '' }) {
       <span
         className="self-start rounded-full px-2 py-0.5 font-body text-xs"
         style={{
-          background: better ? 'rgba(167,243,208,0.3)' : 'rgba(253,164,175,0.3)',
-          color:      better ? '#059669'                : '#e11d48',
+          background: better ? 'rgba(124,109,140,0.14)' : 'rgba(207,203,211,0.45)',
+          color:      better ? '#7C6D8C'                : '#938E97',
         }}
       >
         {better ? '↑ improved' : '↓ reduced'}
@@ -120,7 +120,7 @@ export function AlgorithmDemo() {
                 className={`rounded-full px-4 py-2 font-body text-sm font-medium text-left transition-all duration-200 ${
                   preset === val
                     ? 'liquid-glass-strong text-foreground'
-                    : 'text-foreground/50 hover:text-foreground hover:bg-white/30'
+                    : 'text-foreground/50 hover:text-foreground hover:bg-secondary/35'
                 }`}
               >
                 {label}
@@ -141,7 +141,7 @@ export function AlgorithmDemo() {
                 className={`rounded-full px-4 py-2 font-body text-sm font-medium text-left transition-all duration-200 ${
                   ageGroup === val
                     ? 'liquid-glass-strong text-foreground'
-                    : 'text-foreground/50 hover:text-foreground hover:bg-white/30'
+                    : 'text-foreground/50 hover:text-foreground hover:bg-secondary/35'
                 }`}
               >
                 {label}
@@ -158,7 +158,7 @@ export function AlgorithmDemo() {
             <button
               onClick={() => setNightMode(!nightMode)}
               className={`relative w-10 h-5 rounded-full transition-all duration-300 ${
-                nightMode ? 'bg-violet-400' : 'bg-foreground/15'
+                nightMode ? 'bg-primary' : 'bg-foreground/15'
               }`}
             >
               <span
@@ -209,7 +209,7 @@ export function AlgorithmDemo() {
                 <>
                   <p className="font-body font-medium text-sm text-foreground/70">Backend not running</p>
                   <p className="font-body font-light text-sm text-foreground/50">Start the FastAPI server:</p>
-                  <code className="rounded-lg px-4 py-2 font-mono text-sm text-foreground/70" style={{ background: 'rgba(0,0,0,0.05)' }}>
+                  <code className="rounded-lg px-4 py-2 font-mono text-sm text-foreground/70" style={{ background: 'rgba(147,142,151,0.14)' }}>
                     python api.py
                   </code>
                 </>
@@ -233,10 +233,10 @@ export function AlgorithmDemo() {
                   <p className="font-body text-xs font-medium text-foreground/45 uppercase tracking-wider flex items-center gap-1.5">
                     <BarChart2 className="w-3 h-3" /> Here's how Chrysalis scored your feed:
                   </p>
-                  <WeightBar label="Relevance"   value={result.weights.e ?? 0} color="#818cf8" />
-                  <WeightBar label="Diversity"   value={result.weights.d ?? 0} color="#67e8f9" />
-                  <WeightBar label="Prosocial"   value={result.weights.p ?? 0} color="#a7f3d0" />
-                  <WeightBar label="Risk shield" value={result.weights.r ?? 0} color="#fda4af" />
+                  <WeightBar label="Relevance"   value={result.weights.e ?? 0} color="#7C6D8C" />
+                  <WeightBar label="Diversity"   value={result.weights.d ?? 0} color="#AD9EB8" />
+                  <WeightBar label="Prosocial"   value={result.weights.p ?? 0} color="#938E97" />
+                  <WeightBar label="Risk shield" value={result.weights.r ?? 0} color="#2B2631" />
                 </div>
               )}
 

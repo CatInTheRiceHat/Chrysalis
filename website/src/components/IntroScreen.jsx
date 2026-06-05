@@ -44,7 +44,7 @@ export function IntroScreen({ onDone }) {
         transition={{ duration: 1.45, ease: [0.22, 1, 0.36, 1] }}
         aria-hidden="true"
       >
-        <img src="/butterflylogo.png" alt="" className="intro-logo" />
+        <span className="intro-orbit__blank" />
       </motion.div>
       <motion.p
         className="intro-eyebrow"
