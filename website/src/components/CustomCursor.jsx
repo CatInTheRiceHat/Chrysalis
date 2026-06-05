@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, useMotionValue, useSpring, useReducedMotion } from 'motion/react';
 
 const REVEAL_SELECTOR = '[data-reveal-color], .ct-reveal-color';
@@ -7,6 +7,10 @@ export function CustomCursor() {
   const reduceMotion = useReducedMotion();
   const [enabled, setEnabled] = useState(false);
   const [variant, setVariant] = useState('idle');
+  const [particles, setParticles] = useState([]);
+  const particleId = useRef(0);
+  const lastParticleAt = useRef(0);
+  const particleTimeouts = useRef(new Set());
   const x = useMotionValue(-100);
   const y = useMotionValue(-100);
   const smoothX = useSpring(x, { stiffness: 500, damping: 42, mass: 0.4 });
@@ -129,7 +133,47 @@ export function CustomCursor() {
         target.style.removeProperty('--local-reveal-y');
       });
     };
-  }, [enabled, variant, x, y]);
+  }, [enabled, reduceMotion, x, y]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+
+    const onMove = (event) => {
+      const now = performance.now();
+      if (now - lastParticleAt.current < 34) {
+        return;
+      }
+      lastParticleAt.current = now;
+
+      const id = particleId.current;
+      particleId.current += 1;
+      const particle = {
+        id,
+        x: event.clientX + (Math.random() * 18 - 9),
+        y: event.clientY + (Math.random() * 18 - 9),
+        size: Math.random() * 9 + 5,
+        driftX: Math.random() * 34 - 17,
+        driftY: Math.random() * 24 + 14,
+        duration: Math.random() * 340 + 620,
+      };
+
+      setParticles((current) => [...current.slice(-22), particle]);
+      const timeoutId = window.setTimeout(() => {
+        setParticles((current) => current.filter((item) => item.id !== id));
+        particleTimeouts.current.delete(timeoutId);
+      }, particle.duration);
+      particleTimeouts.current.add(timeoutId);
+    };
+
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      particleTimeouts.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      particleTimeouts.current.clear();
+    };
+  }, [enabled]);
 
   if (!enabled) {
     return null;
@@ -143,8 +187,25 @@ export function CustomCursor() {
         style={{ x: smoothX, y: smoothY }}
       >
         <span className="custom-cursor__aura" />
+        <img className="custom-cursor__logo" src="/Logo.png" alt="" draggable="false" />
         <span className="custom-cursor__dot" />
       </motion.div>
+      <div className="cursor-particles" aria-hidden="true">
+        {particles.map((particle) => (
+          <span
+            key={particle.id}
+            className="cursor-particle"
+            style={{
+              left: particle.x,
+              top: particle.y,
+              '--particle-size': `${particle.size}px`,
+              '--particle-drift-x': `${particle.driftX}px`,
+              '--particle-drift-y': `${particle.driftY}px`,
+              '--particle-duration': `${particle.duration}ms`,
+            }}
+          />
+        ))}
+      </div>
     </>
   );
 }

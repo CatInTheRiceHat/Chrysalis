@@ -105,14 +105,16 @@ export function Contact() {
           className="flex justify-center"
         >
           <div className="liquid-glass rounded-2xl p-6 flex items-center gap-5 max-w-sm w-full">
-            <div
-              className="rounded-full flex-shrink-0"
+            <img
+              className="rounded-full flex-shrink-0 object-cover"
+              src="/Me-portrait.png"
+              alt="Portrait of Elaine"
               style={{
                 width: 72,
                 height: 72,
-                background: 'linear-gradient(135deg, var(--wing-green) 0%, var(--wing-blue) 42%, var(--wing-pink) 72%, var(--wing-yellow) 100%)',
+                objectPosition: 'center 42%',
+                border: '1px solid rgba(147,142,151,0.28)',
               }}
-              aria-hidden="true"
             />
             <div className="flex flex-col gap-1">
               <h3 className="font-body font-semibold text-lg text-foreground leading-tight">Elaine</h3>

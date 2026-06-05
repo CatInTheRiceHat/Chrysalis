@@ -101,12 +101,12 @@ export function About() {
             {/* Main glass card */}
             <div className="glass-card rounded-3xl p-8 max-w-sm w-full flex flex-col gap-6">
               <div className="flex items-center gap-3">
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-lg"
-                  style={{ background: 'linear-gradient(135deg, #a78bfa22, #67e8f922)', border: '1px solid rgba(167,139,250,0.3)' }}
-                >
-                  🦋
-                </div>
+                <img
+                  className="w-12 h-12 rounded-full object-cover"
+                  src="/Me-portrait.png"
+                  alt="Portrait of Elaine Che"
+                  style={{ objectPosition: 'center 42%', border: '1px solid rgba(167,139,250,0.3)' }}
+                />
                 <div>
                   <p className="font-body font-semibold text-sm text-foreground">Elaine Che</p>
                   <p className="font-body font-light text-xs text-foreground/50">Creator of Chrysalis</p>

@@ -13,7 +13,6 @@ import {
   Route,
   ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
 } from 'lucide-react';
 
 const wellbeingSignals = [
@@ -164,11 +163,10 @@ function SignalCard({ signal, index }) {
 function HeroVisual() {
   return (
     <div className="ct-hero-visual" aria-hidden="true">
-      <div className="ct-hero-orbit ct-hero-orbit--one ct-reveal-color" />
-      <div className="ct-hero-orbit ct-hero-orbit--two ct-reveal-color" />
-      <div className="ct-hero-orbit ct-hero-orbit--three ct-reveal-color" />
       <div className="ct-hero-canvas ct-reveal-color">
-        <div className="ct-hero-blank" />
+        <img className="ct-hero-logo ct-hero-logo--back" src="/Logo.png" alt="" />
+        <img className="ct-hero-logo ct-hero-logo--middle" src="/Logo.png" alt="" />
+        <img className="ct-hero-logo ct-hero-logo--front" src="/Logo.png" alt="" />
       </div>
       <div className="ct-pulse-card ct-pulse-card--top ct-reveal-color">
         <span>Session load</span>
@@ -288,8 +286,10 @@ function FutureSection() {
       <div className="ct-data-layout">
         <Reveal className="ct-data-collage">
           <div className="ct-data-image ct-data-image--large ct-reveal-color">
+            <img src="/Logo.png" alt="" />
           </div>
           <div className="ct-data-image ct-data-image--small ct-reveal-color">
+            <img src="/Logo.png" alt="" />
           </div>
           <div className="ct-data-terminal ct-reveal-color">
             <span>ranking_delta.json</span>
@@ -331,7 +331,7 @@ function CreatorSection() {
         </Reveal>
         <Reveal className="ct-profile-card ct-reveal-color" delay={0.12}>
           <div className="ct-profile-card__mark ct-reveal-color">
-            <Sparkles size={28} />
+            <img src="/Me-portrait.png" alt="Portrait of Elaine Che" />
           </div>
           <span>Creator & Developer</span>
           <h3>Elaine Che</h3>
