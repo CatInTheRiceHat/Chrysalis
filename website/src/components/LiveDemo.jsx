@@ -81,7 +81,7 @@ export function LiveDemo() {
               transition={{ duration: 0.25 }}
               className="flex flex-col gap-2 items-center"
             >
-              <h2 className="demo-title font-heading text-4xl md:text-6xl text-foreground leading-[0.98] tracking-normal">
+              <h2 className="demo-title font-title text-4xl md:text-6xl text-foreground leading-[1] tracking-normal">
                 {meta.title}
               </h2>
               <p className="font-body font-light text-base text-foreground/55 max-w-lg">

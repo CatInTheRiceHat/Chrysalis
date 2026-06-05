@@ -225,7 +225,7 @@ a {
 .ct-footer h2 {
   margin: 0;
   color: var(--ct-ink);
-  font-family: "Story Script", sans-serif;
+  font-family: "Abril Fatface", serif;
   font-weight: 400;
   letter-spacing: 0;
 }
@@ -353,9 +353,10 @@ a {
   display: block;
   margin-top: 0.45rem;
   color: var(--ct-charcoal-2);
+  font-family: "Abril Fatface", serif;
   font-size: clamp(2rem, 6vw, 4.2rem);
-  font-weight: 100;
-  line-height: 0.9;
+  font-weight: 400;
+  line-height: 1;
 }
 
 .ct-pulse-card--top {
@@ -373,6 +374,17 @@ a {
   min-height: auto;
   background: var(--ct-paper);
   perspective: 1200px;
+}
+
+.ct-section-shell--aqua,
+.ct-section-shell--ink {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(173, 158, 184, 0.18), transparent 26rem),
+    linear-gradient(135deg, #2b2631, #393241);
+}
+
+.ct-section-shell--paper {
+  background: var(--ct-paper);
 }
 
 .ct-section {
@@ -458,7 +470,7 @@ a {
 .ct-copy-block h2 {
   max-width: 950px;
   font-size: var(--ct-step-2);
-  line-height: 0.92;
+  line-height: 0.98;
 }
 
 .ct-section-shell--aqua h2,
@@ -481,25 +493,28 @@ a {
 }
 
 .ct-metric-row {
-  min-height: 92px;
+  min-height: clamp(108px, 11vw, 156px);
   display: grid;
-  grid-template-columns: minmax(8rem, 0.45fr) minmax(0, 1fr);
-  gap: 1.2rem;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  padding: clamp(1rem, 2.2vw, 1.8rem) 0;
   border-bottom: 1px solid var(--ct-light-line);
 }
 
 .ct-metric-row strong {
   color: var(--ct-white);
-  font-size: clamp(2.8rem, 8vw, 7.8rem);
-  font-weight: 100;
-  line-height: 0.9;
+  font-family: "Abril Fatface", serif;
+  font-size: clamp(2.9rem, 5vw, 4.8rem);
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .ct-metric-row span {
   color: rgba(250, 249, 246, 0.68);
   font-size: var(--ct-step-0);
-  line-height: 1.35;
+  line-height: 1.5;
 }
 
 .ct-signal-grid {
@@ -540,9 +555,10 @@ a {
 .ct-profile-card h3 {
   margin: 1.6rem 0 0;
   color: var(--ct-ink);
+  font-family: "Story Script", sans-serif;
   font-size: clamp(1.8rem, 3.6vw, 3.6rem);
-  font-weight: 100;
-  line-height: 0.98;
+  font-weight: 400;
+  line-height: 1.08;
 }
 
 .ct-signal-card p,
@@ -714,7 +730,7 @@ a {
 
 .ct-profile-card h3 {
   color: var(--ct-white);
-  font-size: clamp(3.4rem, 9vw, 8rem);
+  font-size: clamp(3.4rem, 8vw, 6.8rem);
 }
 
 .ct-profile-card__links {
@@ -775,8 +791,8 @@ a {
 .ct-footer h2 {
   max-width: 980px;
   color: var(--ct-white);
-  font-size: clamp(4.2rem, 13vw, 15rem);
-  line-height: 0.82;
+  font-size: clamp(3.35rem, 9vw, 10.5rem);
+  line-height: 0.88;
 }
 
 .ct-footer__grid {
@@ -805,7 +821,9 @@ a {
 
 .ct-footer-card span {
   font-size: clamp(1.8rem, 4vw, 4rem);
-  font-weight: 100;
+  font-family: "Story Script", sans-serif;
+  font-weight: 400;
+  line-height: 1.08;
 }
 
 .ct-footer__bottom {
@@ -1248,6 +1266,9 @@ a {
 
 .iridescent-text {
   color: var(--ct-purple);
+  font-family: "Abril Fatface", serif;
+  font-weight: 400;
+  line-height: 1.05;
 }
 
 .scroll-x {
@@ -1362,7 +1383,7 @@ a {
   }
 
   .ct-section-shell {
-    min-height: 138svh;
+    min-height: 100svh;
     margin-top: -1px;
   }
 
@@ -1376,6 +1397,12 @@ a {
 
   .ct-section::after {
     opacity: 0.18;
+  }
+
+  .ct-metric-row {
+    grid-template-columns: minmax(17rem, 0.46fr) minmax(0, 1fr);
+    gap: clamp(2rem, 4vw, 3.5rem);
+    align-items: center;
   }
 
   .ct-section__tab {
