@@ -164,9 +164,9 @@ function HeroVisual() {
   return (
     <div className="ct-hero-visual" aria-hidden="true">
       <div className="ct-hero-canvas ct-reveal-color">
-        <img className="ct-hero-logo ct-hero-logo--back" src="/images/logo.png" alt="" />
-        <img className="ct-hero-logo ct-hero-logo--middle" src="/images/logo.png" alt="" />
-        <img className="ct-hero-logo ct-hero-logo--front" src="/images/logo.png" alt="" />
+        <img className="ct-hero-logo ct-hero-logo--back" src="/images/butterfly.png" alt="" />
+        <img className="ct-hero-logo ct-hero-logo--middle" src="/images/butterfly.png" alt="" />
+        <img className="ct-hero-logo ct-hero-logo--front" src="/images/butterfly.png" alt="" />
       </div>
       <div className="ct-pulse-card ct-pulse-card--top ct-reveal-color">
         <span>Session load</span>
@@ -286,10 +286,10 @@ function FutureSection() {
       <div className="ct-data-layout">
         <Reveal className="ct-data-collage">
           <div className="ct-data-image ct-data-image--large ct-reveal-color">
-            <img src="/images/logo.png" alt="" />
+            <img src="/images/butterfly.png" alt="" />
           </div>
           <div className="ct-data-image ct-data-image--small ct-reveal-color">
-            <img src="/images/logo.png" alt="" />
+            <img src="/images/butterfly.png" alt="" />
           </div>
           <div className="ct-data-terminal ct-reveal-color">
             <span>ranking_delta.json</span>

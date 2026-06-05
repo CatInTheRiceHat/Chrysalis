@@ -5,7 +5,6 @@ import { AnimatePresence } from 'motion/react';
 import { Navbar } from './components/Navbar';
 import { LiveDemo } from './components/LiveDemo';
 import { IntroScreen } from './components/IntroScreen';
-import { CustomCursor } from './components/CustomCursor';
 import { RebootPage } from './components/RebootPage';
 import './App.css';
 
@@ -59,7 +58,6 @@ function App() {
         )}
       </AnimatePresence>
       <div className="min-h-screen overflow-x-hidden">
-        <CustomCursor />
         <Navbar />
         <Routes>
           <Route path="/" element={<MainPage />} />
