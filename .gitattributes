@@ -6,3 +6,4 @@
 # Vercel needs these as real binaries (not LFS pointers)
 website/public/butterfly.png !filter !diff !merge -text
 website/public/butterflylogo.png !filter !diff !merge -text
+website/public/images/*.png !filter !diff !merge -text
