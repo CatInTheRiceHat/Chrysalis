@@ -103,7 +103,7 @@ export function About() {
               <div className="flex items-center gap-3">
                 <img
                   className="w-12 h-12 rounded-full object-cover"
-                  src="/Me-portrait.png"
+                  src="/Me.png"
                   alt="Portrait of Elaine Che"
                   style={{ objectPosition: 'center 42%', border: '1px solid rgba(167,139,250,0.3)' }}
                 />

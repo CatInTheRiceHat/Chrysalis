@@ -331,7 +331,7 @@ function CreatorSection() {
         </Reveal>
         <Reveal className="ct-profile-card ct-reveal-color" delay={0.12}>
           <div className="ct-profile-card__mark ct-reveal-color">
-            <img src="/Me-portrait.png" alt="Portrait of Elaine Che" />
+            <img src="/Me.png" alt="Portrait of Elaine Che" />
           </div>
           <span>Creator & Developer</span>
           <h3>Elaine Che</h3>

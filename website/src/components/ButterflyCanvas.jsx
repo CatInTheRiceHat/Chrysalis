@@ -45,7 +45,7 @@ export default function ButterflyCanvas({ width = 900, height = 700 }) {
           style={{ position: 'absolute', top: 0, left: 0, width: '50%', height: '100%', overflow: 'hidden' }}
         >
           <img
-            src="/Logo.png"
+            src="/butterfly.png"
             alt=""
             style={{ width: imgW, height: imgH, display: 'block', maxWidth: 'none' }}
             draggable={false}
@@ -58,7 +58,7 @@ export default function ButterflyCanvas({ width = 900, height = 700 }) {
           style={{ position: 'absolute', top: 0, right: 0, width: '50%', height: '100%', overflow: 'hidden' }}
         >
           <img
-            src="/Logo.png"
+            src="/butterfly.png"
             alt=""
             style={{
               width: imgW, height: imgH, display: 'block', maxWidth: 'none',
