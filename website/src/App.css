@@ -764,10 +764,11 @@ a {
   flex-direction: column;
   justify-content: space-between;
   padding: clamp(6rem, 12vw, 9rem) var(--ct-pad) clamp(1.6rem, 4vw, 3rem);
-  color: var(--ct-white);
+  color: var(--ct-ink);
   background:
     radial-gradient(circle at 82% 20%, rgba(173, 158, 184, 0.2), transparent 26rem),
-    linear-gradient(135deg, #2b2631, #393241 68%, #7c6d8c);
+    radial-gradient(circle at 12% 82%, rgba(207, 203, 211, 0.34), transparent 24rem),
+    var(--ct-paper);
 }
 
 .ct-footer::before {
@@ -777,10 +778,13 @@ a {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(circle at 80% 18%, rgba(250, 249, 246, 0.12), transparent 28rem),
-    linear-gradient(rgba(250, 249, 246, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(250, 249, 246, 0.03) 1px, transparent 1px);
-  background-size: auto, 58px 58px, 58px 58px;
+    linear-gradient(rgba(147, 142, 151, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(147, 142, 151, 0.09) 1px, transparent 1px);
+  background-size: 58px 58px, 58px 58px;
+}
+
+.ct-footer .ct-kicker--light {
+  color: var(--ct-ink-faint);
 }
 
 .ct-footer__heading {
@@ -790,7 +794,7 @@ a {
 
 .ct-footer h2 {
   max-width: 980px;
-  color: var(--ct-white);
+  color: var(--ct-ink);
   font-size: clamp(3.35rem, 9vw, 10.5rem);
   line-height: 0.88;
 }
@@ -800,7 +804,7 @@ a {
   margin: clamp(4rem, 8vw, 7rem) auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  border-top: 1px solid var(--ct-light-line);
+  border-top: 1px solid var(--ct-line);
 }
 
 .ct-footer-card {
@@ -809,13 +813,13 @@ a {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 1rem;
-  border-bottom: 1px solid var(--ct-light-line);
-  color: rgba(250, 249, 246, 0.8);
+  border-bottom: 1px solid var(--ct-line);
+  color: rgba(43, 38, 49, 0.72);
   transition: color 180ms ease, padding 180ms ease;
 }
 
 .ct-footer-card:hover {
-  color: var(--ct-white);
+  color: var(--ct-purple);
   padding-left: 0.7rem;
 }
 
@@ -833,7 +837,7 @@ a {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 1rem;
-  color: rgba(250, 249, 246, 0.48);
+  color: rgba(147, 142, 151, 0.82);
   font-size: 0.84rem;
 }
 
