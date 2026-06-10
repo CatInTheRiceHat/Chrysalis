@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion as MOTION } from 'motion/react';
 import { Menu, X } from 'lucide-react';
 
 const SCROLL_LINKS = [
   { label: 'Problem', id: 'problem' },
-  { label: 'Solution', id: 'solution' },
   { label: 'Journey', id: 'journey' },
+  { label: 'Solution', id: 'solution' },
   { label: 'Future', id: 'future' },
-  { label: 'Creator', id: 'creator' },
+  { label: 'About', id: 'about' },
   { label: 'Contact', id: 'contact' },
 ];
 
@@ -56,7 +56,7 @@ export function Navbar() {
 
   return (
     <>
-      <motion.nav
+      <MOTION.nav
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -115,18 +115,18 @@ export function Navbar() {
             </button>
           </div>
         </div>
-      </motion.nav>
+      </MOTION.nav>
 
       <AnimatePresence>
         {menuOpen && (
-          <motion.div
+          <MOTION.div
             className="nav-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.28 }}
           >
-            <motion.div
+            <MOTION.div
               className="nav-overlay__panel"
               initial={{ y: '-100%', borderRadius: '0 0 80px 80px' }}
               animate={{ y: 0, borderRadius: '0 0 36px 36px' }}
@@ -150,7 +150,7 @@ export function Navbar() {
 
               <div className="nav-overlay__links">
                 {SCROLL_LINKS.map(({ label, id }, index) => (
-                  <motion.button
+                  <MOTION.button
                     key={id}
                     type="button"
                     onClick={() => scrollTo(id)}
@@ -160,9 +160,9 @@ export function Navbar() {
                   >
                     <span>{String(index + 1).padStart(2, '0')}</span>
                     {label}
-                  </motion.button>
+                  </MOTION.button>
                 ))}
-                <motion.div
+                <MOTION.div
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: 0.48 }}
@@ -170,10 +170,10 @@ export function Navbar() {
                   <Link to="/demo" onClick={() => setMenuOpen(false)} className="nav-overlay__demo">
                     Open Demo
                   </Link>
-                </motion.div>
+                </MOTION.div>
               </div>
-            </motion.div>
-          </motion.div>
+            </MOTION.div>
+          </MOTION.div>
         )}
       </AnimatePresence>
     </>

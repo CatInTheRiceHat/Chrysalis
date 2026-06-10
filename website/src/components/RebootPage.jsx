@@ -1,60 +1,121 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useInView, useReducedMotion, useScroll, useTransform } from 'motion/react';
+import {
+  AnimatePresence,
+  motion as MOTION,
+  useInView,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from 'motion/react';
 import {
   ArrowUpRight,
+  Award,
   Brain,
-  Clock3,
-  Database,
-  Eye,
+  ClipboardList,
+  Code2,
   Github,
   Linkedin,
   Mail,
-  Moon,
+  MessageCircle,
+  Newspaper,
   Route,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
+  X,
 } from 'lucide-react';
 
-const wellbeingSignals = [
-  ['Screen taper', 'Gradually reduces feed intensity instead of forcing a hard stop.'],
-  ['Diversity lift', 'Balances repeated content loops with wider topic and creator exposure.'],
-  ['Night guard', 'Softens high-stimulation content when sleep risk is highest.'],
-  ['Crisis routing', 'Detects sharper harm signals and redirects toward safer surfaces.'],
+const originCards = [
+  ['Science fair origin', 'Originally developed from MorphoMedia, my Synopsys science fair project.'],
+  ['SPV award recognition', 'Recognized by SPV Market Research at the 2026 Synopsys Championship Science Fair.'],
+  ['Full-stack prototype', 'Built as an interactive web demo with ranking logic people can actually test.'],
+  ['MorphoMedia -> Chrysalis', 'A research question became a more personal digital wellbeing prototype.'],
 ];
 
-const statRows = [
-  ['2.5 hrs', 'Average daily teen social media use modeled as the baseline load.'],
-  ['43%', 'Teens reporting social platforms can worsen mental health.'],
-  ['4 modes', 'Ranking levers for time, diversity, timing, and safety.'],
+const problemRows = [
+  ['01', 'People often scroll when they are bored, stressed, tired, lonely, procrastinating, or trying not to feel something.'],
+  ['02', 'Chrysalis does not blame teens for using social media or tell people to delete every app.'],
+  ['03', 'It asks what would change if the algorithm cared about how someone feels after using it.'],
 ];
 
-const methodCards = [
+const journeySteps = [
   {
-    eyebrow: '01 / Intake',
-    title: 'Read the feed as a health signal.',
-    body: 'Chrysalis scores each candidate post against engagement, repetition, timing, and user-defined wellbeing preferences.',
-    icon: Database,
+    title: 'Observation',
+    body: 'Through journalism, I started paying attention to how technology, AI, social media, and school pressure shape student life. The more I reported and observed, the more I noticed that scrolling was not always just entertainment. Sometimes it was a way to cope, avoid, compare, or escape.',
+    image: '/images/journey-egg.png',
+    icon: Newspaper,
   },
   {
-    eyebrow: '02 / Re-rank',
-    title: 'Trade raw retention for better session shape.',
-    body: 'The algorithm can still surface interesting posts, but it pays a penalty for loops that keep the user stuck.',
+    title: 'MorphoMedia',
+    body: 'I turned those questions into MorphoMedia, my Synopsys science fair project. The project explored whether recommendation systems could be redesigned around teen wellbeing instead of pure engagement.',
+    image: '/images/journey-caterpillar.png',
+    icon: Award,
+  },
+  {
+    title: 'Chrysalis',
+    body: 'After science fair, I rebuilt the idea as Chrysalis: a more interactive full-stack web prototype with a wellbeing-aware recommender, Cocoon Mode, and Migration Mode.',
+    image: '/images/journey-chrysalis.png',
+    icon: Code2,
+  },
+  {
+    title: 'Butterfly',
+    body: 'The long-term vision is not to shame people off social media. It is to help people emerge from digital spaces with more agency, self-awareness, and self-respect.',
+    image: '/images/journey-emerged.png',
+    icon: Sparkles,
+  },
+];
+
+const wellbeingSignals = [
+  {
+    title: 'Cocoon Mode',
+    body: 'A gentle taper that helps users step down from high-friction scrolling instead of forcing an abrupt cutoff.',
+    icon: Sparkles,
+  },
+  {
+    title: 'Migration Mode',
+    body: 'Daily curated drops that shift attention toward more intentional, nourishing, or creative content.',
+    icon: Route,
+  },
+  {
+    title: 'Diversity Lift',
+    body: 'Introduces variety so the feed does not trap users in one emotional loop.',
     icon: SlidersHorizontal,
   },
   {
-    eyebrow: '03 / Explain',
-    title: 'Show why the feed changed.',
-    body: 'Every boost, mute, delay, or reroute should be visible enough for a teenager to understand and challenge.',
-    icon: Eye,
+    title: 'Safety-Aware Routing',
+    body: 'Redirects concerning patterns toward safer, more supportive resources without pretending the prototype is a crisis tool.',
+    icon: ShieldCheck,
   },
 ];
 
-const buildNotes = [
-  ['Algorithm', 'Wellbeing ranker, Gini diversity scoring, night mode protection.'],
-  ['Backend', 'FastAPI service with testable scoring inputs and output explanations.'],
-  ['Interface', 'React demo that makes ranking tradeoffs visible instead of invisible.'],
-  ['Research', 'Mental health literature translated into product constraints.'],
+const futureNotes = [
+  ['Student feedback', 'Collect anonymous student input about scrolling patterns and support preferences.'],
+  ['Demo testing', 'Test the interactive prototype with students and watch where explanations are unclear.'],
+  ['Dataset', 'Improve the content dataset so recommendation tradeoffs feel less abstract.'],
+  ['Transparency', 'Explain why posts are boosted, softened, delayed, or redirected.'],
+  ['Cocoon Mode', 'Make tapering feel supportive, not controlling.'],
+  ['Limits', 'Add clearer safety and limitation notes around what the prototype can and cannot do.'],
 ];
+
+const futureArtifacts = [
+  {
+    title: 'MorphoMedia science fair poster',
+    label: 'Science fair poster',
+    src: '/images/synopsys-poster.jpeg',
+  },
+  {
+    title: 'SPV Market Research award certificate',
+    label: 'Award certificate',
+    src: '/images/award.jpeg',
+  },
+];
+
+function getJourneyStepPercent(index) {
+  return journeySteps.length > 1
+    ? 12 + (index / (journeySteps.length - 1)) * 76
+    : 50;
+}
 
 function useDesktopFiling() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -76,7 +137,7 @@ function Reveal({ children, className = '', delay = 0 }) {
   const inView = useInView(ref, { once: true, margin: '-80px' });
 
   return (
-    <motion.div
+    <MOTION.div
       ref={ref}
       className={className}
       initial={{ opacity: 0, y: 42, filter: 'blur(12px)' }}
@@ -84,7 +145,7 @@ function Reveal({ children, className = '', delay = 0 }) {
       transition={{ duration: 0.72, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
-    </motion.div>
+    </MOTION.div>
   );
 }
 
@@ -118,13 +179,13 @@ function SectionFrame({ id, tone = 'paper', label, children }) {
 
   return (
     <section id={id} ref={ref} className={`ct-section-shell ct-section-shell--${tone}`}>
-      <motion.div
+      <MOTION.div
         className="ct-section"
         style={filingStyle}
       >
         <div className="ct-section__tab ct-reveal-color" aria-hidden="true">{label}</div>
         {children}
-      </motion.div>
+      </MOTION.div>
     </section>
   );
 }
@@ -132,7 +193,7 @@ function SectionFrame({ id, tone = 'paper', label, children }) {
 function MetricRows() {
   return (
     <div className="ct-metric-table">
-      {statRows.map(([value, label]) => (
+      {problemRows.map(([value, label]) => (
         <div className="ct-metric-row" key={value}>
           <strong>{value}</strong>
           <span>{label}</span>
@@ -143,38 +204,138 @@ function MetricRows() {
 }
 
 function SignalCard({ signal, index }) {
-  const [title, body] = signal;
+  const { title, body, icon: ICON } = signal;
 
   return (
-    <motion.article
+    <MOTION.article
       className="ct-signal-card ct-reveal-color"
       initial={{ opacity: 0, y: 34 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-60px' }}
       transition={{ duration: 0.58, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
     >
-      <span>{String(index + 1).padStart(2, '0')}</span>
+      <div>
+        <span>{String(index + 1).padStart(2, '0')}</span>
+        <ICON size={21} aria-hidden="true" />
+      </div>
       <h3>{title}</h3>
       <p>{body}</p>
-    </motion.article>
+    </MOTION.article>
   );
+}
+
+function ArtifactPreview({ artifact, onClose }) {
+  useEffect(() => {
+    if (!artifact) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [artifact, onClose]);
+
+  return (
+    <AnimatePresence>
+      {artifact && (
+        <MOTION.div
+          className="ct-artifact-preview"
+          role="presentation"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22 }}
+          onMouseDown={onClose}
+        >
+          <MOTION.div
+            className="ct-artifact-preview__panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${artifact.title} preview`}
+            initial={{ opacity: 0, y: 24, scale: 0.96, filter: 'blur(10px)' }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: 18, scale: 0.97, filter: 'blur(8px)' }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="ct-artifact-preview__close"
+              aria-label="Close preview"
+              onClick={onClose}
+            >
+              <X size={20} />
+            </button>
+            <img src={artifact.src} alt={artifact.title} />
+            <span>{artifact.label}</span>
+          </MOTION.div>
+        </MOTION.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function handleArtifactPointerMove(event) {
+  if (
+    event.pointerType === 'touch'
+    || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    return;
+  }
+
+  const target = event.currentTarget;
+  const rect = target.getBoundingClientRect();
+  const x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+  const y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+  const tiltX = -y * 7;
+  const tiltY = x * 9;
+  const shiftX = x * 9;
+  const shiftY = y * 7;
+  const isCertificate = target.classList.contains('ct-data-image--certificate');
+  const rotate = isCertificate ? 3 : -2.5;
+  const lift = isCertificate ? '-0.45rem' : '-0.35rem';
+  const scale = isCertificate ? 1.025 : 1.018;
+
+  target.style.setProperty('--tilt-x', `${tiltX.toFixed(2)}deg`);
+  target.style.setProperty('--tilt-y', `${tiltY.toFixed(2)}deg`);
+  target.style.setProperty('--shift-x', `${shiftX.toFixed(2)}px`);
+  target.style.setProperty('--shift-y', `${shiftY.toFixed(2)}px`);
+  target.style.setProperty('transform', [
+    `translate3d(${shiftX.toFixed(2)}px, ${shiftY.toFixed(2)}px, 0px)`,
+    `translateY(${lift})`,
+    `rotate(${rotate}deg)`,
+    `rotateX(${tiltX.toFixed(2)}deg)`,
+    `rotateY(${tiltY.toFixed(2)}deg)`,
+    `scale(${scale})`,
+  ].join(' '));
+}
+
+function resetArtifactTilt(event) {
+  const target = event.currentTarget;
+
+  target.style.setProperty('--tilt-x', '0deg');
+  target.style.setProperty('--tilt-y', '0deg');
+  target.style.setProperty('--shift-x', '0px');
+  target.style.setProperty('--shift-y', '0px');
+  target.style.removeProperty('transform');
 }
 
 function HeroVisual() {
   return (
-    <div className="ct-hero-visual" aria-hidden="true">
-      <div className="ct-hero-canvas ct-reveal-color">
-        <img className="ct-hero-logo ct-hero-logo--back" src="/images/butterfly.png" alt="" />
-        <img className="ct-hero-logo ct-hero-logo--middle" src="/images/butterfly.png" alt="" />
-        <img className="ct-hero-logo ct-hero-logo--front" src="/images/butterfly.png" alt="" />
-      </div>
-      <div className="ct-pulse-card ct-pulse-card--top ct-reveal-color">
-        <span>Session load</span>
-        <strong>-22%</strong>
-      </div>
-      <div className="ct-pulse-card ct-pulse-card--bottom ct-reveal-color">
-        <span>Diversity index</span>
-        <strong>0.71</strong>
+    <div className="ct-hero-visual">
+      <div className="ct-hero-canvas ct-reveal-color" aria-hidden="true">
+        <img className="ct-hero-art" src="/images/hero-butterfly.png" alt="" />
       </div>
     </div>
   );
@@ -183,23 +344,35 @@ function HeroVisual() {
 function HeroSection() {
   return (
     <section id="home" className="ct-hero">
+      <HeroVisual />
       <div className="ct-hero__grid">
         <Reveal className="ct-hero__copy">
-          <span className="ct-kicker">Chrysalis Algorithm Project</span>
+          <span className="ct-kicker">Teen-built digital wellbeing prototype</span>
           <h1>Rewriting the feed.</h1>
           <p>
-            A recommendation system that treats attention as something to protect:
-            tapering screen time, widening content diversity, and making safety logic visible.
+            Chrysalis is a teen-built digital wellbeing prototype exploring how social media
+            recommendation systems could support balance, self-awareness, and agency instead
+            of only maximizing attention.
+          </p>
+          <p className="ct-origin-line">
+            Originally developed from MorphoMedia, my Synopsys science fair project.
           </p>
           <div className="ct-hero__actions">
-            <a href="#problem" className="ct-button" data-cursor="soft">
-              Explore the system
+            <a href="#journey" className="ct-button" data-cursor="soft">
+              Follow the story
               <ArrowUpRight size={17} />
             </a>
-            <span className="ct-pagination">01 / 06</span>
+            <span className="ct-pagination">01 / 07</span>
+          </div>
+          <div className="ct-origin-grid" aria-label="Project origin highlights">
+            {originCards.map(([title, body], index) => (
+              <div className={`ct-origin-card ct-origin-card--${index + 1} ct-reveal-color`} key={title}>
+                <span>{title}</span>
+                <strong>{body}</strong>
+              </div>
+            ))}
           </div>
         </Reveal>
-        <HeroVisual />
       </div>
     </section>
   );
@@ -211,13 +384,15 @@ function ProblemSection() {
       <div className="ct-split">
         <Reveal className="ct-copy-block">
           <span className="ct-kicker ct-kicker--light">The Problem</span>
-          <h2>The feed is already optimized. It is just optimized for the wrong outcome.</h2>
+          <h2>The feed is not neutral.</h2>
         </Reveal>
         <Reveal className="ct-copy-block ct-copy-block--narrow" delay={0.08}>
           <p>
-            Most ranking systems are excellent at keeping a session alive. Chrysalis starts from
-            a different question: what should the feed do when continued engagement is no longer
-            good for the person using it?
+            Social media is not just entertainment. People often scroll when they are bored,
+            stressed, tired, lonely, procrastinating, or trying not to feel something.
+            Chrysalis is not about blaming teens for using social media or telling people
+            to delete every app. It asks a different question: what if the algorithm cared
+            about how someone feels after using it, not just how long they stayed?
           </p>
           <MetricRows />
         </Reveal>
@@ -226,53 +401,185 @@ function ProblemSection() {
   );
 }
 
+function JourneySection() {
+  const ref = useRef(null);
+  const reduceMotion = useReducedMotion();
+  const isDesktop = useDesktopFiling();
+  const [activeStep, setActiveStep] = useState(0);
+  const [lockState, setLockState] = useState('before');
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ['start start', 'end end'],
+  });
+  const progressScale = useTransform(scrollYProgress, [0.08, 0.92], [0, 1]);
+  const shouldPin = isDesktop && !reduceMotion;
+  const activeJourneyStep = journeySteps[activeStep];
+  const activePercent = getJourneyStepPercent(activeStep);
+
+  useMotionValueEvent(scrollYProgress, 'change', (latest) => {
+    if (!shouldPin) {
+      return;
+    }
+
+    const nextStep = Math.min(
+      journeySteps.length - 1,
+      Math.max(0, Math.floor(latest * journeySteps.length)),
+    );
+    const nextLockState = latest >= 0.995 ? 'after' : latest > 0.002 ? 'active' : 'before';
+
+    setActiveStep((current) => (current === nextStep ? current : nextStep));
+    setLockState((current) => (current === nextLockState ? current : nextLockState));
+  });
+
+  return (
+    <section
+      id="journey"
+      ref={ref}
+      className={`ct-journey-shell ct-journey-shell--${lockState} ct-section-shell ct-section-shell--paper`}
+    >
+      <div className="ct-journey-sticky ct-section">
+        <div className="ct-section__tab ct-reveal-color" aria-hidden="true">Journey</div>
+        <div className="ct-journey-layout">
+          <Reveal className="ct-copy-block ct-journey-copy">
+            <span className="ct-kicker">The Journey</span>
+            <h2>From observation to butterfly.</h2>
+            <p>
+              Chrysalis grew from the intersection of reporting, research, and building.
+              Journalism helped me notice the human side of the problem. Science fair gave
+              me a way to test the idea. Code helped me turn it into something people could
+              actually interact with.
+            </p>
+          </Reveal>
+
+          <div className="ct-journey-lock" aria-label="Chrysalis journey timeline">
+            <div className="ct-journey-stage-art" aria-hidden="true">
+              {journeySteps.map((step, index) => {
+                const isActive = activeStep === index;
+
+                return (
+                  <MOTION.figure
+                    className={`ct-journey-image ${isActive ? 'is-active' : ''}`}
+                    key={step.title}
+                    animate={{
+                      opacity: isActive ? 1 : 0,
+                      scale: isActive ? 1 : 0.88,
+                      y: isActive ? 0 : 24,
+                      filter: isActive ? 'blur(0px)' : 'blur(12px)',
+                    }}
+                    transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <img src={step.image} alt="" />
+                  </MOTION.figure>
+                );
+              })}
+            </div>
+
+            <div className="ct-journey-caption" aria-live="polite">
+              <span>{String(activeStep + 1).padStart(2, '0')} / {activeJourneyStep.title}</span>
+              <MOTION.h3
+                key={`${activeJourneyStep.title}-heading`}
+                initial={shouldPin ? { opacity: 0, y: 18, filter: 'blur(8px)' } : false}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {activeJourneyStep.title}
+              </MOTION.h3>
+              <MOTION.p
+                key={`${activeJourneyStep.title}-body`}
+                initial={shouldPin ? { opacity: 0, y: 16 } : false}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.42, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {activeJourneyStep.body}
+              </MOTION.p>
+            </div>
+
+            <div className="ct-journey-timeline" aria-hidden="true">
+              <div className="ct-journey-progress">
+                <MOTION.div
+                  className="ct-journey-progress__fill"
+                  style={{ scaleX: shouldPin ? progressScale : 1 }}
+                />
+              </div>
+
+              <MOTION.div
+                className="ct-journey-tracker"
+                animate={{ left: `${activePercent}%` }}
+                transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <img src="/images/butterfly.png" alt="" />
+              </MOTION.div>
+
+              <div className="ct-journey-nodes">
+                {journeySteps.map((step, index) => {
+                  const ICON = step.icon;
+                  const isActive = activeStep === index;
+                  const isPast = activeStep > index;
+                  const stepPercent = getJourneyStepPercent(index);
+
+                  return (
+                    <MOTION.div
+                      className={`ct-journey-node ${isActive ? 'is-active' : ''} ${isPast ? 'is-past' : ''}`}
+                      key={step.title}
+                      style={{ '--step-x': `${stepPercent}%` }}
+                      animate={{
+                        opacity: isActive ? 1 : isPast ? 0.68 : 0.42,
+                        scale: isActive ? 1 : 0.92,
+                      }}
+                      transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <span className="ct-journey-node__icon">
+                        <ICON size={20} />
+                      </span>
+                      <span className="ct-journey-node__label">{step.title}</span>
+                    </MOTION.div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="ct-journey-mobile-list">
+              {journeySteps.map((step, index) => {
+                const ICON = step.icon;
+
+                return (
+                  <article className="ct-journey-mobile-step" key={step.title}>
+                    <div className="ct-journey-mobile-step__mark">
+                      <ICON size={19} aria-hidden="true" />
+                      <span>{String(index + 1).padStart(2, '0')}</span>
+                    </div>
+                    <img src={step.image} alt="" />
+                    <div>
+                      <h3>{step.title}</h3>
+                      <p>{step.body}</p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function SolutionSection() {
   return (
-    <SectionFrame id="solution" tone="paper" label="Solution">
+    <SectionFrame id="solution" tone="ink" label="Solution">
       <div className="ct-section-grid">
         <Reveal className="ct-copy-block">
           <span className="ct-kicker">The Solution</span>
-          <h2>A ranking model with friction, context, and a memory for harm.</h2>
+          <h2>A prototype that tests a different design goal.</h2>
           <p>
-            Chrysalis does not pretend attention is neutral. It scores for usefulness and delight,
-            then deliberately dampens loops that are repetitive, late-night, or emotionally risky.
+            Chrysalis explores what a feed could do if it optimized for balance, variety,
+            and agency. It simulates ranking choices that support healthier patterns without
+            pretending to diagnose, treat, or solve every problem social media creates.
           </p>
         </Reveal>
         <div className="ct-signal-grid">
           {wellbeingSignals.map((signal, index) => (
-            <SignalCard key={signal[0]} signal={signal} index={index} />
-          ))}
-        </div>
-      </div>
-    </SectionFrame>
-  );
-}
-
-function JourneySection() {
-  return (
-    <SectionFrame id="journey" tone="ink" label="Method">
-      <div className="ct-method-layout">
-        <Reveal className="ct-copy-block">
-          <span className="ct-kicker ct-kicker--light">The Method</span>
-          <h2>From research note to working algorithm.</h2>
-        </Reveal>
-        <div className="ct-method-deck">
-          {methodCards.map(({ icon: Icon, ...card }, index) => (
-            <motion.article
-              className="ct-method-card ct-reveal-color"
-              key={card.eyebrow}
-              initial={{ opacity: 0, x: 64, rotate: 2 }}
-              whileInView={{ opacity: 1, x: 0, rotate: 0 }}
-              viewport={{ once: true, margin: '-70px' }}
-              transition={{ duration: 0.64, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div>
-                <span>{card.eyebrow}</span>
-                <Icon size={22} />
-              </div>
-              <h3>{card.title}</h3>
-              <p>{card.body}</p>
-            </motion.article>
+            <SignalCard key={signal.title} signal={signal} index={index} />
           ))}
         </div>
       </div>
@@ -281,59 +588,78 @@ function JourneySection() {
 }
 
 function FutureSection() {
+  const [previewArtifact, setPreviewArtifact] = useState(null);
+  const closePreview = () => setPreviewArtifact(null);
+
   return (
-    <SectionFrame id="future" tone="paper" label="Future">
-      <div className="ct-data-layout">
-        <Reveal className="ct-data-collage">
-          <div className="ct-data-image ct-data-image--large ct-reveal-color">
-            <img src="/images/butterfly.png" alt="" />
-          </div>
-          <div className="ct-data-image ct-data-image--small ct-reveal-color">
-            <img src="/images/butterfly.png" alt="" />
-          </div>
-          <div className="ct-data-terminal ct-reveal-color">
-            <span>ranking_delta.json</span>
-            <code>{'{"screen_time": -0.22, "diversity": +0.31, "risk": "softened"}'}</code>
-          </div>
-        </Reveal>
-        <Reveal className="ct-copy-block" delay={0.12}>
-          <span className="ct-kicker">What Comes Next</span>
-          <h2>The prototype should become a transparent layer over real feeds.</h2>
-          <p>
-            The larger version of Chrysalis would sit between people and the platforms they already
-            use, preserving creators while changing the logic that decides what comes next.
-          </p>
-          <div className="ct-note-list">
-            {buildNotes.map(([title, body]) => (
-              <div key={title}>
-                <strong>{title}</strong>
-                <span>{body}</span>
-              </div>
+    <>
+      <SectionFrame id="future" tone="paper" label="Future">
+        <div className="ct-data-layout">
+          <Reveal className="ct-data-collage">
+            {futureArtifacts.map((artifact, index) => (
+              <button
+                type="button"
+                className={`ct-data-image ct-data-image--${index === 0 ? 'poster' : 'certificate'} ct-reveal-color`}
+                key={artifact.src}
+                onClick={() => setPreviewArtifact(artifact)}
+                onPointerMove={handleArtifactPointerMove}
+                onPointerLeave={resetArtifactTilt}
+                onBlur={resetArtifactTilt}
+                aria-label={`Preview ${artifact.title}`}
+                data-cursor="soft"
+              >
+                <img src={artifact.src} alt={artifact.title} />
+              </button>
             ))}
-          </div>
-        </Reveal>
-      </div>
-    </SectionFrame>
+          </Reveal>
+          <Reveal className="ct-copy-block" delay={0.12}>
+            <span className="ct-kicker">What I am building next</span>
+            <h2>More grounded, more transparent, and still honest about its limits.</h2>
+            <p>
+              Chrysalis is still a prototype. The next step is making it more grounded in
+              real student experiences and more transparent about how its recommendations change.
+            </p>
+            <div className="ct-note-list">
+              {futureNotes.map(([title, body]) => (
+                <div key={title}>
+                  <strong>{title}</strong>
+                  <span>{body}</span>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </SectionFrame>
+      <ArtifactPreview artifact={previewArtifact} onClose={closePreview} />
+    </>
   );
 }
 
 function CreatorSection() {
   return (
-    <SectionFrame id="creator" tone="aqua" label="Creator">
+    <SectionFrame id="about" tone="aqua" label="About">
       <div className="ct-creator-layout">
         <Reveal className="ct-copy-block">
-          <span className="ct-kicker ct-kicker--light">About the Creator</span>
-          <h2>Built from the belief that care can be made measurable.</h2>
+          <span className="ct-kicker ct-kicker--light">About Elaine</span>
+          <h2>Built by Elaine.</h2>
           <p>
-            Chrysalis was designed and developed by Elaine Che as part critique, part prototype,
-            and part proof that recommendation systems can be judged by more than retention.
+            I am Elaine Che, a student journalist, builder, and researcher interested in how
+            technology shapes the way people think, feel, and live. As a journalist, I report
+            on student life, media, AI, internet culture, and pressure. As a builder, I try
+            to turn those observations into tools people can actually interact with.
+          </p>
+          <p>
+            Chrysalis is where those two sides meet. It began as MorphoMedia, my Synopsys
+            science fair project, and grew into a prototype about healthier recommendation
+            systems. I am interested in building technology that does not just capture attention,
+            but helps people understand themselves better.
           </p>
         </Reveal>
         <Reveal className="ct-profile-card ct-reveal-color" delay={0.12}>
           <div className="ct-profile-card__mark ct-reveal-color">
             <img src="/images/me.png" alt="Portrait of Elaine Che" />
           </div>
-          <span>Creator & Developer</span>
+          <span>Student journalist, builder, researcher</span>
           <h3>Elaine Che</h3>
           <div className="ct-profile-card__links">
             <a href="https://github.com/CatInTheRiceHat" target="_blank" rel="noopener noreferrer">
@@ -360,16 +686,16 @@ function ContactSection() {
     <footer id="contact" className="ct-footer">
       <div className="ct-footer__heading">
         <span className="ct-kicker ct-kicker--light">Contact</span>
-        <h2>Let’s build a healthier feed.</h2>
+        <h2>Let us build a more humane feed.</h2>
       </div>
       <div className="ct-footer__grid">
         {[
-          ['Open demo', '/demo', Route],
-          ['Email Elaine', 'mailto:elaineyouyuanche@gmail.com', Mail],
-          ['View source', 'https://github.com/CatInTheRiceHat', Github],
-        ].map(([label, href, Icon]) => (
+          ['Open demo', '/demo', <Route size={22} aria-hidden="true" />],
+          ['Email Elaine', 'mailto:elaineyouyuanche@gmail.com', <Mail size={22} aria-hidden="true" />],
+          ['View source', 'https://github.com/CatInTheRiceHat', <Github size={22} aria-hidden="true" />],
+        ].map(([label, href, icon]) => (
           <a key={label} href={href} className="ct-footer-card ct-reveal-color">
-            <Icon size={22} />
+            {icon}
             <span>{label}</span>
             <ArrowUpRight size={18} />
           </a>
@@ -377,7 +703,7 @@ function ContactSection() {
       </div>
       <div className="ct-footer__bottom">
         <span>Chrysalis © 2026</span>
-        <span>Algorithmic wellbeing prototype</span>
+        <span>Teen-built recommendation systems prototype</span>
       </div>
     </footer>
   );
@@ -387,20 +713,28 @@ function SystemRail() {
   return (
     <aside className="ct-system-rail" aria-label="System summary">
       <div>
+        <Newspaper size={18} className="ct-reveal-color" />
+        <span>journalism</span>
+      </div>
+      <div>
+        <Award size={18} className="ct-reveal-color" />
+        <span>science fair</span>
+      </div>
+      <div>
+        <Code2 size={18} className="ct-reveal-color" />
+        <span>prototype</span>
+      </div>
+      <div>
+        <ClipboardList size={18} className="ct-reveal-color" />
+        <span>student input</span>
+      </div>
+      <div>
+        <MessageCircle size={18} className="ct-reveal-color" />
+        <span>agency</span>
+      </div>
+      <div>
         <Brain size={18} className="ct-reveal-color" />
-        <span>wellbeing ranker</span>
-      </div>
-      <div>
-        <Clock3 size={18} className="ct-reveal-color" />
-        <span>session taper</span>
-      </div>
-      <div>
-        <Moon size={18} className="ct-reveal-color" />
-        <span>night guard</span>
-      </div>
-      <div>
-        <ShieldCheck size={18} className="ct-reveal-color" />
-        <span>safety route</span>
+        <span>wellbeing aware</span>
       </div>
     </aside>
   );
@@ -412,8 +746,8 @@ export function RebootPage() {
       <SystemRail />
       <HeroSection />
       <ProblemSection />
-      <SolutionSection />
       <JourneySection />
+      <SolutionSection />
       <FutureSection />
       <CreatorSection />
       <ContactSection />
