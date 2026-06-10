@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AnimatePresence,
   motion as MOTION,
@@ -14,13 +15,13 @@ import {
   Brain,
   ClipboardList,
   Code2,
+  Droplets,
   Github,
   Linkedin,
   Mail,
   MessageCircle,
   Newspaper,
   Route,
-  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   X,
@@ -54,7 +55,7 @@ const journeySteps = [
   },
   {
     title: 'Chrysalis',
-    body: 'After science fair, I rebuilt the idea as Chrysalis: a more interactive full-stack web prototype with a wellbeing-aware recommender, Cocoon Mode, and Migration Mode.',
+    body: 'After science fair, I rebuilt the idea as Chrysalis: a more interactive full-stack web prototype with Flutter Feed, Metamorph Mode, and Daily Dew.',
     image: '/images/journey-chrysalis.png',
     icon: Code2,
   },
@@ -66,26 +67,21 @@ const journeySteps = [
   },
 ];
 
-const wellbeingSignals = [
+const solutionModes = [
   {
-    title: 'Cocoon Mode',
+    title: 'Flutter Feed',
+    body: 'The familiar feed, re-ranked. It keeps the original scrolling experience but tunes the ranking logic for diversity, balance, and wellbeing instead of pure engagement.',
+    icon: SlidersHorizontal,
+  },
+  {
+    title: 'Metamorph Mode',
     body: 'A gentle taper that helps users step down from high-friction scrolling instead of forcing an abrupt cutoff.',
     icon: Sparkles,
   },
   {
-    title: 'Migration Mode',
-    body: 'Daily curated drops that shift attention toward more intentional, nourishing, or creative content.',
-    icon: Route,
-  },
-  {
-    title: 'Diversity Lift',
-    body: 'Introduces variety so the feed does not trap users in one emotional loop.',
-    icon: SlidersHorizontal,
-  },
-  {
-    title: 'Safety-Aware Routing',
-    body: 'Redirects concerning patterns toward safer, more supportive resources without pretending the prototype is a crisis tool.',
-    icon: ShieldCheck,
+    title: 'Daily Dew',
+    body: 'A daily drop of curated posts that shifts attention toward more intentional, nourishing, or creative content.',
+    icon: Droplets,
   },
 ];
 
@@ -94,7 +90,7 @@ const futureNotes = [
   ['Demo testing', 'Test the interactive prototype with students and watch where explanations are unclear.'],
   ['Dataset', 'Improve the content dataset so recommendation tradeoffs feel less abstract.'],
   ['Transparency', 'Explain why posts are boosted, softened, delayed, or redirected.'],
-  ['Cocoon Mode', 'Make tapering feel supportive, not controlling.'],
+  ['Metamorph Mode', 'Make tapering feel supportive, not controlling.'],
   ['Limits', 'Add clearer safety and limitation notes around what the prototype can and cannot do.'],
 ];
 
@@ -107,7 +103,8 @@ const futureArtifacts = [
   {
     title: 'SPV Market Research award certificate',
     label: 'Award certificate',
-    src: '/images/award.jpeg',
+    src: '/images/award.png',
+    previewSrc: '/images/award.png',
   },
 ];
 
@@ -277,7 +274,7 @@ function ArtifactPreview({ artifact, onClose }) {
             >
               <X size={20} />
             </button>
-            <img src={artifact.src} alt={artifact.title} />
+            <img src={artifact.previewSrc || artifact.src} alt={artifact.title} />
             <span>{artifact.label}</span>
           </MOTION.div>
         </MOTION.div>
@@ -286,56 +283,74 @@ function ArtifactPreview({ artifact, onClose }) {
   );
 }
 
-function handleArtifactPointerMove(event) {
-  if (
-    event.pointerType === 'touch'
-    || window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  ) {
-    return;
-  }
-
-  const target = event.currentTarget;
-  const rect = target.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
-  const y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
-  const tiltX = -y * 7;
-  const tiltY = x * 9;
-  const shiftX = x * 9;
-  const shiftY = y * 7;
-  const isCertificate = target.classList.contains('ct-data-image--certificate');
-  const rotate = isCertificate ? 3 : -2.5;
-  const lift = isCertificate ? '-0.45rem' : '-0.35rem';
-  const scale = isCertificate ? 1.025 : 1.018;
-
-  target.style.setProperty('--tilt-x', `${tiltX.toFixed(2)}deg`);
-  target.style.setProperty('--tilt-y', `${tiltY.toFixed(2)}deg`);
-  target.style.setProperty('--shift-x', `${shiftX.toFixed(2)}px`);
-  target.style.setProperty('--shift-y', `${shiftY.toFixed(2)}px`);
-  target.style.setProperty('transform', [
-    `translate3d(${shiftX.toFixed(2)}px, ${shiftY.toFixed(2)}px, 0px)`,
-    `translateY(${lift})`,
-    `rotate(${rotate}deg)`,
-    `rotateX(${tiltX.toFixed(2)}deg)`,
-    `rotateY(${tiltY.toFixed(2)}deg)`,
-    `scale(${scale})`,
-  ].join(' '));
+function clampUnit(value) {
+  return Math.min(1, Math.max(-1, value));
 }
 
-function resetArtifactTilt(event) {
-  const target = event.currentTarget;
+function orbitArtifact(element, clientX, clientY, sectionRect) {
+  const rect = element.getBoundingClientRect();
+  const nx = clampUnit((clientX - (rect.left + rect.width / 2)) / (sectionRect.width / 2));
+  const ny = clampUnit((clientY - (rect.top + rect.height / 2)) / (sectionRect.height / 2));
 
-  target.style.setProperty('--tilt-x', '0deg');
-  target.style.setProperty('--tilt-y', '0deg');
-  target.style.setProperty('--shift-x', '0px');
-  target.style.setProperty('--shift-y', '0px');
-  target.style.removeProperty('transform');
+  element.style.setProperty('--tilt-x', `${(-ny * 8).toFixed(2)}deg`);
+  element.style.setProperty('--tilt-y', `${(nx * 10).toFixed(2)}deg`);
+  element.style.setProperty('--shift-x', `${(nx * 10).toFixed(2)}px`);
+  element.style.setProperty('--shift-y', `${(ny * 8).toFixed(2)}px`);
+}
+
+function resetArtifactTilt(element) {
+  element.style.setProperty('--tilt-x', '0deg');
+  element.style.setProperty('--tilt-y', '0deg');
+  element.style.setProperty('--shift-x', '0px');
+  element.style.setProperty('--shift-y', '0px');
+}
+
+const heroVerbs = ['Rewriting', 'Changing', 'Improving', 'Diversifying', 'Rebalancing'];
+
+function RotatingTitle() {
+  const reduceMotion = useReducedMotion();
+  const [verbIndex, setVerbIndex] = useState(0);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      return undefined;
+    }
+
+    const id = setInterval(() => {
+      setVerbIndex((index) => (index + 1) % heroVerbs.length);
+    }, 2500);
+    return () => clearInterval(id);
+  }, [reduceMotion]);
+
+  return (
+    <h1 aria-label="Rewriting the feed.">
+      <span className="ct-hero-title__verb" aria-hidden="true">
+        <AnimatePresence mode="wait" initial={false}>
+          <MOTION.span
+            key={heroVerbs[verbIndex]}
+            initial={{ opacity: 0, y: '0.55em', filter: 'blur(10px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: '-0.45em', filter: 'blur(10px)' }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {heroVerbs[verbIndex]}
+          </MOTION.span>
+        </AnimatePresence>
+      </span>
+      <span className="ct-hero-title__rest" aria-hidden="true">the feed.</span>
+    </h1>
+  );
 }
 
 function HeroVisual() {
   return (
     <div className="ct-hero-visual">
       <div className="ct-hero-canvas ct-reveal-color" aria-hidden="true">
-        <img className="ct-hero-art" src="/images/hero-butterfly.png" alt="" />
+        <div className="ct-hero-butterfly">
+          <img className="ct-hero-wing ct-hero-wing--left" src="/images/hero-butterfly.png" alt="" />
+          <img className="ct-hero-wing ct-hero-wing--right" src="/images/hero-butterfly.png" alt="" />
+          <img className="ct-hero-body" src="/images/hero-butterfly.png" alt="" />
+        </div>
       </div>
     </div>
   );
@@ -348,7 +363,7 @@ function HeroSection() {
       <div className="ct-hero__grid">
         <Reveal className="ct-hero__copy">
           <span className="ct-kicker">Teen-built digital wellbeing prototype</span>
-          <h1>Rewriting the feed.</h1>
+          <RotatingTitle />
           <p>
             Chrysalis is a teen-built digital wellbeing prototype exploring how social media
             recommendation systems could support balance, self-awareness, and agency instead
@@ -362,6 +377,10 @@ function HeroSection() {
               Follow the story
               <ArrowUpRight size={17} />
             </a>
+            <Link to="/demo" className="ct-button ct-button--ghost" data-cursor="soft">
+              Try the demo
+              <ArrowUpRight size={17} />
+            </Link>
             <span className="ct-pagination">01 / 07</span>
           </div>
           <div className="ct-origin-grid" aria-label="Project origin highlights">
@@ -383,7 +402,7 @@ function ProblemSection() {
     <SectionFrame id="problem" tone="aqua" label="Problem">
       <div className="ct-split">
         <Reveal className="ct-copy-block">
-          <span className="ct-kicker ct-kicker--light">The Problem</span>
+          <span className="ct-kicker ct-kicker--light">Problem</span>
           <h2>The feed is not neutral.</h2>
         </Reveal>
         <Reveal className="ct-copy-block ct-copy-block--narrow" delay={0.08}>
@@ -414,7 +433,6 @@ function JourneySection() {
   const progressScale = useTransform(scrollYProgress, [0.08, 0.92], [0, 1]);
   const shouldPin = isDesktop && !reduceMotion;
   const activeJourneyStep = journeySteps[activeStep];
-  const activePercent = getJourneyStepPercent(activeStep);
 
   useMotionValueEvent(scrollYProgress, 'change', (latest) => {
     if (!shouldPin) {
@@ -441,7 +459,7 @@ function JourneySection() {
         <div className="ct-section__tab ct-reveal-color" aria-hidden="true">Journey</div>
         <div className="ct-journey-layout">
           <Reveal className="ct-copy-block ct-journey-copy">
-            <span className="ct-kicker">The Journey</span>
+            <span className="ct-kicker">Journey</span>
             <h2>From observation to butterfly.</h2>
             <p>
               Chrysalis grew from the intersection of reporting, research, and building.
@@ -498,17 +516,9 @@ function JourneySection() {
               <div className="ct-journey-progress">
                 <MOTION.div
                   className="ct-journey-progress__fill"
-                  style={{ scaleX: shouldPin ? progressScale : 1 }}
+                  style={{ scaleY: shouldPin ? progressScale : 1 }}
                 />
               </div>
-
-              <MOTION.div
-                className="ct-journey-tracker"
-                animate={{ left: `${activePercent}%` }}
-                transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <img src="/images/butterfly.png" alt="" />
-              </MOTION.div>
 
               <div className="ct-journey-nodes">
                 {journeySteps.map((step, index) => {
@@ -521,9 +531,9 @@ function JourneySection() {
                     <MOTION.div
                       className={`ct-journey-node ${isActive ? 'is-active' : ''} ${isPast ? 'is-past' : ''}`}
                       key={step.title}
-                      style={{ '--step-x': `${stepPercent}%` }}
+                      style={{ '--step-y': `${stepPercent}%` }}
                       animate={{
-                        opacity: isActive ? 1 : isPast ? 0.68 : 0.42,
+                        opacity: 1,
                         scale: isActive ? 1 : 0.92,
                       }}
                       transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
@@ -536,6 +546,22 @@ function JourneySection() {
                   );
                 })}
               </div>
+            </div>
+
+            <div className="ct-journey-stage-symbols" aria-hidden="true">
+              {journeySteps.map((step, index) => (
+                <MOTION.img
+                  className={`ct-journey-stage-symbol ${activeStep === index ? 'is-active' : ''}`}
+                  key={`${step.title}-symbol`}
+                  src={step.image}
+                  alt=""
+                  animate={{
+                    opacity: activeStep === index ? 1 : 0.36,
+                    scale: activeStep === index ? 1.14 : 1,
+                  }}
+                  transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+                />
+              ))}
             </div>
 
             <div className="ct-journey-mobile-list">
@@ -567,9 +593,9 @@ function JourneySection() {
 function SolutionSection() {
   return (
     <SectionFrame id="solution" tone="ink" label="Solution">
-      <div className="ct-section-grid">
-        <Reveal className="ct-copy-block">
-          <span className="ct-kicker">The Solution</span>
+      <div className="ct-solution-layout">
+        <Reveal className="ct-copy-block ct-solution-copy">
+          <span className="ct-kicker">Solution</span>
           <h2>A prototype that tests a different design goal.</h2>
           <p>
             Chrysalis explores what a feed could do if it optimized for balance, variety,
@@ -577,9 +603,9 @@ function SolutionSection() {
             pretending to diagnose, treat, or solve every problem social media creates.
           </p>
         </Reveal>
-        <div className="ct-signal-grid">
-          {wellbeingSignals.map((signal, index) => (
-            <SignalCard key={signal.title} signal={signal} index={index} />
+        <div className="ct-mode-showcase">
+          {solutionModes.map((mode, index) => (
+            <SignalCard key={mode.title} signal={mode} index={index} />
           ))}
         </div>
       </div>
@@ -590,6 +616,38 @@ function SolutionSection() {
 function FutureSection() {
   const [previewArtifact, setPreviewArtifact] = useState(null);
   const closePreview = () => setPreviewArtifact(null);
+
+  useEffect(() => {
+    const shell = document.getElementById('future');
+    if (!shell) {
+      return undefined;
+    }
+
+    const reduceQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const artifacts = () => Array.from(shell.querySelectorAll('.ct-data-image'));
+
+    const onPointerMove = (event) => {
+      if (event.pointerType === 'touch' || reduceQuery.matches) {
+        return;
+      }
+
+      const sectionRect = shell.getBoundingClientRect();
+      artifacts().forEach((element) => {
+        orbitArtifact(element, event.clientX, event.clientY, sectionRect);
+      });
+    };
+    const onPointerLeave = () => {
+      artifacts().forEach(resetArtifactTilt);
+    };
+
+    shell.addEventListener('pointermove', onPointerMove);
+    shell.addEventListener('pointerleave', onPointerLeave);
+
+    return () => {
+      shell.removeEventListener('pointermove', onPointerMove);
+      shell.removeEventListener('pointerleave', onPointerLeave);
+    };
+  }, []);
 
   return (
     <>
@@ -602,9 +660,6 @@ function FutureSection() {
                 className={`ct-data-image ct-data-image--${index === 0 ? 'poster' : 'certificate'} ct-reveal-color`}
                 key={artifact.src}
                 onClick={() => setPreviewArtifact(artifact)}
-                onPointerMove={handleArtifactPointerMove}
-                onPointerLeave={resetArtifactTilt}
-                onBlur={resetArtifactTilt}
                 aria-label={`Preview ${artifact.title}`}
                 data-cursor="soft"
               >
@@ -613,7 +668,7 @@ function FutureSection() {
             ))}
           </Reveal>
           <Reveal className="ct-copy-block" delay={0.12}>
-            <span className="ct-kicker">What I am building next</span>
+            <span className="ct-kicker">Future</span>
             <h2>More grounded, more transparent, and still honest about its limits.</h2>
             <p>
               Chrysalis is still a prototype. The next step is making it more grounded in
@@ -640,7 +695,7 @@ function CreatorSection() {
     <SectionFrame id="about" tone="aqua" label="About">
       <div className="ct-creator-layout">
         <Reveal className="ct-copy-block">
-          <span className="ct-kicker ct-kicker--light">About Elaine</span>
+          <span className="ct-kicker ct-kicker--light">About</span>
           <h2>Built by Elaine.</h2>
           <p>
             I am Elaine Che, a student journalist, builder, and researcher interested in how

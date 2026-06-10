@@ -168,7 +168,7 @@ export function Navbar() {
                   transition={{ duration: 0.45, delay: 0.48 }}
                 >
                   <Link to="/demo" onClick={() => setMenuOpen(false)} className="nav-overlay__demo">
-                    Open Demo
+                    Demo
                   </Link>
                 </MOTION.div>
               </div>
