@@ -26,6 +26,8 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
+import awardCertificateUrl from '../assets/award.png';
+import sciencePosterUrl from '../assets/synopsys-poster.jpeg';
 
 const originCards = [
   ['Science fair origin', 'Originally developed from MorphoMedia, my Synopsys science fair project.'],
@@ -98,13 +100,14 @@ const futureArtifacts = [
   {
     title: 'MorphoMedia science fair poster',
     label: 'Science fair poster',
-    src: '/images/synopsys-poster.jpeg',
+    src: sciencePosterUrl,
+    previewSrc: sciencePosterUrl,
   },
   {
     title: 'SPV Market Research award certificate',
     label: 'Award certificate',
-    src: '/images/award.png',
-    previewSrc: '/images/award.png',
+    src: awardCertificateUrl,
+    previewSrc: awardCertificateUrl,
   },
 ];
 
