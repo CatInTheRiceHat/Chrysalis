@@ -7,3 +7,8 @@
 website/public/butterfly.png !filter !diff !merge -text
 website/public/butterflylogo.png !filter !diff !merge -text
 website/public/images/*.png !filter !diff !merge -text
+website/public/images/*.jpg !filter !diff !merge -text
+website/public/images/*.jpeg !filter !diff !merge -text
+website/src/assets/*.png !filter !diff !merge -text
+website/src/assets/*.jpg !filter !diff !merge -text
+website/src/assets/*.jpeg !filter !diff !merge -text
