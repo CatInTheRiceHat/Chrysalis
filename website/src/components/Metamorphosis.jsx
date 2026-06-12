@@ -290,7 +290,7 @@ export function Metamorphosis() {
               <MOTION.div
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                className="demo-blank-mark"
+                className="algorithm-blank-mark"
               />
               <div className="flex flex-col gap-1.5">
                 <p className="font-heading text-xl text-foreground/55">Enter your details to begin</p>
@@ -348,7 +348,7 @@ export function Metamorphosis() {
                     transition={{ repeat: Infinity, duration: 2.5 }}
                     className="text-3xl"
                   >
-                    <span className="demo-blank-mark demo-blank-mark--small" />
+                    <span className="algorithm-blank-mark algorithm-blank-mark--small" />
                   </MOTION.span>
                   <div>
                     <p className="font-body font-semibold text-sm text-foreground/80">
@@ -461,7 +461,7 @@ export function Metamorphosis() {
                       {cap}m
                     </span>
                     {i === weeklyCaps.length - 1 && (
-                      <span className="demo-blank-mark demo-blank-mark--tiny" />
+                      <span className="algorithm-blank-mark algorithm-blank-mark--tiny" />
                     )}
                   </div>
                 ))}

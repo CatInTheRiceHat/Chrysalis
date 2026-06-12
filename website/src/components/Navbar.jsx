@@ -18,7 +18,7 @@ export function Navbar() {
   const [menuOpen, setMenuOpen]   = useState(false);
   const { pathname }              = useLocation();
   const navigate                  = useNavigate();
-  const onDemo                    = pathname === '/demo';
+  const onAlgorithm               = pathname === '/algorithm';
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -81,16 +81,16 @@ export function Navbar() {
                 key={id}
                 onClick={() => scrollTo(id)}
                 data-cursor="wide"
-                className={!onDemo && active === id ? 'is-active' : ''}
+                className={!onAlgorithm && active === id ? 'is-active' : ''}
               >
                 {label}
               </button>
             ))}
 
             <Link
-              to="/demo"
+              to="/algorithm"
               data-cursor="wide"
-              className={onDemo ? 'is-active' : ''}
+              className={onAlgorithm ? 'is-active' : ''}
             >
               Algorithm
             </Link>
@@ -167,7 +167,7 @@ export function Navbar() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: 0.48 }}
                 >
-                  <Link to="/demo" onClick={() => setMenuOpen(false)} className="nav-overlay__demo">
+                  <Link to="/algorithm" onClick={() => setMenuOpen(false)} className="nav-overlay__algorithm">
                     Algorithm
                   </Link>
                 </MOTION.div>

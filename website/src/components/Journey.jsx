@@ -56,10 +56,10 @@ const SLIDES = [
   {
     color: 'green',
     icon: Rocket,
-    eyebrow: 'Demo',
+    eyebrow: 'Algorithm',
     title: 'Then it became something people could try.',
-    body: 'The FastAPI backend and React demo connect the algorithm to an interface that makes the healthier ranking visible.',
-    visual: <SnapshotFrame title="Live demo" body="FastAPI, React, and feed cards working end-to-end." />,
+    body: 'The FastAPI backend and React algorithm interface make the healthier ranking visible.',
+    visual: <SnapshotFrame title="Live algorithm" body="FastAPI, React, and feed cards working end-to-end." />,
   },
 ];
 

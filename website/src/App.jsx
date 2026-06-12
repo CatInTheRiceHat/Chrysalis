@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Lenis from 'lenis';
 import { AnimatePresence } from 'motion/react';
 import { Navbar } from './components/Navbar';
-import { LiveDemo } from './components/LiveDemo';
+import { AlgorithmPage } from './components/LiveDemo';
 import { IntroScreen } from './components/IntroScreen';
 import { RebootPage } from './components/RebootPage';
 import './App.css';
@@ -61,7 +61,7 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<MainPage />} />
-          <Route path="/demo" element={<LiveDemo />} />
+          <Route path="/algorithm" element={<AlgorithmPage />} />
         </Routes>
       </div>
     </BrowserRouter>

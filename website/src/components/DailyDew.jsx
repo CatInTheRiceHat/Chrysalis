@@ -207,7 +207,7 @@ export function DailyDew() {
             <MOTION.div
               animate={{ y: [0, -6, 0] }}
               transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-              className="demo-blank-mark"
+              className="algorithm-blank-mark"
             />
             <div className="flex flex-col gap-2">
               <p className="font-heading text-xl text-foreground/50">No drops yet today</p>

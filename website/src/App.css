@@ -2130,7 +2130,7 @@ a {
 }
 
 .nav-overlay__links button,
-.nav-overlay__demo {
+.nav-overlay__algorithm {
   display: flex;
   align-items: baseline;
   gap: clamp(1rem, 2.5vw, 2rem);
@@ -2149,7 +2149,7 @@ a {
 }
 
 .nav-overlay__links button:hover,
-.nav-overlay__demo:hover {
+.nav-overlay__algorithm:hover {
   color: var(--ct-white);
   transform: translateX(0.4rem);
 }
@@ -2463,7 +2463,7 @@ a {
   scrollbar-color: rgba(147, 142, 151, 0.5) transparent;
 }
 
-.demo-blank-mark {
+.algorithm-blank-mark {
   width: 4rem;
   height: 4rem;
   display: inline-flex;
@@ -2474,12 +2474,12 @@ a {
     drop-shadow(0 0 18px rgba(124, 109, 140, 0.18));
 }
 
-.demo-blank-mark--small {
+.algorithm-blank-mark--small {
   width: 2.25rem;
   height: 2.25rem;
 }
 
-.demo-blank-mark--tiny {
+.algorithm-blank-mark--tiny {
   width: 0.75rem;
   height: 0.75rem;
 }
@@ -2989,9 +2989,9 @@ a {
   .ct-hero__grid,
   .ct-hero__copy,
   .ct-hero p,
-  #demo > div,
-  #demo .liquid-glass,
-  #demo .liquid-glass-strong {
+  #algorithm > div,
+  #algorithm .liquid-glass,
+  #algorithm .liquid-glass-strong {
     max-width: min(calc(100vw - 2.5rem), 19.25rem);
     min-width: 0;
   }
@@ -3100,20 +3100,20 @@ a {
     min-height: 11rem;
   }
 
-  .demo-tab-list {
+  .algorithm-tab-list {
     width: min(100%, 22rem);
     flex-wrap: wrap;
     justify-content: center;
     border-radius: 18px !important;
   }
 
-  .demo-tab {
+  .algorithm-tab {
     flex: 1 1 9rem;
     padding-inline: 0.75rem;
     white-space: nowrap;
   }
 
-  .demo-title {
+  .algorithm-title {
     max-width: 10ch;
     margin-inline: auto;
     overflow-wrap: break-word;
