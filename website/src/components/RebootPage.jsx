@@ -810,11 +810,20 @@ function HeroSection() {
               Learn my story
               <ArrowUpRight size={17} />
             </a>
+            <a
+              href={SURVEY_URL}
+              className="ct-button ct-button--survey"
+              data-cursor="soft"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Take the survey
+              <ArrowUpRight size={17} />
+            </a>
             <Link to="/algorithm" className="ct-button ct-button--ghost" data-cursor="soft">
               Try the algorithm
               <ArrowUpRight size={17} />
             </Link>
-            <span className="ct-pagination">01 / 07</span>
           </DroopyElement>
           <div className="ct-origin-grid" aria-label="Project origin highlights">
             {originCards.map(([title, body], index) => (
