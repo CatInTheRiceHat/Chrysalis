@@ -92,7 +92,7 @@ export function Navbar() {
               data-cursor="wide"
               className={onDemo ? 'is-active' : ''}
             >
-              Demo
+              Algorithm
             </Link>
           </div>
 
@@ -168,7 +168,7 @@ export function Navbar() {
                   transition={{ duration: 0.45, delay: 0.48 }}
                 >
                   <Link to="/demo" onClick={() => setMenuOpen(false)} className="nav-overlay__demo">
-                    Demo
+                    Algorithm
                   </Link>
                 </MOTION.div>
               </div>

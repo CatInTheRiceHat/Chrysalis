@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion as MOTION, AnimatePresence } from 'motion/react';
 import { Sun, Moon, RefreshCw, Calendar, Sparkles } from 'lucide-react';
 import { FeedCard } from './FeedCard';
 
@@ -17,9 +17,11 @@ function StatPill({ label, value, accent }) {
 }
 
 function DropCard({ drop, label, Icon, accentColor, scheduledTime }) {
+  const DropIcon = Icon;
+
   if (!drop) {
     return (
-      <motion.div
+      <MOTION.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         className="liquid-glass rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center min-h-[280px]"
@@ -29,18 +31,18 @@ function DropCard({ drop, label, Icon, accentColor, scheduledTime }) {
           className="w-12 h-12 rounded-full flex items-center justify-center"
           style={{ background: `${accentColor}22` }}
         >
-          <Icon className="w-5 h-5" style={{ color: `${accentColor}99` }} />
+          <DropIcon className="w-5 h-5" style={{ color: `${accentColor}99` }} />
         </div>
         <div className="flex flex-col gap-1">
           <p className="font-body font-medium text-sm text-foreground/45">{label} not yet delivered</p>
           <p className="font-body font-light text-xs text-foreground/30">Scheduled for {scheduledTime}</p>
         </div>
-      </motion.div>
+      </MOTION.div>
     );
   }
 
   return (
-    <motion.div
+    <MOTION.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className="liquid-glass rounded-2xl p-6 flex flex-col gap-5"
@@ -53,7 +55,7 @@ function DropCard({ drop, label, Icon, accentColor, scheduledTime }) {
             className="w-10 h-10 rounded-full flex items-center justify-center"
           style={{ background: `${accentColor}22` }}
           >
-            <Icon className="w-5 h-5" style={{ color: accentColor }} />
+            <DropIcon className="w-5 h-5" style={{ color: accentColor }} />
           </div>
           <div>
             <p className="font-body font-semibold text-sm text-foreground/80">{label}</p>
@@ -86,7 +88,7 @@ function DropCard({ drop, label, Icon, accentColor, scheduledTime }) {
         <div className="w-px h-8 bg-foreground/8" />
         <StatPill label="Mode" value={<span className="capitalize text-foreground/60 font-body text-sm font-medium">{drop.mode}</span>} />
       </div>
-    </motion.div>
+    </MOTION.div>
   );
 }
 
@@ -147,7 +149,7 @@ export function MigrationMode() {
       >
         <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#7C6D8C' }} />
         <p className="font-body font-light text-sm text-foreground/55 leading-relaxed">
-          Migration Mode replaces your personalized feed with two non-personalized daily drops — one in the
+          Daily Dew replaces your personalized feed with two non-personalized daily drops — one in the
           morning, one in the evening — curated for diversity and positivity. Same content for everyone.
         </p>
       </div>
@@ -155,18 +157,18 @@ export function MigrationMode() {
       <AnimatePresence mode="wait">
 
         {loading && !data && (
-          <motion.div
+          <MOTION.div
             key="loading"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="flex flex-col items-center justify-center gap-4 liquid-glass rounded-2xl p-16"
           >
             <div className="butterfly-spinner" />
             <p className="font-body font-light text-sm text-foreground/40">Fetching today's drops…</p>
-          </motion.div>
+          </MOTION.div>
         )}
 
         {error && (
-          <motion.div
+          <MOTION.div
             key="error"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="liquid-glass rounded-2xl p-8 flex flex-col gap-3 items-center text-center"
@@ -193,16 +195,16 @@ export function MigrationMode() {
             >
               <RefreshCw className="w-3.5 h-3.5" /> Try again
             </button>
-          </motion.div>
+          </MOTION.div>
         )}
 
         {data?.empty && (
-          <motion.div
+          <MOTION.div
             key="empty"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="liquid-glass rounded-2xl p-12 flex flex-col items-center gap-6 text-center"
           >
-            <motion.div
+            <MOTION.div
               animate={{ y: [0, -6, 0] }}
               transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
               className="demo-blank-mark"
@@ -221,11 +223,11 @@ export function MigrationMode() {
             >
               python api.py
             </code>
-          </motion.div>
+          </MOTION.div>
         )}
 
         {data && !data.empty && (
-          <motion.div
+          <MOTION.div
             key="drops"
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="grid lg:grid-cols-2 gap-6"
@@ -244,7 +246,7 @@ export function MigrationMode() {
               accentColor="#7C6D8C"
               scheduledTime="19:00"
             />
-          </motion.div>
+          </MOTION.div>
         )}
 
       </AnimatePresence>

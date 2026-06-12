@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { motion, useInView, AnimatePresence } from 'motion/react';
+import { motion as MOTION, useInView, AnimatePresence } from 'motion/react';
 import { AlgorithmDemo } from './AlgorithmDemo';
 import { CocoonMode }    from './CocoonMode';
 import { MigrationMode } from './MigrationMode';
@@ -7,19 +7,19 @@ import { MigrationMode } from './MigrationMode';
 const TABS = [
   {
     id:       'algorithm',
-    label:    'Algorithm',
+    label:    'Flutter Feed',
     title:    'Try the algorithm.',
     subtitle: 'Configure and run the Chrysalis recommendation engine against a live dataset.',
   },
   {
     id:       'cocoon',
-    label:    'Cocoon Mode',
+    label:    'Metamorphosis',
     title:    'Start your taper.',
     subtitle: 'Enroll to gradually reduce daily screen time using exponential decay — 20% less each week.',
   },
   {
     id:       'migration',
-    label:    'Migration Mode',
+    label:    'Daily Dew',
     title:    "Today's drops.",
     subtitle: 'Non-personalized daily drops curated for diversity and wellbeing. Same content for everyone.',
   },
@@ -37,13 +37,13 @@ export function LiveDemo() {
       <div className="max-w-7xl mx-auto flex flex-col gap-12" ref={ref}>
 
         {/* ── Header ── */}
-        <motion.div
+        <MOTION.div
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
           className="flex flex-col gap-5 items-center text-center"
         >
-          <span className="section-badge liquid-glass">Interactive Demo</span>
+          <span className="section-badge liquid-glass">Algorithm</span>
 
           {/* Tab switcher — mirrors the Navbar pill pattern */}
           <div
@@ -73,7 +73,7 @@ export function LiveDemo() {
 
           {/* Title + subtitle cross-fade on tab switch */}
           <AnimatePresence mode="wait">
-            <motion.div
+            <MOTION.div
               key={active}
               initial={{ opacity: 0, y: 8,  filter: 'blur(4px)' }}
               animate={{ opacity: 1, y: 0,  filter: 'blur(0px)' }}
@@ -87,18 +87,18 @@ export function LiveDemo() {
               <p className="font-body font-light text-base text-foreground/55 max-w-lg">
                 {meta.subtitle}
               </p>
-            </motion.div>
+            </MOTION.div>
           </AnimatePresence>
-        </motion.div>
+        </MOTION.div>
 
         {/* ── Tab content ── */}
-        <motion.div
+        <MOTION.div
           initial={{ opacity: 0, y: 24 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.7, delay: 0.15 }}
         >
           <AnimatePresence mode="wait">
-            <motion.div
+            <MOTION.div
               key={active}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -108,9 +108,9 @@ export function LiveDemo() {
               {active === 'algorithm' && <AlgorithmDemo />}
               {active === 'cocoon'    && <CocoonMode />}
               {active === 'migration' && <MigrationMode />}
-            </motion.div>
+            </MOTION.div>
           </AnimatePresence>
-        </motion.div>
+        </MOTION.div>
 
       </div>
     </section>

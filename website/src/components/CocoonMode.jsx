@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion as MOTION, AnimatePresence } from 'motion/react';
 import { Clock, ArrowRight, CheckCircle2, RefreshCw, ChevronRight } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '';
@@ -234,7 +234,7 @@ export function CocoonMode() {
           >
             {loading
               ? <><div className="butterfly-spinner scale-75" /> Enrolling…</>
-              : <><ArrowRight className="w-4 h-4" /> Start Cocoon Mode</>}
+              : <><ArrowRight className="w-4 h-4" /> Start Metamorphosis</>}
           </button>
         ) : (
           <div className="flex flex-col gap-2">
@@ -281,13 +281,13 @@ export function CocoonMode() {
       <AnimatePresence mode="wait">
 
         {!profile && (
-          <motion.div
+          <MOTION.div
             key="idle"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="liquid-glass rounded-2xl p-10 flex flex-col items-center gap-8 text-center min-h-[420px] justify-center"
           >
             <div className="flex flex-col items-center gap-4">
-              <motion.div
+              <MOTION.div
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
                 className="demo-blank-mark"
@@ -310,7 +310,7 @@ export function CocoonMode() {
               </p>
               <p className="font-body text-xs text-foreground/35 leading-relaxed">
                 Your cap reduces by 20% each week until it reaches 45 min/day,
-                at which point you graduate to Migration Mode.
+                at which point you graduate to Daily Dew.
               </p>
               <div className="h-px w-full" style={{ background: 'linear-gradient(90deg, #7C6D8C, #AD9EB8, transparent)', opacity: 0.35 }} />
               <div className="flex justify-between">
@@ -322,11 +322,11 @@ export function CocoonMode() {
                 ))}
               </div>
             </div>
-          </motion.div>
+          </MOTION.div>
         )}
 
         {profile && (
-          <motion.div
+          <MOTION.div
             key="profile"
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="flex flex-col gap-5"
@@ -334,7 +334,7 @@ export function CocoonMode() {
             {/* Graduation banner */}
             <AnimatePresence>
               {profile.should_graduate && (
-                <motion.div
+                <MOTION.div
                   initial={{ opacity: 0, scale: 0.96, y: -8 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   className="rounded-2xl p-5 flex items-center gap-4"
@@ -343,23 +343,23 @@ export function CocoonMode() {
                     border: '1px solid rgba(124,109,140,0.28)',
                   }}
                 >
-                  <motion.span
+                  <MOTION.span
                     animate={{ rotate: [0, 10, -10, 0] }}
                     transition={{ repeat: Infinity, duration: 2.5 }}
                     className="text-3xl"
                   >
                     <span className="demo-blank-mark demo-blank-mark--small" />
-                  </motion.span>
+                  </MOTION.span>
                   <div>
                     <p className="font-body font-semibold text-sm text-foreground/80">
-                      Ready for Migration Mode
+                      Ready for Daily Dew
                     </p>
                     <p className="font-body font-light text-xs text-foreground/50">
-                      Daily cap has reached ≤ 45 min — you've completed Cocoon Mode.
+                      Daily cap has reached ≤ 45 min — you've completed Metamorphosis.
                     </p>
                   </div>
                   <CheckCircle2 className="w-5 h-5 ml-auto flex-shrink-0" style={{ color: '#7C6D8C' }} />
-                </motion.div>
+                </MOTION.div>
               )}
             </AnimatePresence>
 
@@ -394,7 +394,7 @@ export function CocoonMode() {
                   <span>45 min goal</span>
                 </div>
                 <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(147,142,151,0.2)' }}>
-                  <motion.div
+                  <MOTION.div
                     initial={{ width: 0 }}
                     animate={{ width: `${taperProgress}%` }}
                     transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
@@ -467,7 +467,7 @@ export function CocoonMode() {
                 ))}
               </div>
             </div>
-          </motion.div>
+          </MOTION.div>
         )}
 
       </AnimatePresence>
