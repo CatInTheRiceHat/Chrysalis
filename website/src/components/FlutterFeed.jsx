@@ -71,7 +71,7 @@ function MetricCard({ label, subtitle, improved, baseline, suffix = '' }) {
   );
 }
 
-export function AlgorithmDemo() {
+export function FlutterFeed() {
   const [preset,    setPreset]    = useState('entertainment');
   const [nightMode, setNightMode] = useState(false);
   const [ageGroup,  setAgeGroup]  = useState(null);

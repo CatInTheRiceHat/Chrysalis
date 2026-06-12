@@ -92,7 +92,7 @@ function DropCard({ drop, label, Icon, accentColor, scheduledTime }) {
   );
 }
 
-export function MigrationMode() {
+export function DailyDew() {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);

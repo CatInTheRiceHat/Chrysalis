@@ -108,7 +108,7 @@ function DecayCurve({ startMinutes, currentWeek }) {
   );
 }
 
-export function CocoonMode() {
+export function Metamorphosis() {
   const [userId,        setUserId]        = useState('');
   const [startMinutes,  setStartMinutes]  = useState(180);
   const [profile,       setProfile]       = useState(null);

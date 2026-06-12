@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
 import { motion as MOTION, useInView, AnimatePresence } from 'motion/react';
-import { AlgorithmDemo } from './AlgorithmDemo';
-import { CocoonMode }    from './CocoonMode';
-import { MigrationMode } from './MigrationMode';
+import { FlutterFeed }   from './FlutterFeed';
+import { Metamorphosis } from './Metamorphosis';
+import { DailyDew }      from './DailyDew';
 
 const TABS = [
   {
@@ -105,9 +105,9 @@ export function LiveDemo() {
               exit={{   opacity: 0, y: -12 }}
               transition={{ duration: 0.3 }}
             >
-              {active === 'algorithm' && <AlgorithmDemo />}
-              {active === 'cocoon'    && <CocoonMode />}
-              {active === 'migration' && <MigrationMode />}
+              {active === 'algorithm' && <FlutterFeed />}
+              {active === 'cocoon'    && <Metamorphosis />}
+              {active === 'migration' && <DailyDew />}
             </MOTION.div>
           </AnimatePresence>
         </MOTION.div>
