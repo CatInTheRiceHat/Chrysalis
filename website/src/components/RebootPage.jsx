@@ -12,6 +12,8 @@ import {
   useVelocity,
 } from 'motion/react';
 import {
+  ArrowLeft,
+  ArrowRight,
   ArrowUpRight,
   Award,
   Brain,
@@ -43,13 +45,14 @@ const problemRows = [
 const journeySteps = [
   {
     title: 'Ova Phase',
-    body: 'Observation: Through journalism, I started paying attention to how technology, AI, school pressure, and internet culture shape student life. As I reported and observed more, I noticed that social media was not always "just entertainment." Sometimes it helped people feel connected. Other times, it became a place where teens compared themselves, avoided stress, or felt trapped in endless scrolling.',
+    body: 'Observation: Through journalism, I started paying attention to how technology, AI, school pressure, and internet culture shape student life.',
     symbolImage: '/images/journey-egg.png',
     mosaic: 'ova',
     artifacts: [
       {
         src: '/images/poster.png',
         alt: 'The Social Dilemma poster',
+        label: 'The Social Dilemma poster',
         variant: 'ova-poster',
         depth: 22,
         lateral: -3,
@@ -64,6 +67,7 @@ const journeySteps = [
       {
         src: '/images/newspaper.png',
         alt: 'Article screenshot by Elaine Che',
+        label: 'Elaine Che article screenshot',
         variant: 'ova-article',
         depth: 52,
         lateral: 9,
@@ -87,6 +91,7 @@ const journeySteps = [
       {
         src: '/images/synopsys-poster.jpeg',
         alt: 'MorphoMedia science fair poster',
+        label: 'MorphoMedia science fair poster',
         variant: 'larva-poster',
         depth: 24,
         lateral: -5,
@@ -101,6 +106,7 @@ const journeySteps = [
       {
         src: '/images/award.png',
         alt: 'SPV Market Research award certificate',
+        label: 'SPV Market Research award certificate',
         variant: 'larva-certificate',
         depth: 56,
         lateral: 10,
@@ -124,6 +130,7 @@ const journeySteps = [
       {
         src: '/images/app-icon.png',
         alt: 'Chrysalis app icon',
+        label: 'Chrysalis app icon',
         variant: 'chrysalis-app',
         depth: 28,
         lateral: -7,
@@ -136,9 +143,10 @@ const journeySteps = [
         sway: 1.12,
       },
       {
-        src: '/images/metamorphosis.png',
-        alt: 'Cocoon with emerging butterfly wings',
-        variant: 'chrysalis-cocoon',
+        src: '/images/code.png',
+        alt: 'Chrysalis code screenshot',
+        label: 'Chrysalis code screenshot',
+        variant: 'chrysalis-code',
         depth: 58,
         lateral: 11,
         driftDepth: 72,
@@ -159,8 +167,9 @@ const journeySteps = [
     mosaic: 'imago',
     artifacts: [
       {
-        src: '/images/journey-emerged.png',
-        alt: 'Butterfly placeholder',
+        src: '/images/future.png',
+        alt: 'Future social media network illustration',
+        label: 'Future social media network illustration',
         variant: 'imago-placeholder',
         depth: 42,
         lateral: 5,
@@ -182,45 +191,54 @@ const solutionModes = [
     title: 'Flutter Feed',
     body: 'The classic infinite feed, but re-ranked. Flutter Feed keeps the familiar scrolling experience but changes what the algorithm rewards. Instead of only prioritizing engagement, users can describe what they want to see, and the algorithm re-ranks content based on relevance, variety, positivity, and risk.',
     icon: SlidersHorizontal,
+    image: '/images/flutter-feed.png',
   },
   {
     title: 'Metamorphosis',
     body: 'A recovery mode for people who feel stuck in endless scrolling. Metamorphosis helps users gradually reduce screen time instead of forcing an abrupt cutoff. The goal is not punishment. It is support.',
     icon: Sparkles,
+    image: '/images/metamorphosis.png',
   },
   {
     title: 'Daily Dew',
     body: 'A limited daily drop of content. Inspired by the intentional design of daily games like The New York Times puzzles, Daily Dew replaces endless personalization with a small set of daily videos. The content is designed to feel more thoughtful, creative, and perspective-building instead of infinite and addictive.',
     icon: Droplets,
+    image: '/images/daily-dew.png',
   },
 ];
 
-const futureNotes = [
-  ['Surveys', 'Collect anonymous student input about scrolling habits, emotional triggers, and what kinds of support actually feel helpful.'],
-  ['Testing', 'Test the interactive prototype with students and observe where the experience feels confusing, too controlling, or unclear.'],
-  ['Dataset', 'Improve the content dataset by using real video examples that can be tagged and implemented into the feed.'],
-  ['Transparency', 'Explain why posts are boosted, softened, delayed, or redirected using simple UI and clear language.'],
-];
-
-const futureArtifacts = [
-  {
-    title: 'MorphoMedia science fair poster',
-    label: 'Science fair poster',
-    src: '/images/synopsys-poster.jpeg',
-    previewSrc: '/images/synopsys-poster.jpeg',
-  },
-  {
-    title: 'SPV Market Research award certificate',
-    label: 'Award certificate',
-    src: '/images/award.png',
-    previewSrc: '/images/award.png',
-  },
-];
+const SURVEY_URL = 'https://forms.gle/tyhkHUfPJgs4FjSJ6';
 
 function getJourneyStepPercent(index) {
   return journeySteps.length > 1
     ? 12 + (index / (journeySteps.length - 1)) * 76
     : 50;
+}
+
+function getPhaseTitleParts(title) {
+  const parts = title.trim().split(/\s+/);
+  const suffix = parts[parts.length - 1] === 'Phase' ? parts.pop() : '';
+
+  return {
+    name: parts.join(' '),
+    suffix,
+  };
+}
+
+function PhaseTitle({ step, showImage = true }) {
+  const { name, suffix } = getPhaseTitleParts(step.title);
+
+  return (
+    <span className="ct-phase-title">
+      <span className="ct-phase-title__text">
+        <span>{name}</span>
+        {suffix && <span>{suffix}</span>}
+      </span>
+      {showImage && (
+        <img className="ct-phase-title__image" src={step.symbolImage} alt="" aria-hidden="true" />
+      )}
+    </span>
+  );
 }
 
 function useDesktopFiling() {
@@ -249,35 +267,6 @@ function Reveal({ children, className = '', delay = 0 }) {
       initial={{ opacity: 0, y: 42, filter: 'blur(12px)' }}
       animate={inView ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}}
       transition={{ duration: 0.72, delay, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {children}
-    </MOTION.div>
-  );
-}
-
-function ScrollDrift({
-  children,
-  className = '',
-  depth = 14,
-  lateral = 0,
-  rotate = 0,
-  lag,
-  response,
-  sway,
-}) {
-  const {
-    ref,
-    x,
-    y,
-    rotateZ,
-    reduceMotion,
-  } = useDroopyMotion({ depth, lateral, rotate, lag, response, sway });
-
-  return (
-    <MOTION.div
-      ref={ref}
-      className={`ct-scroll-drift ${className}`}
-      style={reduceMotion ? undefined : { x, y, rotate: rotateZ }}
     >
       {children}
     </MOTION.div>
@@ -359,45 +348,7 @@ function DroopyElement({
   );
 }
 
-function DroopyArtifactButton({
-  children,
-  className = '',
-  depth = 32,
-  lateral = 0,
-  rotate = 0,
-  lag,
-  response,
-  sway,
-  style,
-  ...props
-}) {
-  const {
-    ref,
-    x,
-    y,
-    rotateZ,
-    reduceMotion,
-  } = useDroopyMotion({ depth, lateral, rotate, lag, response, sway });
-  const droopY = useTransform(y, (value) => `${value}px`);
-  const droopX = useTransform(x, (value) => `${value}px`);
-  const droopRotate = useTransform(rotateZ, (value) => `${value}deg`);
-  const motionStyle = reduceMotion
-    ? style
-    : {
-      ...style,
-      '--droop-x': droopX,
-      '--droop-y': droopY,
-      '--droop-rotate': droopRotate,
-    };
-
-  return (
-    <MOTION.button ref={ref} className={className} style={motionStyle} {...props}>
-      {children}
-    </MOTION.button>
-  );
-}
-
-function JourneyArtifact({ artifact }) {
+function JourneyArtifact({ artifact, onPreview, stepTitle, interactive = true }) {
   const {
     ref,
     x,
@@ -405,11 +356,11 @@ function JourneyArtifact({ artifact }) {
     rotateZ,
     reduceMotion,
   } = useDroopyMotion({
-    depth: artifact.depth ?? 32,
-    lateral: artifact.lateral ?? 0,
+    depth: artifact.driftDepth ?? artifact.depth ?? 32,
+    lateral: artifact.driftLateral ?? artifact.lateral ?? 0,
     rotate: artifact.driftRotate ?? 0,
-    lag: artifact.lag,
-    response: artifact.response,
+    lag: (artifact.lag ?? 1.4) + 0.18,
+    response: artifact.driftResponse ?? artifact.response,
     sway: artifact.sway,
   });
   const droopY = useTransform(y, (value) => `${value}px`);
@@ -424,31 +375,40 @@ function JourneyArtifact({ artifact }) {
     };
 
   return (
-    <MOTION.div
+    <MOTION.button
+      type="button"
       ref={ref}
       className={`ct-journey-artifact ct-journey-artifact--${artifact.variant}`}
       style={motionStyle}
+      onClick={() => onPreview({
+        title: artifact.alt,
+        label: artifact.label || artifact.alt,
+        src: artifact.src,
+        previewSrc: artifact.previewSrc || artifact.src,
+      })}
+      aria-label={`Preview ${artifact.alt}`}
+      disabled={!interactive}
+      tabIndex={interactive ? 0 : -1}
+      data-cursor="soft"
     >
-      <ScrollDrift
-        className="ct-journey-artifact__drift"
-        depth={artifact.driftDepth ?? artifact.depth ?? 32}
-        lateral={artifact.driftLateral ?? artifact.lateral ?? 0}
-        rotate={artifact.driftRotate ?? 0}
-        lag={(artifact.lag ?? 1.4) + 0.18}
-        response={artifact.driftResponse ?? artifact.response}
-        sway={artifact.sway ?? 1.24}
-      >
+      <span className="ct-journey-artifact__drift">
         <img src={artifact.src} alt={artifact.alt} />
-      </ScrollDrift>
-    </MOTION.div>
+      </span>
+    </MOTION.button>
   );
 }
 
-function JourneyMosaic({ step, className = '' }) {
+function JourneyMosaic({ step, className = '', onPreview = () => {}, interactive = true }) {
   return (
     <div className={`ct-journey-mosaic ct-journey-mosaic--${step.mosaic} ${className}`.trim()}>
       {step.artifacts.map((artifact) => (
-        <JourneyArtifact artifact={artifact} key={`${step.title}-${artifact.variant}`} />
+        <JourneyArtifact
+          artifact={artifact}
+          key={`${step.title}-${artifact.variant}`}
+          onPreview={onPreview}
+          stepTitle={step.title}
+          interactive={interactive}
+        />
       ))}
     </div>
   );
@@ -528,28 +488,98 @@ function MetricRows() {
   );
 }
 
-function SignalCard({ signal, index }) {
-  const { title, body, icon: ICON } = signal;
+const modeCardVariants = {
+  enter: (dir) => ({ opacity: 0, x: dir >= 0 ? 36 : -36, filter: 'blur(8px)' }),
+  center: { opacity: 1, x: 0, filter: 'blur(0px)' },
+  exit: (dir) => ({ opacity: 0, x: dir >= 0 ? -36 : 36, filter: 'blur(8px)' }),
+};
+
+function ModeCarousel({ modes }) {
+  const [active, setActive] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const mode = modes[active];
+
+  const go = (delta) => {
+    setActive((current) => {
+      const next = Math.min(modes.length - 1, Math.max(0, current + delta));
+      if (next !== current) {
+        setDirection(delta);
+      }
+      return next;
+    });
+  };
+
+  const jump = (index) => {
+    setActive((current) => {
+      if (index !== current) {
+        setDirection(index > current ? 1 : -1);
+      }
+      return index;
+    });
+  };
 
   return (
-    <DroopyElement
-      as="article"
-      className="ct-signal-card ct-reveal-color"
-      depth={22 + index * 8}
-      lag={1.22 + index * 0.26}
-      sway={1.08 + index * 0.16}
-      initial={{ opacity: 0, filter: 'blur(10px)' }}
-      whileInView={{ opacity: 1, filter: 'blur(0px)' }}
-      viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.58, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
-    >
-      <div className="ct-signal-card__header">
-        <span>{String(index + 1).padStart(2, '0')}</span>
-        <ICON size={21} aria-hidden="true" />
+    <div className="ct-mode-carousel">
+      <div className="ct-mode-carousel__stage" aria-live="polite">
+        <AnimatePresence mode="wait" custom={direction}>
+          <MOTION.article
+            key={active}
+            className="ct-mode-card"
+            custom={direction}
+            variants={modeCardVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="ct-mode-card__badge">
+              <span className="ct-mode-card__rule" aria-hidden="true" />
+              <span className="ct-mode-card__ring">
+                <img src={mode.image} alt="" aria-hidden="true" />
+              </span>
+              <span className="ct-mode-card__rule" aria-hidden="true" />
+            </div>
+            <span className="ct-mode-card__index">{String(active + 1).padStart(2, '0')}</span>
+            <h3>{mode.title}</h3>
+            <p>{mode.body}</p>
+          </MOTION.article>
+        </AnimatePresence>
       </div>
-      <h3>{title}</h3>
-      <p>{body}</p>
-    </DroopyElement>
+
+      <div className="ct-mode-carousel__controls">
+        <button
+          type="button"
+          className="ct-mode-carousel__arrow"
+          onClick={() => go(-1)}
+          disabled={active === 0}
+          aria-label="Previous mode"
+        >
+          <ArrowLeft size={18} aria-hidden="true" />
+        </button>
+        <div className="ct-mode-carousel__dots" role="tablist" aria-label="Modes">
+          {modes.map((item, index) => (
+            <button
+              key={item.title}
+              type="button"
+              role="tab"
+              aria-selected={index === active}
+              aria-label={item.title}
+              className={`ct-mode-carousel__dot ${index === active ? 'is-active' : ''}`}
+              onClick={() => jump(index)}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          className="ct-mode-carousel__arrow"
+          onClick={() => go(1)}
+          disabled={active === modes.length - 1}
+          aria-label="Next mode"
+        >
+          <ArrowRight size={18} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -695,7 +725,7 @@ function resetArtifactTilt(element) {
   });
 }
 
-const heroVerbs = ['Rebalancing'];
+const heroVerbs = ['Rebalancing', 'Rewriting', 'Rethinking'];
 
 function RotatingTitle() {
   const reduceMotion = useReducedMotion();
@@ -706,26 +736,25 @@ function RotatingTitle() {
       return undefined;
     }
 
-    const id = setInterval(() => {
+    const id = window.setInterval(() => {
       setVerbIndex((index) => (index + 1) % heroVerbs.length);
-    }, 2500);
-    return () => clearInterval(id);
+    }, 3600);
+    return () => window.clearInterval(id);
   }, [reduceMotion]);
 
+  const currentVerb = heroVerbs[verbIndex];
+
   return (
-    <h1 aria-label="Rebalancing the feed.">
+    <h1 aria-label="Rebalancing, rewriting, and rethinking the feed.">
       <span className="ct-hero-title__verb" aria-hidden="true">
-        <AnimatePresence mode="wait" initial={false}>
-          <MOTION.span
-            key={heroVerbs[verbIndex]}
-            initial={{ opacity: 0, y: '0.55em', filter: 'blur(10px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: '-0.45em', filter: 'blur(10px)' }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {heroVerbs[verbIndex]}
-          </MOTION.span>
-        </AnimatePresence>
+        <span className="ct-hero-title__measure">{currentVerb}</span>
+        <span
+          className={`ct-hero-title__typed ${reduceMotion ? 'is-static' : ''}`}
+          key={currentVerb}
+          style={{ '--typewriter-steps': currentVerb.length }}
+        >
+          {currentVerb}
+        </span>
       </span>
       <span className="ct-hero-title__rest" aria-hidden="true">the feed.</span>
     </h1>
@@ -764,9 +793,6 @@ function HeroSection() {
       <HeroVisual />
       <div className="ct-hero__grid">
         <Reveal className="ct-hero__copy">
-          <TextTrail as="span" className="ct-kicker" depth={9} lag={0.82}>
-            Digital wellbeing prototype
-          </TextTrail>
           <TextTrail className="ct-title-trail" depth={24} lag={1.2}>
             <RotatingTitle />
           </TextTrail>
@@ -826,11 +852,10 @@ function ProblemSection() {
         </Reveal>
         <Reveal className="ct-copy-block ct-copy-block--narrow" delay={0.08}>
           <TextTrail as="p" depth={18} lag={1.05}>
-            After watching The Social Dilemma, which is still one of my favorite documentaries,
+            After watching The Social Dilemma, one of my favorite documentaries,
             I started thinking more deeply about how social media affects people, especially teenagers.
-            People often scroll when they are bored, stressed, tired, lonely, procrastinating,
-            or trying to avoid a feeling they do not want to sit with. But I also know that
-            social media is not all bad. Most of us cannot simply delete every app and disappear
+            People often scroll when they are bored, stressed, tired, lonely, or procrastinating. 
+            But I also know that social media is not all bad. Most of us cannot simply delete every app and disappear
             from the internet. That is why I made Chrysalis.
           </TextTrail>
           <MetricRows />
@@ -846,6 +871,8 @@ function JourneySection() {
   const isDesktop = useDesktopFiling();
   const [activeStep, setActiveStep] = useState(0);
   const [lockState, setLockState] = useState('before');
+  const [previewArtifact, setPreviewArtifact] = useState(null);
+  const closePreview = () => setPreviewArtifact(null);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ['start start', 'end end'],
@@ -981,7 +1008,7 @@ function JourneySection() {
                     }}
                     transition={{ duration: 0.58, ease: [0.22, 1, 0.36, 1] }}
                   >
-                    <JourneyMosaic step={step} />
+                    <JourneyMosaic step={step} onPreview={setPreviewArtifact} interactive={isActive} />
                   </MOTION.figure>
                 );
               })}
@@ -1001,7 +1028,7 @@ function JourneySection() {
                 animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                 transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
               >
-                {activeJourneyStep.title}
+                <PhaseTitle step={activeJourneyStep} />
               </MOTION.h3>
               <MOTION.p
                 key={`${activeJourneyStep.title}-body`}
@@ -1046,26 +1073,13 @@ function JourneySection() {
                       <span className="ct-journey-node__icon">
                         <ICON size={20} />
                       </span>
-                      <span className="ct-journey-node__label">{step.title}</span>
+                      <span className="ct-journey-node__label">
+                        <PhaseTitle step={step} showImage={false} />
+                      </span>
                     </MOTION.button>
                   );
                 })}
               </div>
-            </div>
-
-            <div className="ct-journey-stage-symbols" aria-hidden="true">
-              <AnimatePresence mode="wait">
-                <MOTION.img
-                  className="ct-journey-stage-symbol"
-                  key={`${activeJourneyStep.title}-symbol`}
-                  src={activeJourneyStep.symbolImage}
-                  alt=""
-                  initial={{ opacity: 0, scale: 0.86, rotate: -7, y: 10, filter: 'blur(8px)' }}
-                  animate={{ opacity: 1, scale: 1, rotate: 0, y: 0, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, scale: 0.9, rotate: 5, y: -8, filter: 'blur(8px)' }}
-                  transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-                />
-              </AnimatePresence>
             </div>
 
             <div className="ct-journey-mobile-list">
@@ -1078,9 +1092,13 @@ function JourneySection() {
                       <ICON size={19} aria-hidden="true" />
                       <span>{String(index + 1).padStart(2, '0')}</span>
                     </div>
-                    <JourneyMosaic step={step} className="ct-journey-mobile-step__mosaic" />
+                    <JourneyMosaic
+                      step={step}
+                      className="ct-journey-mobile-step__mosaic"
+                      onPreview={setPreviewArtifact}
+                    />
                     <div>
-                      <h3>{step.title}</h3>
+                      <h3><PhaseTitle step={step} /></h3>
                       <p>{step.body}</p>
                     </div>
                   </article>
@@ -1090,6 +1108,7 @@ function JourneySection() {
           </div>
         </div>
       </div>
+      <ArtifactPreview artifact={previewArtifact} onClose={closePreview} />
     </section>
   );
 }
@@ -1112,118 +1131,48 @@ function SolutionSection() {
             Chrysalis turns those needs into three modes.
           </TextTrail>
         </Reveal>
-        <div className="ct-mode-showcase">
-          {solutionModes.map((mode, index) => (
-            <SignalCard key={mode.title} signal={mode} index={index} />
-          ))}
-        </div>
+        <Reveal className="ct-mode-showcase">
+          <ModeCarousel modes={solutionModes} />
+        </Reveal>
       </div>
     </SectionFrame>
   );
 }
 
 function FutureSection() {
-  const [previewArtifact, setPreviewArtifact] = useState(null);
-  const closePreview = () => setPreviewArtifact(null);
-
-  useEffect(() => {
-    const shell = document.getElementById('future');
-    if (!shell) {
-      return undefined;
-    }
-
-    const reduceQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const artifacts = () => Array.from(shell.querySelectorAll('.ct-data-image'));
-
-    const onPointerMove = (event) => {
-      if (event.pointerType === 'touch' || reduceQuery.matches) {
-        return;
-      }
-
-      const sectionRect = shell.getBoundingClientRect();
-      artifacts().forEach((element) => {
-        orbitArtifact(element, event.clientX, event.clientY, sectionRect);
-      });
-    };
-    const onPointerLeave = () => {
-      artifacts().forEach(resetArtifactTilt);
-    };
-
-    shell.addEventListener('pointermove', onPointerMove);
-    shell.addEventListener('pointerleave', onPointerLeave);
-
-    return () => {
-      shell.removeEventListener('pointermove', onPointerMove);
-      shell.removeEventListener('pointerleave', onPointerLeave);
-    };
-  }, []);
-
   return (
-    <>
-      <SectionFrame id="future" tone="paper" label="The Future">
-        <div className="ct-data-layout">
-          <Reveal className="ct-data-collage">
-            {futureArtifacts.map((artifact, index) => (
-              <DroopyArtifactButton
-                type="button"
-                className={`ct-data-image ct-data-image--${index === 0 ? 'poster' : 'certificate'} ct-reveal-color`}
-                depth={index === 0 ? 24 : 54}
-                lateral={index === 0 ? -4 : 8}
-                rotate={index === 0 ? -0.35 : 0.85}
-                lag={index === 0 ? 1.16 : 1.76}
-                response={index === 0 ? 2.05 : 1.08}
-                sway={index === 0 ? 1.08 : 1.52}
-                key={artifact.src}
-                onClick={() => setPreviewArtifact(artifact)}
-                aria-label={`Preview ${artifact.title}`}
-                data-cursor="soft"
-              >
-                <ScrollDrift
-                  className="ct-data-image__drift"
-                  depth={index === 0 ? 32 : 66}
-                  lateral={index === 0 ? -7 : 15}
-                  rotate={index === 0 ? -0.7 : 1.35}
-                  lag={index === 0 ? 1.35 : 1.94}
-                  response={index === 0 ? 2.35 : 1.18}
-                  sway={index === 0 ? 1.18 : 1.66}
-                >
-                  <img src={artifact.src} alt={artifact.title} />
-                </ScrollDrift>
-              </DroopyArtifactButton>
-            ))}
-          </Reveal>
-          <Reveal className="ct-copy-block" delay={0.12}>
-            <TextTrail as="span" className="ct-kicker" depth={8} lag={0.8}>
-              The Future
-            </TextTrail>
-            <TextTrail as="h2" depth={26} lag={1.16}>
-              A changing prototype for a changing internet.
-            </TextTrail>
-            <TextTrail as="p" depth={18} lag={1.06}>
-              Chrysalis is a prototype. It is not a finished product, and it should not pretend
-              to be one. The beauty and difficulty of ethical technology is that there is always
-              a gray area. Social media can connect and harm, inspire and distract, help and
-              overwhelm. Understanding those gray areas will take time. The next step is making
-              Chrysalis more grounded in real student experiences and more transparent about how
-              its recommendations work.
-            </TextTrail>
-            <div className="ct-note-list">
-              {futureNotes.map(([title, body], index) => (
-                <DroopyElement
-                  depth={10 + index * 2.5}
-                  lag={0.9 + index * 0.11}
-                  key={title}
-                >
-                  <strong>{title}</strong>
-                  <span>{body}</span>
-                </DroopyElement>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </SectionFrame>
-      <ArtifactPreview artifact={previewArtifact} onClose={closePreview} />
-    </>
+    <SectionFrame id="future" tone="paper" label="The Future">
+      <div className="ct-future-layout">
+        <Reveal className="ct-copy-block ct-copy-block--center">
+          <TextTrail as="span" className="ct-kicker" depth={8} lag={0.8}>
+            The Future
+          </TextTrail>
+          <TextTrail as="h2" depth={26} lag={1.16}>
+            A changing prototype for a changing internet.
+          </TextTrail>
+          <TextTrail as="p" depth={18} lag={1.06}>
+            Chrysalis is a prototype. It is not a finished product, and it should not pretend
+            to be one. The beauty and difficulty of ethical technology is that there is always
+            a gray area. Social media can connect and harm, inspire and distract, help and
+            overwhelm. Understanding those gray areas will take time. The next step is making
+            Chrysalis more grounded in real student experiences and more transparent about how
+            its recommendations work.
+          </TextTrail>
+          <DroopyElement className="ct-future__actions" depth={12} lag={0.95}>
+            <a
+              href={SURVEY_URL}
+              className="ct-button"
+              data-cursor="soft"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Take the Survey
+              <ArrowUpRight size={17} />
+            </a>
+          </DroopyElement>
+        </Reveal>
+      </div>
+    </SectionFrame>
   );
 }
 

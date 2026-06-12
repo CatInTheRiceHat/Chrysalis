@@ -71,7 +71,7 @@ export function IntroScreen({ onDone }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.85, delay: 1.25 }}
       >
-        A teen-built passion project exploring one question: What if your feed helped you feel more like yourself again?
+        What if your feed helped you feel more like yourself again?
       </MOTION.p>
       <MOTION.div
         className="intro-formula-wrapper"
