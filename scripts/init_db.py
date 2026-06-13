@@ -7,9 +7,15 @@ Usage:
 """
 
 import sqlite3
+import sys
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "chrysalis.db"
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
+
+from core.public_signals.storage import ensure_sqlite_public_signal_tables
+
+DB_PATH = ROOT / "chrysalis.db"
 
 CREATE_MIGRATION_DROPS = """
 CREATE TABLE IF NOT EXISTS migration_drops (
@@ -46,8 +52,9 @@ def main() -> None:
         conn.execute(CREATE_MIGRATION_DROPS)
         conn.execute(CREATE_INDEX)
         conn.execute(CREATE_COCOON_PROFILES)
+        ensure_sqlite_public_signal_tables(conn)
         conn.commit()
-        print(f"OK: migration_drops and cocoon_profiles tables ready in {DB_PATH}")
+        print(f"OK: migration, cocoon, and public signal tables ready in {DB_PATH}")
     finally:
         conn.close()
 

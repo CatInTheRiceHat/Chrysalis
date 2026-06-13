@@ -23,6 +23,7 @@ from core.algorithm import (
 from core.metrics import diversity_at_k, max_streak, prosocial_ratio
 from core.ranking.feed import build_feed
 from core.ranking.modes import is_valid_mode, MODES
+from core.public_signals.storage import load_or_scan_context_postgres
 from integrations.youtube_service import (
     fetch_videos_by_topic,
     get_youtube_id_for_video,
@@ -169,18 +170,23 @@ def chrysalis_feed(mode: str, k: int = 12):
         raise HTTPException(status_code=400, detail=f"mode must be one of {list(MODES)}")
 
     rows: list[dict] = []
+    public_signal_context = None
     conn = get_db()
     try:
         cur = conn.cursor()
         cur.execute("SELECT * FROM videos")
         cols = [d[0] for d in cur.description]
         rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        try:
+            public_signal_context = load_or_scan_context_postgres(conn, rows)
+        except Exception as exc:
+            print(f"[public_signals] scanner cache unavailable: {exc}")
     except Exception:
         rows = []
     finally:
         conn.close()
 
-    items = build_feed(rows, mode, k=k)
+    items = build_feed(rows, mode, k=k, public_signal_context=public_signal_context)
     return {"mode": mode, "count": len(items), "items": items}
 
 
@@ -477,7 +483,13 @@ def cron_extract(authorization: str = Header(None)):
 
             cur.execute(
                 """
-                INSERT INTO videos VALUES (
+                INSERT INTO videos (
+                    video_id, title, description, channel_id, channel_title,
+                    topic, category_id, view_count, like_count, comment_count,
+                    published_at, active_engagement_ratio,
+                    appearance_comparison, opinion_comparison, prosocial, risk,
+                    creator_authenticity, fetched_at, classified_at
+                ) VALUES (
                     %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
                 ) ON CONFLICT (video_id) DO NOTHING
                 """,

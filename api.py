@@ -22,6 +22,7 @@ from core.algorithm import (
 from core.metrics import diversity_at_k, max_streak, prosocial_ratio
 from core.ranking.feed import build_feed
 from core.ranking.modes import is_valid_mode, MODES
+from core.public_signals.storage import load_or_scan_context_sqlite
 from integrations.youtube_service import fetch_videos_by_topic, get_youtube_id_for_video, get_all_topics_cache_status
 from migration_scheduler import create_scheduler
 from core.cocoon import (
@@ -177,14 +178,19 @@ def chrysalis_feed(mode: str, k: int = 12):
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    public_signal_context = None
     try:
         rows = [dict(r) for r in conn.execute("SELECT * FROM videos").fetchall()]
+        try:
+            public_signal_context = load_or_scan_context_sqlite(conn, rows)
+        except Exception as exc:
+            print(f"[public_signals] scanner cache unavailable: {exc}")
     except sqlite3.OperationalError:
         rows = []
     finally:
         conn.close()
 
-    items = build_feed(rows, mode, k=k)
+    items = build_feed(rows, mode, k=k, public_signal_context=public_signal_context)
     return {"mode": mode, "count": len(items), "items": items}
 
 

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from .. import algorithm as _alg  # reuse calculate_gini for the diversity proxy
 from ..labeling.schema import LabelSet
+from ..public_signals.ranking import PublicSignalContext, evaluate_public_signal
 
 MODES = ("daily-dew", "metamorphosis", "flutter-feed")
 
@@ -121,11 +122,18 @@ def passes_gate(labels: LabelSet, mode: str) -> bool:
     return True
 
 
-def rank_videos(items: list[dict], mode: str, k: int = 12) -> list[dict]:
+def rank_videos(
+    items: list[dict],
+    mode: str,
+    k: int = 12,
+    public_signal_context: PublicSignalContext | None = None,
+    public_signal_override: bool = False,
+) -> list[dict]:
     """
     Gate → score → sort → (Flutter Feed) topic-spread. Each input item must carry a
     `labels` LabelSet; the returned items are annotated with `mode_fit` and ordered.
-    Inputs are not mutated.
+    Inputs are not mutated. Public-signal context is optional and can downrank,
+    request review, or exclude only when the context policy requires it.
     """
     scored: list[dict] = []
     for item in items:
@@ -134,9 +142,20 @@ def rank_videos(items: list[dict], mode: str, k: int = 12) -> list[dict]:
             labels = LabelSet.from_dict(labels or {})
         if not passes_gate(labels, mode):
             continue
+
+        public_eval = evaluate_public_signal(
+            item,
+            labels,
+            context=public_signal_context,
+            public_signal_override=public_signal_override,
+        )
+        if not public_eval.allowed:
+            continue
+
         annotated = dict(item)
         annotated["labels"] = labels
-        annotated["mode_fit"] = score_for_mode(labels, mode)
+        annotated["mode_fit"] = _alg_clamp(score_for_mode(labels, mode) + public_eval.score_delta)
+        annotated.update(public_eval.to_item_fields())
         scored.append(annotated)
 
     scored.sort(key=lambda it: it["mode_fit"], reverse=True)

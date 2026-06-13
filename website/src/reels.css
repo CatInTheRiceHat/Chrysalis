@@ -72,7 +72,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(1rem, 4vh, 3rem) clamp(1rem, 5vw, 4rem);
+  padding: clamp(5.5rem, 12vh, 7rem) clamp(1rem, 5vw, 4rem) clamp(2.75rem, 6vh, 4rem);
   box-sizing: border-box;
 }
 
@@ -217,13 +217,32 @@
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
 }
 
-/* ── Floating shell controls (theme toggle + back) ──────────────────────── */
-.reels-topbar {
+/* ── Floating shell controls (home + mode tabs + theme) ─────────────────── */
+.reels-controls {
   position: absolute;
-  top: 16px;
+  top: max(14px, env(safe-area-inset-top));
+  left: 16px;
   right: 16px;
-  z-index: 6;
+  z-index: 7;
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) auto minmax(7rem, 1fr);
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+.reels-controls > * {
+  pointer-events: auto;
+}
+.reels-controls--simple {
+  grid-template-columns: auto 1fr auto;
+}
+.reels-controls__spacer {
+  min-width: 1px;
+}
+.reels-topbar {
+  justify-self: end;
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 .reels-fab,
@@ -248,7 +267,10 @@
 .reels-fab { width: 42px; justify-content: center; padding: 0; }
 .reels-fab:hover,
 .reel-back:hover { transform: translateY(-2px); }
-.reel-back { position: absolute; top: 16px; left: 16px; z-index: 6; }
+.reel-back {
+  justify-self: start;
+  text-decoration: none;
+}
 
 /* Scroll hint */
 .reels-hint {
@@ -431,11 +453,7 @@
 
 /* ── Mode tabs (floating over the feed) ─────────────────────────────────── */
 .reels-tabs {
-  position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
+  justify-self: center;
   display: flex;
   gap: 4px;
   padding: 5px;
@@ -445,7 +463,8 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 10px 28px rgba(43, 38, 49, 0.14);
-  max-width: calc(100vw - 32px);
+  max-width: min(38rem, calc(100vw - 21rem));
+  min-width: 0;
 }
 .reels-tab {
   border: none;
@@ -476,10 +495,21 @@
 .reels-fab__text { white-space: nowrap; }
 
 /* ── Responsive — keep tabs clear of the corner controls on mobile ──────── */
-@media (max-width: 600px) {
+@media (max-width: 760px) {
   .intention-grid { grid-template-columns: 1fr; width: 100%; max-width: 26rem; }
+  .reels-controls {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "back actions"
+      "tabs tabs";
+    gap: 10px;
+  }
+  .reel-back { grid-area: back; }
+  .reels-topbar { grid-area: actions; }
   .reels-tabs {
-    top: 70px;
+    grid-area: tabs;
+    width: min(100%, 28rem);
+    max-width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
     justify-content: flex-start;
@@ -501,7 +531,6 @@
     transform: none;
   }
   .intention-card:hover { transform: none; }
-  .reels-tabs { transform: translateX(-50%); }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -539,6 +568,23 @@
   transition: transform 0.25s ease, background 0.25s ease;
 }
 .reel-play:hover .reel-play__badge { transform: translate(-50%, -50%) scale(1.08); }
+.reel-play__hint {
+  position: absolute;
+  top: calc(50% + 46px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(10, 8, 14, 0.58);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+}
 .reel-play:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -4px;
@@ -571,6 +617,10 @@
 .reel-caption__chip--concern {
   background: color-mix(in srgb, #e8a23d 82%, transparent);
   color: #2b1d05;
+}
+.reel-caption__chip--review {
+  background: color-mix(in srgb, #8fb9b0 84%, transparent);
+  color: #102622;
 }
 
 /* "Why am I seeing this?" overlay (anchored to the action rail) */
@@ -616,6 +666,35 @@
   font-size: 0.82rem;
   line-height: 1.45;
   color: var(--text);
+}
+.reel-why__public {
+  margin-top: 10px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-soft) 76%, transparent);
+  border: 1px solid var(--border);
+}
+.reel-why__public-title {
+  margin: 0 0 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+.reel-why__public-body {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.42;
+  color: var(--text);
+}
+.reel-why__public-meta {
+  margin: 6px 0 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6f817c;
 }
 .reel-why__concern {
   margin: 8px 0 0;

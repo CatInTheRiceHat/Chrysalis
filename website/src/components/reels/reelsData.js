@@ -20,7 +20,7 @@
 
 export const MODES = [
   { key: 'daily-dew',     label: 'Daily Dew',          blurb: 'A short daily drop of grounding, positive content.' },
-  { key: 'metamorphosis', label: 'Metamorphosis Mode', blurb: 'Slow down, pause, breathe, notice your scrolling.' },
+  { key: 'metamorphosis', label: 'Metamorphosis', blurb: 'Slow down, pause, breathe, notice your scrolling.' },
   { key: 'flutter-feed',  label: 'Flutter Feed',       blurb: 'A healthier personalized feed, with more control.' },
 ];
 

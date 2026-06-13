@@ -17,6 +17,9 @@ export function ReelCard({ reel }) {
 
   const hasVideo = Boolean(reel.youtube_id);
   const poster = reel.thumbnail || reel.image;
+  const embedOrigin = typeof window !== 'undefined'
+    ? `&origin=${encodeURIComponent(window.location.origin)}`
+    : '';
 
   return (
     <article className="reel-card">
@@ -34,11 +37,12 @@ export function ReelCard({ reel }) {
           playing ? (
             <iframe
               className="reel-media reel-embed"
-              src={`https://www.youtube.com/embed/${reel.youtube_id}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1`}
+              src={`https://www.youtube.com/embed/${reel.youtube_id}?autoplay=1&mute=1&playsinline=1&controls=1&rel=0&modestbranding=1${embedOrigin}`}
               title={reel.title}
               loading="lazy"
-              allow="autoplay; encrypted-media; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
             />
           ) : (
             <button
@@ -60,6 +64,7 @@ export function ReelCard({ reel }) {
               <span className="reel-play__badge" aria-hidden="true">
                 <Play size={26} fill="currentColor" />
               </span>
+              <span className="reel-play__hint" aria-hidden="true">Tap to play</span>
             </button>
           )
         ) : (
@@ -83,6 +88,9 @@ export function ReelCard({ reel }) {
           rankingReason={reel.ranking_reason}
           concernReason={reel.concern_reason}
           safetyReason={reel.safety_reason}
+          publicSignalReason={reel.public_signal_reason}
+          publicSignalEffect={reel.public_signal_effect}
+          sourceSafetyStatus={reel.source_safety_status}
         />
         <ReelCaption
           title={reel.title}
@@ -90,6 +98,7 @@ export function ReelCard({ reel }) {
           label={reel.label}
           description={reel.description}
           concernReason={reel.concern_reason}
+          publicSignalEffect={reel.public_signal_effect}
         />
       </MOTION.div>
     </article>

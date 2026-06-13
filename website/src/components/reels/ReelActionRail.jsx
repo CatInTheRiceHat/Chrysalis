@@ -7,10 +7,18 @@ import { Heart, Bookmark, Sparkles, RefreshCw, HelpCircle, Share2, X } from 'luc
  * note when present). Every control is a real <button> with an aria-label so it
  * is keyboard-reachable and screen-reader friendly.
  */
-export function ReelActionRail({ rankingReason, concernReason, safetyReason }) {
+export function ReelActionRail({
+  rankingReason,
+  concernReason,
+  safetyReason,
+  publicSignalReason,
+  publicSignalEffect,
+  sourceSafetyStatus,
+}) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
+  const showPublicSignal = Boolean(publicSignalReason && publicSignalEffect !== 'none');
 
   return (
     <div className="reel-rail" role="group" aria-label="Reel actions">
@@ -65,8 +73,17 @@ export function ReelActionRail({ rankingReason, concernReason, safetyReason }) {
           </button>
           <p className="reel-why__title">Why am I seeing this?</p>
           <p className="reel-why__body">
-            {rankingReason || 'Curated by Chrysalis to support your wellbeing.'}
+          {rankingReason || 'Curated by Chrysalis to support your wellbeing.'}
           </p>
+          {showPublicSignal && (
+            <div className="reel-why__public">
+              <p className="reel-why__public-title">Reputation context</p>
+              <p className="reel-why__public-body">{publicSignalReason}</p>
+              {sourceSafetyStatus === 'caution' && (
+                <p className="reel-why__public-meta">Requires review</p>
+              )}
+            </div>
+          )}
           {concernReason && <p className="reel-why__concern">{concernReason}</p>}
           {safetyReason && <p className="reel-why__safety">{safetyReason}</p>}
         </div>

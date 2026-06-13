@@ -137,7 +137,9 @@ def test_build_feed_shape_and_gating():
     assert "calm1" in ids
     item = feed[0]
     for key in ("youtube_id", "title", "thumbnail", "chrysalis_scores",
-                "ranking_reason", "safety_reason", "concern_reason", "mode_fit"):
+                "ranking_reason", "safety_reason", "concern_reason", "mode_fit",
+                "public_signal", "source_safety_status", "public_signal_effect",
+                "public_signal_reason"):
         assert key in item
 
 

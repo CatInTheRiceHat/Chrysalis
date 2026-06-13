@@ -27,6 +27,10 @@ function apiItemToCard(item) {
     ranking_reason: item.ranking_reason,
     safety_reason: item.safety_reason,
     concern_reason: item.concern_reason,
+    public_signal: item.public_signal,
+    source_safety_status: item.source_safety_status,
+    public_signal_effect: item.public_signal_effect,
+    public_signal_reason: item.public_signal_reason,
   };
 }
 
@@ -36,7 +40,7 @@ function apiItemToCard(item) {
  * strictly-gated real videos; the other modes prefer real videos when present.
  */
 function mergeForMode(mode, real, synthetic) {
-  if (mode === 'metamorphosis') return [...synthetic, ...real.slice(0, 2)];
+  if (mode === 'metamorphosis') return real.length ? [...real.slice(0, 2), ...synthetic] : synthetic;
   return real.length ? real : synthetic;
 }
 
@@ -73,16 +77,30 @@ export function ReelsPage() {
     let cancelled = false;
     const synthetic = reelsByMode[mode] ?? reelsByMode[DEFAULT_MODE];
 
-    fetch(`${API_URL}/api/feed/${mode}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((data) => {
+    async function loadFeed() {
+      try {
+        const response = await fetch(`${API_URL}/api/feed/${mode}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
         if (cancelled) return;
-        const real = (data.items ?? []).map(apiItemToCard);
+
+        let real = (data.items ?? []).map(apiItemToCard);
+        if (!real.length && mode === 'metamorphosis') {
+          const fallback = await fetch(`${API_URL}/api/feed/flutter-feed?k=2`);
+          if (fallback.ok) {
+            const fallbackData = await fallback.json();
+            real = (fallbackData.items ?? []).map(apiItemToCard);
+          }
+        }
+
+        if (cancelled) return;
         setFeed({ mode, cards: mergeForMode(mode, real, synthetic) });
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setFeed({ mode, cards: synthetic });
-      });
+      }
+    }
+
+    loadFeed();
 
     return () => { cancelled = true; };
   }, [mode, onboarded]);
@@ -112,25 +130,33 @@ export function ReelsPage() {
 
   return (
     <main className="reels-shell" data-reels data-theme={theme}>
-      <Link to="/" className="reel-back" aria-label="Back to Chrysalis home">
-        <ArrowLeft size={17} aria-hidden="true" />
-        Home
-      </Link>
+      <div className={`reels-controls${onboarded ? '' : ' reels-controls--simple'}`}>
+        <Link to="/" className="reel-back" aria-label="Back to Chrysalis home">
+          <ArrowLeft size={17} aria-hidden="true" />
+          Home
+        </Link>
 
-      <div className="reels-topbar">
-        {onboarded && (
-          <button
-            type="button"
-            className="reels-fab reels-fab--wide"
-            onClick={() => setOnboarded(false)}
-            aria-label="Change your intention and retake onboarding"
-            title="Change intention"
-          >
-            <RotateCcw size={16} aria-hidden="true" />
-            <span className="reels-fab__text">Change intention</span>
-          </button>
+        {onboarded ? (
+          <ModeTabs modes={MODES} activeMode={mode} onChange={setMode} />
+        ) : (
+          <span className="reels-controls__spacer" aria-hidden="true" />
         )}
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+
+        <div className="reels-topbar">
+          {onboarded && (
+            <button
+              type="button"
+              className="reels-fab reels-fab--wide"
+              onClick={() => setOnboarded(false)}
+              aria-label="Change your intention and retake onboarding"
+              title="Change intention"
+            >
+              <RotateCcw size={16} aria-hidden="true" />
+              <span className="reels-fab__text">Change intention</span>
+            </button>
+          )}
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -145,8 +171,6 @@ export function ReelsPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.35 }}
           >
-            <ModeTabs modes={MODES} activeMode={mode} onChange={setMode} />
-
             <div className="reels-scroll" data-lenis-prevent key={mode}>
               {cards.map((reel) => (
                 <ReelCard key={reel.id} reel={reel} />

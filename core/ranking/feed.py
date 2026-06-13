@@ -14,6 +14,7 @@ import json
 from ..labeling.schema import LabelSet, SCORING_VERSION
 from ..labeling.metadata_scoring import score_metadata
 from ..labeling.explain import build_reasons
+from ..public_signals.ranking import PublicSignalContext
 from .modes import rank_videos, is_valid_mode
 
 _THUMB = "https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
@@ -39,11 +40,19 @@ def label_row(row: dict) -> LabelSet:
     return _labels_for_row(row)
 
 
-def build_feed(rows: list[dict], mode: str, k: int = 12) -> list[dict]:
+def build_feed(
+    rows: list[dict],
+    mode: str,
+    k: int = 12,
+    public_signal_context: PublicSignalContext | None = None,
+    public_signal_override: bool = False,
+) -> list[dict]:
     """
     Returns a list of API-ready items for `mode`:
       { youtube_id, title, source, description, thumbnail,
-        chrysalis_scores, ranking_reason, safety_reason, concern_reason, mode_fit }
+        chrysalis_scores, ranking_reason, safety_reason, concern_reason, mode_fit,
+        public_signal, source_safety_status, public_signal_effect,
+        public_signal_reason }
     Empty input (or an unknown mode) yields an empty list.
     """
     if not is_valid_mode(mode) or not rows:
@@ -56,9 +65,18 @@ def build_feed(rows: list[dict], mode: str, k: int = 12) -> list[dict]:
             "_row": row,
             "labels": labels,
             "topic": row.get("topic") or row.get("category"),
+            "video_id": row.get("video_id") or row.get("youtube_id") or "",
+            "channel_id": row.get("channel_id") or "",
+            "channel_title": row.get("channel_title") or row.get("channel") or "",
         })
 
-    ranked = rank_videos(candidates, mode, k=k)
+    ranked = rank_videos(
+        candidates,
+        mode,
+        k=k,
+        public_signal_context=public_signal_context,
+        public_signal_override=public_signal_override,
+    )
 
     items: list[dict] = []
     for cand in ranked:
@@ -78,5 +96,9 @@ def build_feed(rows: list[dict], mode: str, k: int = 12) -> list[dict]:
             "safety_reason": reasons["safety_reason"],
             "concern_reason": reasons["concern_reason"],
             "mode_fit": round(cand["mode_fit"], 4),
+            "public_signal": cand.get("public_signal"),
+            "source_safety_status": cand.get("source_safety_status", "neutral"),
+            "public_signal_effect": cand.get("public_signal_effect", "none"),
+            "public_signal_reason": cand.get("public_signal_reason"),
         })
     return items

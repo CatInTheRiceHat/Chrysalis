@@ -6,7 +6,16 @@ import { Leaf, ShieldAlert } from 'lucide-react';
  * lives behind the action-rail button; here we only surface a brief concern
  * heads-up when one is present.
  */
-export function ReelCaption({ title, source, label, description, concernReason }) {
+export function ReelCaption({
+  title,
+  source,
+  label,
+  description,
+  concernReason,
+  publicSignalEffect,
+}) {
+  const showReviewSignal = Boolean(publicSignalEffect && publicSignalEffect !== 'none');
+
   return (
     <div className="reel-caption">
       <div className="reel-caption__chips">
@@ -20,6 +29,12 @@ export function ReelCaption({ title, source, label, description, concernReason }
           <span className="reel-caption__chip reel-caption__chip--concern">
             <ShieldAlert size={12} aria-hidden="true" />
             Heads up
+          </span>
+        )}
+        {showReviewSignal && (
+          <span className="reel-caption__chip reel-caption__chip--review">
+            <ShieldAlert size={12} aria-hidden="true" />
+            Review signal
           </span>
         )}
       </div>

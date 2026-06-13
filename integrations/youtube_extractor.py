@@ -149,6 +149,14 @@ def _get_conn(db_path: Path = DB_PATH) -> sqlite3.Connection:
     conn.execute(_CREATE_TABLE_SQL)
     conn.commit()
     _ensure_label_columns(conn)
+    try:
+        from core.public_signals.storage import ensure_sqlite_public_signal_tables
+
+        ensure_sqlite_public_signal_tables(conn)
+    except Exception:
+        # Public signals are optional context; extraction should still work if
+        # this helper is unavailable in a standalone integration run.
+        pass
     return conn
 
 
