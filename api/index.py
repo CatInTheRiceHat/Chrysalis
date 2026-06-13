@@ -21,6 +21,8 @@ from core.algorithm import (
     validate_and_clean,
 )
 from core.metrics import diversity_at_k, max_streak, prosocial_ratio
+from core.ranking.feed import build_feed
+from core.ranking.modes import is_valid_mode, MODES
 from integrations.youtube_service import (
     fetch_videos_by_topic,
     get_youtube_id_for_video,
@@ -153,6 +155,33 @@ def youtube_videos(topic: str, max_results: int = 12):
 @app.get("/api/youtube/cache")
 def youtube_cache():
     return get_all_topics_cache_status()
+
+
+@app.get("/api/feed/{mode}")
+def chrysalis_feed(mode: str, k: int = 12):
+    """
+    Labeled + mode-ranked + explained feed for a reels mode
+    (daily-dew, metamorphosis, flutter-feed). Reads the Postgres `videos` table.
+    Returns an empty list when there are no scored candidates — the frontend then
+    falls back to its built-in sample cards.
+    """
+    if not is_valid_mode(mode):
+        raise HTTPException(status_code=400, detail=f"mode must be one of {list(MODES)}")
+
+    rows: list[dict] = []
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM videos")
+        cols = [d[0] for d in cur.description]
+        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+    except Exception:
+        rows = []
+    finally:
+        conn.close()
+
+    items = build_feed(rows, mode, k=k)
+    return {"mode": mode, "count": len(items), "items": items}
 
 
 @app.get("/api/migration/today")

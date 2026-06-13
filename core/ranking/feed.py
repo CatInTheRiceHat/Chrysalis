@@ -1,0 +1,82 @@
+"""
+Shared, pure feed builder (v1).
+
+`build_feed` takes raw video rows (plain dicts, as read from either the SQLite or
+Postgres `videos` table), labels + ranks + explains them for a mode, and returns the
+clean API shape. No DB or network here, so both API files (api.py / api/index.py) and
+the unit tests call the exact same logic.
+"""
+
+from __future__ import annotations
+
+import json
+
+from ..labeling.schema import LabelSet, SCORING_VERSION
+from ..labeling.metadata_scoring import score_metadata
+from ..labeling.explain import build_reasons
+from .modes import rank_videos, is_valid_mode
+
+_THUMB = "https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+
+
+def _labels_for_row(row: dict) -> LabelSet:
+    """Reuse stored v1 scores when present and current; otherwise score on the fly."""
+    stored = row.get("chrysalis_scores")
+    version = row.get("scoring_version")
+    if stored and version == SCORING_VERSION:
+        if isinstance(stored, str):
+            try:
+                stored = json.loads(stored)
+            except (ValueError, TypeError):
+                stored = None
+        if isinstance(stored, dict):
+            return LabelSet.from_dict(stored)
+    return score_metadata(row)
+
+
+def label_row(row: dict) -> LabelSet:
+    """Public helper (used by the backfill script): label one raw video row."""
+    return _labels_for_row(row)
+
+
+def build_feed(rows: list[dict], mode: str, k: int = 12) -> list[dict]:
+    """
+    Returns a list of API-ready items for `mode`:
+      { youtube_id, title, source, description, thumbnail,
+        chrysalis_scores, ranking_reason, safety_reason, concern_reason, mode_fit }
+    Empty input (or an unknown mode) yields an empty list.
+    """
+    if not is_valid_mode(mode) or not rows:
+        return []
+
+    candidates: list[dict] = []
+    for row in rows:
+        labels = _labels_for_row(row)
+        candidates.append({
+            "_row": row,
+            "labels": labels,
+            "topic": row.get("topic") or row.get("category"),
+        })
+
+    ranked = rank_videos(candidates, mode, k=k)
+
+    items: list[dict] = []
+    for cand in ranked:
+        row = cand["_row"]
+        labels = cand["labels"]
+        # Reasons are mode-specific, so always compute for the requested mode.
+        reasons = build_reasons(labels, mode)
+        vid = row.get("video_id") or row.get("youtube_id") or ""
+        items.append({
+            "youtube_id": vid,
+            "title": row.get("title") or "",
+            "source": row.get("channel_title") or row.get("channel") or "Chrysalis",
+            "description": row.get("description") or "",
+            "thumbnail": row.get("thumbnail") or (_THUMB.format(vid=vid) if vid else None),
+            "chrysalis_scores": labels.to_dict(),
+            "ranking_reason": reasons["ranking_reason"],
+            "safety_reason": reasons["safety_reason"],
+            "concern_reason": reasons["concern_reason"],
+            "mode_fit": round(cand["mode_fit"], 4),
+        })
+    return items

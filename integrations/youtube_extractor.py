@@ -109,15 +109,46 @@ CREATE TABLE IF NOT EXISTS videos (
     risk                     REAL,
     creator_authenticity     REAL,
     fetched_at               REAL,
-    classified_at            REAL
+    classified_at            REAL,
+    -- Chrysalis label/ranking fields (v1). Nullable; populated by scripts/score_videos.py.
+    chrysalis_scores         TEXT,
+    ranking_reason           TEXT,
+    safety_reason            TEXT,
+    concern_reason           TEXT,
+    label_confidence         REAL,
+    scored_at                REAL,
+    scoring_version          TEXT
 )
 """
+
+# Label columns added after the original schema — kept here so existing databases
+# can be upgraded idempotently (SQLite has no "ADD COLUMN IF NOT EXISTS").
+_LABEL_COLUMNS = (
+    ("chrysalis_scores", "TEXT"),
+    ("ranking_reason", "TEXT"),
+    ("safety_reason", "TEXT"),
+    ("concern_reason", "TEXT"),
+    ("label_confidence", "REAL"),
+    ("scored_at", "REAL"),
+    ("scoring_version", "TEXT"),
+)
+
+
+def _ensure_label_columns(conn: sqlite3.Connection) -> None:
+    """Add any missing Chrysalis label columns to an existing `videos` table."""
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(videos)")}
+    for name, sql_type in _LABEL_COLUMNS:
+        if name not in existing:
+            conn.execute(f"ALTER TABLE videos ADD COLUMN {name} {sql_type}")
+    conn.commit()
+
 
 def _get_conn(db_path: Path = DB_PATH) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.execute(_CREATE_TABLE_SQL)
     conn.commit()
+    _ensure_label_columns(conn)
     return conn
 
 
@@ -548,7 +579,13 @@ def extract_and_classify(
 
             conn.execute(
                 """
-                INSERT OR REPLACE INTO videos VALUES (
+                INSERT OR REPLACE INTO videos (
+                    video_id, title, description, channel_id, channel_title,
+                    topic, category_id, view_count, like_count, comment_count,
+                    published_at, active_engagement_ratio,
+                    appearance_comparison, opinion_comparison, prosocial, risk,
+                    creator_authenticity, fetched_at, classified_at
+                ) VALUES (
                     ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
                 )
                 """,

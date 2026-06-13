@@ -6,6 +6,7 @@ import { Navbar } from './components/Navbar';
 import { AlgorithmPage } from './components/LiveDemo';
 import { IntroScreen } from './components/IntroScreen';
 import { RebootPage } from './components/RebootPage';
+import { ReelsPage } from './components/reels/ReelsPage';
 import './App.css';
 
 function MainPage() {
@@ -62,6 +63,7 @@ function App() {
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/algorithm" element={<AlgorithmPage />} />
+          <Route path="/reels" element={<ReelsPage />} />
         </Routes>
       </div>
     </BrowserRouter>
