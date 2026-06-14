@@ -1,21 +1,27 @@
-name: Daily YouTube feed ingest
+name: YouTube Feed Ingest
 
 on:
   schedule:
-    - cron: "20 6 * * *"
+    - cron: "17 14 * * *"
   workflow_dispatch:
 
 jobs:
   ingest:
     runs-on: ubuntu-latest
+
+    env:
+      CHRYSALIS_API_BASE_URL: ${{ secrets.CHRYSALIS_API_BASE_URL }}
+      FEED_INGEST_SECRET: ${{ secrets.FEED_INGEST_SECRET }}
+
     steps:
-      - name: Call Chrysalis ingestion endpoint
-        env:
-          CHRYSALIS_API_BASE_URL: ${{ secrets.CHRYSALIS_API_BASE_URL }}
-          FEED_INGEST_SECRET: ${{ secrets.FEED_INGEST_SECRET }}
+      - name: Validate required secrets
         run: |
           test -n "$CHRYSALIS_API_BASE_URL"
           test -n "$FEED_INGEST_SECRET"
-          curl -fsS -X POST \
+
+      - name: Call YouTube ingest endpoint
+        run: |
+          curl -X POST "$CHRYSALIS_API_BASE_URL/api/admin/ingest/youtube" \
             -H "X-Feed-Ingest-Secret: $FEED_INGEST_SECRET" \
-            "$CHRYSALIS_API_BASE_URL/api/admin/ingest/youtube"
+            --fail \
+            --show-error
