@@ -188,7 +188,10 @@ export function ReelsPage() {
 
         if (cancelled) return;
         setFeed({ mode, cards: mergeForMode(mode, real, synthetic) });
-      } catch {
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.warn('[Chrysalis reels] Falling back to sample cards:', error);
+        }
         if (!cancelled) setFeed({ mode, cards: synthetic });
       }
     }

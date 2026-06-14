@@ -29,6 +29,20 @@ python api.py
 # Server starts at http://localhost:8000
 ```
 
+### Local `/reels` live-video check
+
+Run the API and Vite frontend together:
+
+```bash
+DATABASE_PATH=./chrysalis.db python api.py
+cd website
+npm run dev
+```
+
+`website/.env.local` should contain `VITE_API_URL=http://localhost:8000`.
+The local API allows Vite on `localhost` or `127.0.0.1` ports `5173` and `5174`,
+so `/reels` can still fetch live cards when Vite moves to the next open port.
+
 ## Project Structure
 
 ```
