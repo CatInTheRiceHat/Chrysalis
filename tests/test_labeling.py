@@ -11,7 +11,7 @@ Verifies the core product guarantees with small hand-built metadata samples:
 
 import pytest
 
-from core.labeling.metadata_scoring import score_metadata
+from core.labeling.metadata_scoring import score_metadata, parse_duration_seconds
 from core.labeling.explain import build_reasons
 from core.ranking.modes import passes_gate, score_for_mode, rank_videos
 from core.ranking.feed import build_feed
@@ -53,6 +53,17 @@ LEARN = {
     "channel_title": "StudyWithMe",
     "topic": "education",
 }
+NEUTRAL_LOW_RISK = {
+    "video_id": "neutral1",
+    "title": "One day or day one",
+    "description": (
+        "A plain update with ordinary details about a routine upload, including "
+        "schedule notes, location context, simple production notes, and general "
+        "background text for metadata confidence."
+    ),
+    "channel_title": "Neutral Channel",
+    "topic": "entertainment",
+}
 
 
 # ── Scoring ──────────────────────────────────────────────────────────────────
@@ -80,6 +91,16 @@ def test_negation_aware_scoring():
     assert labels.appearance_focus < 0.34
 
 
+def test_title_matches_are_weighted_more_than_description():
+    labels = score_metadata({
+        "title": "Calm",
+        "description": "",
+        "channel_title": "Sample",
+        "topic": "entertainment",
+    })
+    assert labels.calm >= 0.6
+
+
 # ── Mode ranking ─────────────────────────────────────────────────────────────
 def test_daily_dew_prefers_calm_over_ragebait():
     calm = score_metadata(CALM)
@@ -87,6 +108,13 @@ def test_daily_dew_prefers_calm_over_ragebait():
     assert passes_gate(calm, "daily-dew")
     assert not passes_gate(rage, "daily-dew")
     assert score_for_mode(calm, "daily-dew") > score_for_mode(rage, "daily-dew")
+
+
+def test_daily_dew_rejects_neutral_low_risk_content():
+    neutral = score_metadata(NEUTRAL_LOW_RISK)
+    assert neutral.confidence >= 0.25
+    assert neutral.overall_risk < 0.3
+    assert not passes_gate(neutral, "daily-dew")
 
 
 def test_ragebait_gated_out_of_every_mode():
@@ -130,10 +158,11 @@ def test_concern_reason_only_when_risk_present():
 
 # ── Feed builder (end-to-end shape) ──────────────────────────────────────────
 def test_build_feed_shape_and_gating():
-    rows = [CALM, GRATITUDE, RAGEBAIT, HYPER, LEARN]
+    rows = [CALM, GRATITUDE, RAGEBAIT, HYPER, LEARN, NEUTRAL_LOW_RISK]
     feed = build_feed(rows, "daily-dew", k=12)
     ids = {it["youtube_id"] for it in feed}
     assert "rage1" not in ids and "hyper1" not in ids
+    assert "neutral1" not in ids
     assert "calm1" in ids
     item = feed[0]
     for key in ("youtube_id", "title", "thumbnail", "chrysalis_scores",
@@ -145,6 +174,143 @@ def test_build_feed_shape_and_gating():
 
 def test_build_feed_unknown_mode_is_empty():
     assert build_feed([CALM], "nope", k=12) == []
+
+
+# ── Richer metadata: duration parsing ────────────────────────────────────────
+def test_parse_duration_seconds_safe():
+    assert parse_duration_seconds("PT1M30S") == 90
+    assert parse_duration_seconds("PT1H2M3S") == 3723
+    assert parse_duration_seconds("PT45S") == 45
+    assert parse_duration_seconds("PT2H") == 7200
+    # numeric passthrough (already seconds)
+    assert parse_duration_seconds(90) == 90
+    assert parse_duration_seconds("90") == 90
+    # junk / empty → None, never raises
+    for bad in (None, "", "garbage", "P", "PT", True, -5):
+        assert parse_duration_seconds(bad) is None
+
+
+# ── Richer metadata: tags influence scoring (but don't dominate) ──────────────
+def test_risky_tags_increase_risk_dims():
+    meta = {
+        "title": "a quiet afternoon update",
+        "description": "just sharing some ordinary notes about the day",
+        "tags": ["glow up", "drama", "exposed", "cringe", "am i pretty"],
+        "topic": "entertainment",
+    }
+    labels = score_metadata(meta)
+    assert labels.appearance_focus > 0.0
+    assert labels.ragebait > 0.0
+    assert labels.shame_or_humiliation_risk > 0.0
+    assert labels.comparison_risk > 0.0
+
+
+def test_positive_tags_increase_positive_dims():
+    meta = {
+        "title": "a quiet afternoon update",
+        "description": "just sharing some ordinary notes about the day",
+        "tags": ["gratitude", "study", "calm", "art", "kindness", "reflection"],
+        "topic": "entertainment",
+    }
+    labels = score_metadata(meta)
+    assert labels.reflection_value > 0.0
+    assert labels.educational > 0.0
+    assert labels.calm > 0.0
+    assert labels.novelty > 0.0
+    assert labels.prosocial > 0.0
+
+
+def test_tags_do_not_dominate_title_description():
+    # Same keyword in the title vs. only in tags → title contributes strictly more.
+    in_title = score_metadata({
+        "title": "gratitude gratitude gratitude reflection",
+        "description": "",
+        "topic": "education",
+    })
+    in_tags = score_metadata({
+        "title": "ordinary update",
+        "description": "",
+        "tags": ["gratitude", "gratitude", "gratitude", "reflection"],
+        "topic": "education",
+    })
+    assert in_title.reflection_value > in_tags.reflection_value
+
+
+def test_tags_accept_json_string():
+    import json
+    meta = {
+        "title": "ordinary update",
+        "description": "",
+        "tags": json.dumps(["calm", "gratitude"]),
+        "topic": "entertainment",
+    }
+    labels = score_metadata(meta)
+    assert labels.calm > 0.0
+    assert labels.reflection_value > 0.0
+
+
+# ── Richer metadata: duration heuristics ──────────────────────────────────────
+def test_short_risky_video_nudges_overstimulation():
+    risky = {
+        "title": "INSANE wild chaotic rapid fire drama",
+        "description": "non-stop shocking exposed cringe",
+        "topic": "entertainment",
+    }
+    long_risky = dict(risky, duration_seconds=600)
+    short_risky = dict(risky, duration_seconds=20)
+    assert score_metadata(short_risky).overstimulation >= score_metadata(long_risky).overstimulation
+
+
+def test_short_calm_video_not_penalized():
+    calm_short = dict(CALM, duration_seconds=20)
+    calm_long = dict(CALM, duration_seconds=600)
+    # A short calm clip must not gain overstimulation just for being short.
+    assert score_metadata(calm_short).overstimulation == score_metadata(calm_long).overstimulation
+    assert passes_gate(score_metadata(calm_short), "daily-dew")
+
+
+def test_missing_metadata_does_not_crash():
+    bare = {"title": "calm rain", "topic": "music"}  # no tags/duration/thumbnail
+    labels = score_metadata(bare)
+    assert labels.calm >= 0.0
+    # explicit Nones must also be safe
+    nulls = {"title": "calm rain", "tags": None, "duration_seconds": None,
+             "thumbnail_url": None, "topic": "music"}
+    assert score_metadata(nulls).calm >= 0.0
+
+
+# ── Richer metadata: API serialization ────────────────────────────────────────
+def test_build_feed_includes_new_fields():
+    row = dict(
+        CALM,
+        tags=["calm", "gratitude"],
+        duration_seconds=300,
+        thumbnail_url="https://example.com/t.jpg",
+        channel_id="UC123",
+        category_id="10",
+    )
+    feed = build_feed([row], "daily-dew", k=12)
+    assert feed, "calm video should survive Daily Dew"
+    item = feed[0]
+    for key in ("duration_seconds", "tags", "channel_id", "category_id", "thumbnail"):
+        assert key in item
+    assert item["duration_seconds"] == 300
+    assert item["tags"] == ["calm", "gratitude"]
+    assert item["channel_id"] == "UC123"
+    assert item["category_id"] == "10"
+    assert item["thumbnail"] == "https://example.com/t.jpg"
+
+
+def test_build_feed_old_rows_without_new_fields():
+    # Rows from a pre-metadata DB (no tags/duration/thumbnail) still build a feed.
+    feed = build_feed([CALM, GRATITUDE], "daily-dew", k=12)
+    assert feed
+    item = feed[0]
+    assert item["tags"] == []
+    assert item["duration_seconds"] is None
+    assert item["channel_id"] == ""
+    # thumbnail falls back to the derived YouTube URL
+    assert item["thumbnail"]
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ from core.algorithm import (
 from core.metrics import diversity_at_k, max_streak, prosocial_ratio
 from core.ranking.feed import build_feed
 from core.ranking.modes import is_valid_mode, MODES
-from core.public_signals.storage import load_or_scan_context_postgres
+from core.public_signals.storage import load_cached_context_postgres, load_or_scan_context_postgres
 from integrations.youtube_service import (
     fetch_videos_by_topic,
     get_youtube_id_for_video,
@@ -59,6 +59,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+REFRESH_PUBLIC_SIGNALS_ON_FEED = os.getenv(
+    "CHRYSALIS_REFRESH_PUBLIC_SIGNALS_ON_FEED",
+    "",
+).lower() in {"1", "true", "yes"}
 
 
 class RunLocalRequest(BaseModel):
@@ -178,7 +183,13 @@ def chrysalis_feed(mode: str, k: int = 12):
         cols = [d[0] for d in cur.description]
         rows = [dict(zip(cols, r)) for r in cur.fetchall()]
         try:
-            public_signal_context = load_or_scan_context_postgres(conn, rows)
+            # Feed reads are read-only by default. Set
+            # CHRYSALIS_REFRESH_PUBLIC_SIGNALS_ON_FEED=1 only when you explicitly
+            # want GET /api/feed/* to populate the no-network stub cache.
+            if REFRESH_PUBLIC_SIGNALS_ON_FEED:
+                public_signal_context = load_or_scan_context_postgres(conn, rows)
+            else:
+                public_signal_context = load_cached_context_postgres(conn, rows)
         except Exception as exc:
             print(f"[public_signals] scanner cache unavailable: {exc}")
     except Exception:
@@ -429,9 +440,11 @@ def cron_extract(authorization: str = Header(None)):
         _classify_heuristic,
         _compute_active_ratio,
         _infer_creator_trait,
+        _best_thumbnail,
         ALL_TOPICS,
         CATEGORY_TO_TOPIC,
     )
+    from core.labeling.metadata_scoring import parse_duration_seconds
     import time
 
     conn = get_db()
@@ -470,6 +483,7 @@ def cron_extract(authorization: str = Header(None)):
                 continue
             snip  = info["snippet"]
             stats = info["statistics"]
+            details = info.get("contentDetails", {})
 
             title         = snip.get("title", "")
             description   = snip.get("description", "")
@@ -481,22 +495,28 @@ def cron_extract(authorization: str = Header(None)):
             active_ratio  = _compute_active_ratio(stats)
             scores        = _classify_heuristic(title, description)
 
+            tags             = snip.get("tags", []) or []
+            thumbnail_url    = _best_thumbnail(snip)
+            duration_seconds = parse_duration_seconds(details.get("duration"))
+
             cur.execute(
                 """
                 INSERT INTO videos (
                     video_id, title, description, channel_id, channel_title,
-                    topic, category_id, view_count, like_count, comment_count,
+                    topic, category_id, tags, duration_seconds, thumbnail_url,
+                    view_count, like_count, comment_count,
                     published_at, active_engagement_ratio,
                     appearance_comparison, opinion_comparison, prosocial, risk,
                     creator_authenticity, fetched_at, classified_at
                 ) VALUES (
-                    %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
+                    %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
                 ) ON CONFLICT (video_id) DO NOTHING
                 """,
                 (
                     vid_id, title, description,
                     channel_id, channel_title,
                     topic, category_id,
+                    json.dumps(tags), duration_seconds, thumbnail_url,
                     int(stats.get("viewCount", 0) or 0),
                     int(stats.get("likeCount",  0) or 0),
                     int(stats.get("commentCount",0) or 0),

@@ -13,6 +13,7 @@ easy to improve. Deeper layers (thumbnail vision, LLM) refine this later.
 
 from __future__ import annotations
 
+import json
 import re
 
 from .schema import (
@@ -111,23 +112,101 @@ RISK_PATTERNS: dict[str, list[str]] = {
 # Risk dimensions that also contribute to overstimulation pressure when present.
 _TOKEN_RE = re.compile(r"[a-z0-9']+")
 
+# Duration thresholds (seconds). Shorts/snackable clips are more prone to
+# compulsive scrolling; very long videos are not penalized but are flagged as
+# less clip-like for Daily Dew / Reels (see the clip-fit hook in core/ranking).
+_SHORT_DURATION_S = 60          # ≤ ~1 min → snackable
+_LONG_DURATION_S = 20 * 60      # ≥ ~20 min → long-form, not clip-like
+
+# Tags are weighted noticeably lower than title/description: they are creator-
+# supplied, noisy, and easily stuffed, so a tag match must never outweigh a real
+# title/description match. (Main blob uses per_hit=0.34; title is doubled.)
+_TAG_PER_HIT = 0.12
+
+# ISO 8601 duration as returned by YouTube contentDetails.duration, e.g. "PT1H2M3S".
+_ISO8601_DURATION_RE = re.compile(
+    r"^P(?:(?P<days>\d+)D)?"
+    r"(?:T(?:(?P<hours>\d+)H)?(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+)S)?)?$"
+)
+
+
+def parse_duration_seconds(value) -> int | None:
+    """
+    Safely normalize a video duration into integer seconds.
+
+    Accepts:
+      • YouTube ISO 8601 strings ("PT1M30S" → 90, "PT1H2M3S" → 3723)
+      • plain int/float/numeric strings (already seconds)
+    Returns None on empty/None/unparseable input. Never raises — the scorer must
+    tolerate older rows and junk metadata.
+    """
+    if value is None:
+        return None
+    # Numeric passthrough (already seconds).
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return int(value) if value >= 0 else None
+
+    s = str(value).strip()
+    if not s:
+        return None
+
+    # Plain numeric string (e.g. "90").
+    if s.isdigit():
+        return int(s)
+
+    m = _ISO8601_DURATION_RE.match(s.upper())
+    if not m:
+        return None
+    parts = m.groupdict()
+    if not any(parts.values()):
+        return None
+    days = int(parts["days"] or 0)
+    hours = int(parts["hours"] or 0)
+    minutes = int(parts["minutes"] or 0)
+    seconds = int(parts["seconds"] or 0)
+    return days * 86400 + hours * 3600 + minutes * 60 + seconds
+
+
+def _normalize_tags(raw) -> list[str]:
+    """Coerce stored tags (list, JSON-encoded string, or None) into a list of strings."""
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        return [str(t) for t in raw]
+    if isinstance(raw, str):
+        s = raw.strip()
+        if s.startswith("["):
+            try:
+                decoded = json.loads(s)
+                if isinstance(decoded, list):
+                    return [str(t) for t in decoded]
+            except (ValueError, TypeError):
+                pass
+        # Fall back to treating the whole string as a single tag blob.
+        return [s] if s else []
+    return [str(raw)]
+
 
 def _count_hits(text: str, patterns: list[str]) -> int:
     """Count negation-aware keyword hits for one pattern list."""
     hits = 0
     for pat in patterns:
-        idx = text.find(pat)
-        if idx == -1:
-            continue
-        context = text[max(0, idx - 32): idx]
-        if any(neg in context for neg in _NEGATION_PREFIXES):
-            continue  # negated — skip
-        hits += 1
+        start = 0
+        while True:
+            idx = text.find(pat, start)
+            if idx == -1:
+                break
+            context = text[max(0, idx - 32): idx]
+            if not any(neg in context for neg in _NEGATION_PREFIXES):
+                hits += 1
+            start = idx + len(pat)
     return hits
 
 
 def _score_group(text: str, patterns: list[str], per_hit: float = 0.34) -> float:
-    """Density-based 0–1 score: each distinct matching phrase adds `per_hit`."""
+    """Density-based 0–1 score: each matching phrase occurrence adds `per_hit`."""
     return clamp01(_count_hits(text, patterns) * per_hit)
 
 
@@ -140,33 +219,45 @@ def score_metadata(meta: dict) -> LabelSet:
     """
     Score a single video's metadata into a normalized LabelSet.
 
-    `meta` keys used (all optional): title, description, tags (str|list),
-    channel_title, category/topic, duration (seconds), thumbnail.
+    `meta` keys used (all optional):
+      • title, description       — primary text signal (title weighted most)
+      • tags (list|JSON str)     — secondary signal, weighted *below* title/description
+      • channel_title / channel  — weak text signal
+      • category / topic         — weak category prior
+      • duration_seconds / duration (ISO 8601 or seconds) — light overstimulation/
+        clip-fit heuristic
+      • thumbnail / thumbnail_url — surfaced in the API only (no image AI yet)
     Missing fields simply contribute no signal and lower confidence.
     """
     title = str(meta.get("title") or "")
     description = str(meta.get("description") or "")
 
-    tags = meta.get("tags") or []
-    if isinstance(tags, str):
-        tags_text = tags
-    else:
-        tags_text = " ".join(str(t) for t in tags)
+    tags = _normalize_tags(meta.get("tags"))
+    tags_text = " ".join(tags).lower()
 
     channel = str(meta.get("channel_title") or meta.get("channel") or "")
     category = _normalize_category(meta)
 
-    # Title carries the strongest signal, so weight it by repeating it.
-    blob = " ".join([title, title, description, tags_text, channel, category]).lower()
+    # future hook: meta.get("thumbnail"/"thumbnail_url") is intentionally NOT scored
+    # yet. A later Layer-2 pass can OCR/vision-analyze the thumbnail; for now it is
+    # passed through to the API (see core/ranking/feed.py) untouched.
+
+    # Title carries the strongest signal, so weight it by repeating it. Tags are
+    # deliberately excluded here and scored separately at a lower weight below, so
+    # creator-supplied tags can nudge but never dominate title/description.
+    blob = " ".join([title, title, description, channel, category]).lower()
 
     labels = LabelSet()
 
-    # Positive dimensions
+    # Positive dimensions: main text first, then a smaller tag-only contribution.
     for dim in POSITIVE_DIMS:
         if dim == "diversity":
             continue  # diversity is contextual — set at ranking time, not per-video
         patterns = POSITIVE_PATTERNS.get(dim, [])
-        setattr(labels, dim, _score_group(blob, patterns))
+        score = _score_group(blob, patterns)
+        if tags_text:
+            score = clamp01(score + _score_group(tags_text, patterns, per_hit=_TAG_PER_HIT))
+        setattr(labels, dim, score)
 
     # Category nudges (cheap priors)
     if category in ("education",):
@@ -174,12 +265,15 @@ def score_metadata(meta: dict) -> LabelSet:
     if category in ("music",):
         labels.calm = clamp01(labels.calm + 0.1)
 
-    # Risk dimensions (overall_risk computed after)
+    # Risk dimensions (overall_risk computed after): main text + smaller tag signal.
     for dim in RISK_DIMS:
         if dim == "overall_risk":
             continue
         patterns = RISK_PATTERNS.get(dim, [])
-        setattr(labels, dim, _score_group(blob, patterns))
+        score = _score_group(blob, patterns)
+        if tags_text:
+            score = clamp01(score + _score_group(tags_text, patterns, per_hit=_TAG_PER_HIT))
+        setattr(labels, dim, score)
 
     # Exclamation-mark / all-caps overstimulation nudge from the title
     bangs = title.count("!")
@@ -191,6 +285,24 @@ def score_metadata(meta: dict) -> LabelSet:
         if caps_ratio > 0.6:
             labels.overstimulation = clamp01(labels.overstimulation + 0.15)
             labels.ragebait = clamp01(labels.ragebait + 0.1)
+
+    # Duration heuristic (light): very short/snackable clips amplify overstimulation
+    # ONLY when another risk signal is already present — a calm short stays calm and
+    # is never penalized for being short. Medium clips are neutral; very long videos
+    # are not penalized here.
+    #   clip-fit hook: long-form (≥ _LONG_DURATION_S) is less "clip-like" and so a
+    #   weaker fit for Daily Dew / Reels. That is a *ranking* concern, handled (later)
+    #   in core/ranking/modes.py, not a per-video risk — so no penalty is applied here.
+    duration_s = parse_duration_seconds(
+        meta.get("duration_seconds") if meta.get("duration_seconds") is not None
+        else meta.get("duration")
+    )
+    if duration_s is not None and duration_s <= _SHORT_DURATION_S:
+        existing_risk = max(
+            getattr(labels, d) for d in RISK_DIMS if d != "overall_risk"
+        )
+        if existing_risk > 0.2:
+            labels.overstimulation = clamp01(labels.overstimulation + 0.15)
 
     # overall_risk: max-biased aggregate so one strong risk dominates, with a
     # contribution from the average so multiple moderate risks add up.

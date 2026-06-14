@@ -20,9 +20,10 @@ from core.algorithm import (
     validate_and_clean,
 )
 from core.metrics import diversity_at_k, max_streak, prosocial_ratio
+from core.database import resolve_database_path
 from core.ranking.feed import build_feed
 from core.ranking.modes import is_valid_mode, MODES
-from core.public_signals.storage import load_or_scan_context_sqlite
+from core.public_signals.storage import load_cached_context_sqlite, load_or_scan_context_sqlite
 from integrations.youtube_service import fetch_videos_by_topic, get_youtube_id_for_video, get_all_topics_cache_status
 from migration_scheduler import create_scheduler
 from core.cocoon import (
@@ -32,7 +33,11 @@ from core.cocoon import (
     advance_week,
 )
 
-DB_PATH = Path(os.environ.get("DATABASE_PATH", str(Path(__file__).parent / "chrysalis.db")))
+DB_PATH = resolve_database_path()
+REFRESH_PUBLIC_SIGNALS_ON_FEED = os.getenv(
+    "CHRYSALIS_REFRESH_PUBLIC_SIGNALS_ON_FEED",
+    "",
+).lower() in {"1", "true", "yes"}
 
 
 @asynccontextmanager
@@ -182,7 +187,13 @@ def chrysalis_feed(mode: str, k: int = 12):
     try:
         rows = [dict(r) for r in conn.execute("SELECT * FROM videos").fetchall()]
         try:
-            public_signal_context = load_or_scan_context_sqlite(conn, rows)
+            # Feed reads are read-only by default. Set
+            # CHRYSALIS_REFRESH_PUBLIC_SIGNALS_ON_FEED=1 only when you explicitly
+            # want GET /api/feed/* to populate the no-network stub cache.
+            if REFRESH_PUBLIC_SIGNALS_ON_FEED:
+                public_signal_context = load_or_scan_context_sqlite(conn, rows)
+            else:
+                public_signal_context = load_cached_context_sqlite(conn, rows)
         except Exception as exc:
             print(f"[public_signals] scanner cache unavailable: {exc}")
     except sqlite3.OperationalError:

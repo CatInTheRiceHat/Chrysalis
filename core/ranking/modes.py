@@ -33,7 +33,15 @@ def is_valid_mode(mode: str) -> bool:
 #   risk: weights over risk dims (subtracted)
 #   caps: hard upper bounds — exceed any → gated out
 #   min_pos: hard lower bounds on positive dims → below any → gated out
+#   min_any_pos: at least one named positive dim must meet a floor
 #   min_confidence: confidence floor
+#
+# clip-fit hook (future): Daily Dew / Metamorphosis are short, clip-style feeds, so
+# long-form videos (duration_seconds ≥ ~20 min, see _LONG_DURATION_S in
+# core/labeling/metadata_scoring.py) are a weaker fit. A later pass can fold a soft
+# clip-fit factor into score_for_mode (e.g. a small mode_fit multiplier for
+# non-clip-like durations) — kept out of v1 so duration stays a scoring-only signal
+# and never hard-gates a video purely for being long.
 MODE_PROFILES: dict[str, dict] = {
     # Calm, grounding, low-risk. Strict on comparison / overstimulation / overall risk.
     "daily-dew": {
@@ -51,6 +59,10 @@ MODE_PROFILES: dict[str, dict] = {
             "overstimulation": 0.3, "shame_or_humiliation_risk": 0.3, "overall_risk": 0.4,
         },
         "min_pos": {},
+        "min_any_pos": {
+            "dims": ("calm", "prosocial", "self_love", "reflection_value", "educational"),
+            "floor": 0.3,
+        },
         "min_confidence": 0.25,
     },
     # Strictest. Only very-calm, very-low-risk real videos pass; novelty is penalized.
@@ -71,6 +83,7 @@ MODE_PROFILES: dict[str, dict] = {
             "appearance_focus": 0.2, "ragebait": 0.2, "shame_or_humiliation_risk": 0.2,
         },
         "min_pos": {"calm": 0.5},
+        "min_any_pos": {},
         "min_confidence": 0.3,
     },
     # More variety/novelty allowed, but still downranks shame/comparison/ragebait/
@@ -90,6 +103,7 @@ MODE_PROFILES: dict[str, dict] = {
             "appearance_focus": 0.6, "shame_or_humiliation_risk": 0.6, "overstimulation": 0.7,
         },
         "min_pos": {},
+        "min_any_pos": {},
         "min_confidence": 0.15,
     },
 }
@@ -119,6 +133,11 @@ def passes_gate(labels: LabelSet, mode: str) -> bool:
     for dim, floor in profile["min_pos"].items():
         if getattr(labels, dim, 0.0) < floor:
             return False
+    min_any = profile.get("min_any_pos") or {}
+    dims = min_any.get("dims") or ()
+    floor = min_any.get("floor")
+    if dims and floor is not None and max(getattr(labels, dim, 0.0) for dim in dims) < floor:
+        return False
     return True
 
 

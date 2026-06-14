@@ -33,6 +33,9 @@ CREATE TABLE IF NOT EXISTS videos (
     channel_title           TEXT,
     topic                   TEXT,
     category_id             TEXT,
+    tags                    JSONB,    -- snippet.tags (creator-supplied)
+    duration_seconds        INTEGER,  -- contentDetails.duration normalized to seconds
+    thumbnail_url           TEXT,     -- best available snippet.thumbnails URL
     view_count              BIGINT,
     like_count              BIGINT,
     comment_count           BIGINT,

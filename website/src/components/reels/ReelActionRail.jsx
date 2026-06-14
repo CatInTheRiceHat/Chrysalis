@@ -1,65 +1,189 @@
 import { useState } from 'react';
 import { Heart, Bookmark, Sparkles, RefreshCw, HelpCircle, Share2, X } from 'lucide-react';
 
+const REFLECTION_OPTIONS = ['Calmer', 'Curious', 'Not for me'];
+
 /**
- * Side action rail for a single reel. Like/save are local toggles. The "Why?"
- * button opens a small overlay with the Chrysalis ranking reason (and a concern
- * note when present). Every control is a real <button> with an aria-label so it
- * is keyboard-reachable and screen-reader friendly.
+ * Side action rail for a single reel. All actions are local/demo-safe: no API
+ * writes, no permanent personalization, and no internal ranking metadata leaks.
  */
 export function ReelActionRail({
+  title,
+  source,
   rankingReason,
+  fallbackReason,
   concernReason,
   safetyReason,
   publicSignalReason,
   publicSignalEffect,
   sourceSafetyStatus,
+  onStatus,
+  onRegenerate,
 }) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showReflect, setShowReflect] = useState(false);
+  const [reflection, setReflection] = useState(null);
   const [showWhy, setShowWhy] = useState(false);
   const showPublicSignal = Boolean(publicSignalReason && publicSignalEffect !== 'none');
+
+  const announce = (message) => onStatus?.(message);
+
+  const toggleLiked = () => {
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    announce(
+      nextLiked
+        ? 'Saved as a positive signal for this session.'
+        : 'Removed from positive signals for this session.',
+    );
+  };
+
+  const toggleSaved = () => {
+    const nextSaved = !saved;
+    setSaved(nextSaved);
+    announce(
+      nextSaved
+        ? 'Saved to your session collection.'
+        : 'Removed from your session collection.',
+    );
+  };
+
+  const toggleReflect = () => {
+    const nextOpen = !showReflect;
+    setShowReflect(nextOpen);
+    if (nextOpen) setShowWhy(false);
+    announce(
+      nextOpen
+        ? 'What feeling did this card leave you with?'
+        : 'Reflection prompt closed.',
+    );
+  };
+
+  const chooseReflection = (option) => {
+    setReflection(option);
+    setShowReflect(false);
+    announce(`Reflection noted: ${option}.`);
+  };
+
+  const toggleWhy = () => {
+    const nextOpen = !showWhy;
+    setShowWhy(nextOpen);
+    if (nextOpen) setShowReflect(false);
+  };
+
+  const handleRegenerate = () => {
+    setShowReflect(false);
+    setShowWhy(false);
+    if (onRegenerate) {
+      onRegenerate();
+      return;
+    }
+    announce('Regenerating this session view.');
+  };
+
+  const handleShare = async () => {
+    const pageUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const shareTitle = title ? `${title} | Chrysalis` : 'Chrysalis reel';
+    const shareText = source
+      ? `A Chrysalis card from ${source}.`
+      : 'A Chrysalis card for a calmer session.';
+
+    try {
+      if (navigator.share) {
+        announce('Opening share options.');
+        await navigator.share({ title: shareTitle, text: shareText, url: pageUrl });
+        return;
+      }
+
+      if (navigator.clipboard?.writeText && pageUrl) {
+        await navigator.clipboard.writeText(pageUrl);
+      }
+      announce('Share link copied.');
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      announce('Share link copied.');
+    }
+  };
 
   return (
     <div className="reel-rail" role="group" aria-label="Reel actions">
       <Action
         label="Like"
-        on={liked}
+        pressed={liked}
         ariaLabel={liked ? 'Unlike' : 'Like'}
-        onClick={() => setLiked((v) => !v)}
+        onClick={toggleLiked}
       >
         <Heart size={20} fill={liked ? 'currentColor' : 'none'} aria-hidden="true" />
       </Action>
 
       <Action
         label="Save"
-        on={saved}
+        pressed={saved}
         ariaLabel={saved ? 'Remove from saved' : 'Save'}
-        onClick={() => setSaved((v) => !v)}
+        onClick={toggleSaved}
       >
         <Bookmark size={20} fill={saved ? 'currentColor' : 'none'} aria-hidden="true" />
       </Action>
 
-      <Action label="Reflect" ariaLabel="Reflect on this reel">
+      <Action
+        label="Reflect"
+        pressed={showReflect || Boolean(reflection)}
+        expanded={showReflect}
+        ariaLabel={showReflect ? 'Close reflection prompt' : 'Reflect on this reel'}
+        onClick={toggleReflect}
+      >
         <Sparkles size={20} aria-hidden="true" />
       </Action>
 
-      <Action label="Regenerate" ariaLabel="Regenerate this feed">
+      <Action
+        label="Regenerate"
+        ariaLabel="Show a different card from this mode"
+        onClick={handleRegenerate}
+      >
         <RefreshCw size={20} aria-hidden="true" />
       </Action>
 
       <Action
         label="Why?"
-        on={showWhy}
+        pressed={showWhy}
+        expanded={showWhy}
         ariaLabel="Why am I seeing this?"
-        onClick={() => setShowWhy((v) => !v)}
+        onClick={toggleWhy}
       >
         <HelpCircle size={20} aria-hidden="true" />
       </Action>
 
-      <Action label="Share" ariaLabel="Share this reel">
+      <Action label="Share" ariaLabel="Share this reel" onClick={handleShare}>
         <Share2 size={20} aria-hidden="true" />
       </Action>
+
+      {showReflect && (
+        <div className="reel-reflect" role="dialog" aria-label="Reflection prompt">
+          <button
+            type="button"
+            className="reel-why__close"
+            onClick={() => setShowReflect(false)}
+            aria-label="Close reflection prompt"
+          >
+            <X size={15} aria-hidden="true" />
+          </button>
+          <p className="reel-reflect__title">What feeling did this card leave you with?</p>
+          <div className="reel-reflect__chips" aria-label="Reflection options">
+            {REFLECTION_OPTIONS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={reflection === option ? 'is-selected' : ''}
+                aria-pressed={reflection === option}
+                onClick={() => chooseReflection(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showWhy && (
         <div className="reel-why" role="dialog" aria-label="Why am I seeing this?">
@@ -73,7 +197,7 @@ export function ReelActionRail({
           </button>
           <p className="reel-why__title">Why am I seeing this?</p>
           <p className="reel-why__body">
-          {rankingReason || 'Curated by Chrysalis to support your wellbeing.'}
+            {rankingReason || fallbackReason || 'Curated by Chrysalis to support your wellbeing.'}
           </p>
           {showPublicSignal && (
             <div className="reel-why__public">
@@ -92,16 +216,26 @@ export function ReelActionRail({
   );
 }
 
-function Action({ children, label, ariaLabel, on = false, onClick }) {
+function Action({
+  children,
+  label,
+  ariaLabel,
+  pressed,
+  expanded,
+  onClick,
+}) {
+  const isPressed = typeof pressed === 'boolean' ? pressed : false;
+
   return (
     <button
       type="button"
       className="reel-action"
       onClick={onClick}
       aria-label={ariaLabel}
-      aria-pressed={onClick ? on : undefined}
+      aria-pressed={typeof pressed === 'boolean' ? pressed : undefined}
+      aria-expanded={typeof expanded === 'boolean' ? expanded : undefined}
     >
-      <span className={`reel-action__btn${on ? ' is-on' : ''}`}>{children}</span>
+      <span className={`reel-action__btn${isPressed ? ' is-on' : ''}`}>{children}</span>
       <span className="reel-action__label">{label}</span>
     </button>
   );

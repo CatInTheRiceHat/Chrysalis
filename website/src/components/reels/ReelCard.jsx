@@ -11,7 +11,12 @@ import { ReelCaption } from './ReelCaption';
  *  - synthetic card (has `image`): the built-in wellbeing/pause cards.
  * No video files are downloaded — playback is a standard YouTube IFrame embed.
  */
-export function ReelCard({ reel }) {
+export function ReelCard({
+  reel,
+  onVisible,
+  onStatus,
+  onRegenerate,
+}) {
   const [loaded, setLoaded] = useState(false);
   const [playing, setPlaying] = useState(false);
 
@@ -28,6 +33,7 @@ export function ReelCard({ reel }) {
         initial={{ opacity: 0, scale: 0.97 }}
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ amount: 0.5 }}
+        onViewportEnter={onVisible}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
         {/* Brand wash always sits behind the media so any image reads on-palette */}
@@ -85,12 +91,17 @@ export function ReelCard({ reel }) {
         )}
 
         <ReelActionRail
+          title={reel.title}
+          source={reel.source}
           rankingReason={reel.ranking_reason}
+          fallbackReason={reel.reason}
           concernReason={reel.concern_reason}
           safetyReason={reel.safety_reason}
           publicSignalReason={reel.public_signal_reason}
           publicSignalEffect={reel.public_signal_effect}
           sourceSafetyStatus={reel.source_safety_status}
+          onStatus={onStatus}
+          onRegenerate={onRegenerate}
         />
         <ReelCaption
           title={reel.title}

@@ -53,7 +53,7 @@ export function OnboardingStartScreen({ onStart }) {
           className="onboard-cta"
           disabled={!selected}
           aria-disabled={!selected}
-          onClick={() => selected && onStart(selected.mode)}
+          onClick={() => selected && onStart(selected.mode, selected.id)}
         >
           Start My Feed
           <ArrowRight size={17} aria-hidden="true" />
@@ -61,7 +61,7 @@ export function OnboardingStartScreen({ onStart }) {
         <button
           type="button"
           className="onboard-skip"
-          onClick={() => onStart(DEFAULT_MODE)}
+          onClick={() => onStart(DEFAULT_MODE, null)}
         >
           Skip for now
         </button>

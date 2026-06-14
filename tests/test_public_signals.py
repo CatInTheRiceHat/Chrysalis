@@ -5,8 +5,11 @@ These tests use only deterministic stub/sample records. No public web search or
 scraping is involved.
 """
 
+import sqlite3
+
 from core.labeling.schema import LabelSet, SCORING_VERSION
 from core.public_signals.provider import StubPublicSignalProvider
+from core.public_signals.storage import load_cached_context_sqlite
 from core.public_signals.ranking import PublicSignalContext
 from core.public_signals.schema import ChannelSafetyRecord, PublicSignalRecord, expiry_iso, iso_utc
 from core.ranking.feed import build_feed
@@ -101,6 +104,22 @@ def test_missing_public_signal_data_stays_neutral():
     assert feed[0]["public_signal_reason"] is None
 
 
+def test_cached_public_signal_read_does_not_create_tables():
+    conn = sqlite3.connect(":memory:")
+    context = load_cached_context_sqlite(conn, [_row("v1", "neutral-channel")])
+    tables = {
+        row[0]
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall()
+    }
+    conn.close()
+
+    assert context == PublicSignalContext.empty()
+    assert "public_signal_records" not in tables
+    assert "channel_safety_records" not in tables
+
+
 def test_medium_concern_changes_ranking_order():
     context = PublicSignalContext(
         channel_signals={
@@ -182,4 +201,3 @@ def test_cautious_source_low_risk_video_is_allowed_with_explanation():
     assert item["public_signal_effect"] == "allowed_low_video_risk"
     assert "video-level scan was low-risk" in item["public_signal_reason"]
     assert item["source_safety_status"] == "caution"
-

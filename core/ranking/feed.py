@@ -12,12 +12,19 @@ from __future__ import annotations
 import json
 
 from ..labeling.schema import LabelSet, SCORING_VERSION
-from ..labeling.metadata_scoring import score_metadata
+from ..labeling.metadata_scoring import (
+    score_metadata,
+    parse_duration_seconds,
+    _normalize_tags,
+)
 from ..labeling.explain import build_reasons
 from ..public_signals.ranking import PublicSignalContext
 from .modes import rank_videos, is_valid_mode
 
 _THUMB = "https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+
+# Cap tags surfaced to the client — enough to be useful, not a debug dump.
+_MAX_API_TAGS = 15
 
 
 def _labels_for_row(row: dict) -> LabelSet:
@@ -50,10 +57,12 @@ def build_feed(
     """
     Returns a list of API-ready items for `mode`:
       { youtube_id, title, source, description, thumbnail,
+        duration_seconds, tags, channel_id, category_id,
         chrysalis_scores, ranking_reason, safety_reason, concern_reason, mode_fit,
         public_signal, source_safety_status, public_signal_effect,
         public_signal_reason }
-    Empty input (or an unknown mode) yields an empty list.
+    Empty input (or an unknown mode) yields an empty list. New metadata fields are
+    null/empty for older rows that predate richer extraction.
     """
     if not is_valid_mode(mode) or not rows:
         return []
@@ -85,12 +94,23 @@ def build_feed(
         # Reasons are mode-specific, so always compute for the requested mode.
         reasons = build_reasons(labels, mode)
         vid = row.get("video_id") or row.get("youtube_id") or ""
+        tags = _normalize_tags(row.get("tags"))[:_MAX_API_TAGS]
         items.append({
             "youtube_id": vid,
             "title": row.get("title") or "",
             "source": row.get("channel_title") or row.get("channel") or "Chrysalis",
             "description": row.get("description") or "",
-            "thumbnail": row.get("thumbnail") or (_THUMB.format(vid=vid) if vid else None),
+            "thumbnail": (
+                row.get("thumbnail_url") or row.get("thumbnail")
+                or (_THUMB.format(vid=vid) if vid else None)
+            ),
+            "duration_seconds": parse_duration_seconds(
+                row.get("duration_seconds") if row.get("duration_seconds") is not None
+                else row.get("duration")
+            ),
+            "tags": tags,
+            "channel_id": row.get("channel_id") or "",
+            "category_id": row.get("category_id") or row.get("category") or None,
             "chrysalis_scores": labels.to_dict(),
             "ranking_reason": reasons["ranking_reason"],
             "safety_reason": reasons["safety_reason"],

@@ -121,6 +121,66 @@ def ensure_postgres_public_signal_tables(conn) -> None:
     conn.commit()
 
 
+def load_cached_context_sqlite(
+    conn,
+    rows: Iterable[dict],
+) -> PublicSignalContext:
+    """
+    Read already-cached public-signal context without creating tables or records.
+    Missing cache tables simply produce a neutral context.
+    """
+    row_list = list(rows)
+    context = PublicSignalContext.empty()
+    try:
+        for channel_id, _channel_title in _unique_channels(row_list):
+            signal = _get_sqlite_public_signal(conn, "channel", channel_id)
+            safety = _get_sqlite_channel_safety(conn, channel_id)
+            if signal is not None:
+                context.channel_signals[channel_id] = signal
+            if safety is not None:
+                context.channel_safety[channel_id] = safety
+
+        for video_id, _row in _unique_videos(row_list):
+            signal = _get_sqlite_public_signal(conn, "video", video_id)
+            if signal is not None:
+                context.video_signals[video_id] = signal
+    except Exception:
+        return PublicSignalContext.empty()
+    return context
+
+
+def load_cached_context_postgres(
+    conn,
+    rows: Iterable[dict],
+) -> PublicSignalContext:
+    """
+    Read already-cached public-signal context without creating tables or records.
+    Missing cache tables simply produce a neutral context.
+    """
+    row_list = list(rows)
+    context = PublicSignalContext.empty()
+    try:
+        for channel_id, _channel_title in _unique_channels(row_list):
+            signal = _get_postgres_public_signal(conn, "channel", channel_id)
+            safety = _get_postgres_channel_safety(conn, channel_id)
+            if signal is not None:
+                context.channel_signals[channel_id] = signal
+            if safety is not None:
+                context.channel_safety[channel_id] = safety
+
+        for video_id, _row in _unique_videos(row_list):
+            signal = _get_postgres_public_signal(conn, "video", video_id)
+            if signal is not None:
+                context.video_signals[video_id] = signal
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return PublicSignalContext.empty()
+    return context
+
+
 def load_or_scan_context_sqlite(
     conn,
     rows: Iterable[dict],
@@ -463,4 +523,3 @@ def _cursor_row(cur, row) -> dict | None:
         return row
     cols = [d[0] for d in cur.description]
     return dict(zip(cols, row))
-

@@ -38,6 +38,7 @@ import json
 import time
 import sqlite3
 import argparse
+import sys
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -51,8 +52,16 @@ import numpy as np
 # Config
 # ---------------------------------------------------------------------------
 
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from core.database import resolve_database_path
+# Shared, safe ISO-8601 → seconds parser (also used by the scorer + Postgres cron).
+from core.labeling.metadata_scoring import parse_duration_seconds
+
 # Load .env if present (same pattern as youtube_service.py)
-_env_path = Path(__file__).parent / ".env"
+_env_path = ROOT / ".env"
 if _env_path.exists():
     for _line in _env_path.read_text().splitlines():
         _line = _line.strip()
@@ -67,7 +76,7 @@ OLLAMA_URL       = "http://localhost:11434"
 PREFERRED_MODEL  = "qwen3.5"   # smartest available
 FALLBACK_MODEL   = "qwen2.5"   # if qwen3.5 isn't listed
 
-DB_PATH          = Path(__file__).parent / "chrysalis.db"
+DB_PATH          = resolve_database_path()
 
 # YouTube category ID ↔ Chrysalis topic mapping
 # Note: some category IDs (e.g. 27-Education) are not available on the
@@ -98,6 +107,9 @@ CREATE TABLE IF NOT EXISTS videos (
     channel_title         TEXT,
     topic                 TEXT,
     category_id           TEXT,
+    tags                  TEXT,
+    duration_seconds      INTEGER,
+    thumbnail_url         TEXT,
     view_count            INTEGER,
     like_count            INTEGER,
     comment_count         INTEGER,
@@ -133,11 +145,19 @@ _LABEL_COLUMNS = (
     ("scoring_version", "TEXT"),
 )
 
+# Richer YouTube metadata columns added after the original schema. Same idempotent
+# upgrade path as the label columns; all nullable so pre-existing rows stay valid.
+_METADATA_COLUMNS = (
+    ("tags", "TEXT"),               # JSON-encoded list of snippet.tags
+    ("duration_seconds", "INTEGER"),  # contentDetails.duration normalized to seconds
+    ("thumbnail_url", "TEXT"),      # best available snippet.thumbnails URL
+)
+
 
 def _ensure_label_columns(conn: sqlite3.Connection) -> None:
-    """Add any missing Chrysalis label columns to an existing `videos` table."""
+    """Add any missing Chrysalis label + richer-metadata columns to `videos`."""
     existing = {row[1] for row in conn.execute("PRAGMA table_info(videos)")}
-    for name, sql_type in _LABEL_COLUMNS:
+    for name, sql_type in (*_LABEL_COLUMNS, *_METADATA_COLUMNS):
         if name not in existing:
             conn.execute(f"ALTER TABLE videos ADD COLUMN {name} {sql_type}")
     conn.commit()
@@ -413,14 +433,16 @@ def _yt_request(endpoint: str, params: dict) -> Optional[dict]:
 
 def _fetch_stats_batch(video_ids: list[str]) -> dict[str, dict]:
     """
-    Fetch snippet + statistics for up to 50 video IDs in a single API call.
-    Returns {video_id: {"snippet": {...}, "statistics": {...}}}
+    Fetch snippet + statistics + contentDetails for up to 50 video IDs in one call.
+    Returns {video_id: {"snippet": {...}, "statistics": {...}, "contentDetails": {...}}}.
+    contentDetails carries the ISO 8601 `duration`; snippet carries `tags` and
+    `thumbnails` (no extra quota cost — these parts ride the same request).
     """
     if not video_ids or not YOUTUBE_API_KEY:
         return {}
 
     data = _yt_request("videos", {
-        "part": "snippet,statistics",
+        "part": "snippet,statistics,contentDetails",
         "id": ",".join(video_ids[:50]),
     })
 
@@ -429,10 +451,25 @@ def _fetch_stats_batch(video_ids: list[str]) -> dict[str, dict]:
         for item in data["items"]:
             vid_id = item["id"]
             result[vid_id] = {
-                "snippet":    item.get("snippet", {}),
-                "statistics": item.get("statistics", {}),
+                "snippet":        item.get("snippet", {}),
+                "statistics":     item.get("statistics", {}),
+                "contentDetails": item.get("contentDetails", {}),
             }
     return result
+
+
+# Preference order for picking a single thumbnail URL from snippet.thumbnails.
+_THUMBNAIL_PREFERENCE = ("maxres", "standard", "high", "medium", "default")
+
+
+def _best_thumbnail(snippet: dict) -> str:
+    """Best available thumbnail URL from a snippet's `thumbnails` map ("" if none)."""
+    thumbs = snippet.get("thumbnails") or {}
+    for size in _THUMBNAIL_PREFERENCE:
+        url = (thumbs.get(size) or {}).get("url")
+        if url:
+            return url
+    return ""
 
 
 def _fetch_ids_by_topic(topic: str, max_results: int = 15) -> list[str]:
@@ -562,6 +599,7 @@ def extract_and_classify(
 
             snip   = info["snippet"]
             stats  = info["statistics"]
+            details = info.get("contentDetails", {})
 
             title        = snip.get("title", "")
             description  = snip.get("description", "")
@@ -570,6 +608,10 @@ def extract_and_classify(
             category_id  = snip.get("categoryId", "24")
             published_at = snip.get("publishedAt", "")
             topic        = CATEGORY_TO_TOPIC.get(category_id, "entertainment")
+
+            tags             = snip.get("tags", []) or []
+            thumbnail_url    = _best_thumbnail(snip)
+            duration_seconds = parse_duration_seconds(details.get("duration"))
 
             view_count    = int(stats.get("viewCount",    0) or 0)
             like_count    = int(stats.get("likeCount",    0) or 0)
@@ -589,18 +631,20 @@ def extract_and_classify(
                 """
                 INSERT OR REPLACE INTO videos (
                     video_id, title, description, channel_id, channel_title,
-                    topic, category_id, view_count, like_count, comment_count,
+                    topic, category_id, tags, duration_seconds, thumbnail_url,
+                    view_count, like_count, comment_count,
                     published_at, active_engagement_ratio,
                     appearance_comparison, opinion_comparison, prosocial, risk,
                     creator_authenticity, fetched_at, classified_at
                 ) VALUES (
-                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+                    ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
                 )
                 """,
                 (
                     vid_id, title, description,
                     channel_id, channel_title,
                     topic, category_id,
+                    json.dumps(tags), duration_seconds, thumbnail_url,
                     view_count, like_count, comment_count,
                     published_at,
                     active_ratio,

@@ -33,9 +33,10 @@ sys.path.insert(0, str(ROOT))
 from core.ranking.feed import label_row          # noqa: E402
 from core.labeling.explain import build_reasons   # noqa: E402
 from core.labeling.schema import SCORING_VERSION  # noqa: E402
+from core.database import resolve_database_path   # noqa: E402
 
 DEFAULT_MODE = "flutter-feed"
-DB_PATH = Path(os.environ.get("DATABASE_PATH", str(ROOT / "chrysalis.db")))
+DB_PATH = resolve_database_path()
 
 
 def _score_one(row: dict) -> dict:

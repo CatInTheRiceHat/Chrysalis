@@ -13,9 +13,10 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
+from core.database import resolve_database_path
 from core.public_signals.storage import ensure_sqlite_public_signal_tables
 
-DB_PATH = ROOT / "chrysalis.db"
+DB_PATH = resolve_database_path()
 
 CREATE_MIGRATION_DROPS = """
 CREATE TABLE IF NOT EXISTS migration_drops (

@@ -21,6 +21,8 @@ pip install pandas numpy matplotlib fastapi uvicorn python-multipart
 # Set up your YouTube API key (optional, for live video data)
 cp .env.example .env
 # Edit .env and add your YOUTUBE_API_KEY
+# Optional: pin local SQLite storage. Relative paths resolve from project root.
+DATABASE_PATH=./chrysalis.db
 
 # Run the API server
 python api.py
