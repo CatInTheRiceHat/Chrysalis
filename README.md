@@ -24,7 +24,7 @@ cp .env.example .env
 #   YOUTUBE_API_KEY
 #   FEED_INGEST_SECRET
 # Optional:
-#   YOUTUBE_FEED_QUERIES=teen productivity,student focus tips,digital wellness
+#   YOUTUBE_FEED_QUERIES=category=query,category=query
 # Optional: pin local SQLite storage. Relative paths resolve from project root.
 DATABASE_PATH=./chrysalis.db
 
@@ -60,10 +60,11 @@ FEED_INGEST_SECRET=...
 DATABASE_PATH=./chrysalis.db
 ```
 
-Optional query override:
+Optional query override. Plain queries are still accepted and stored with
+`source_category=custom`; use `category=query` to preserve analysis metadata:
 
 ```bash
-YOUTUBE_FEED_QUERIES=teen productivity,student focus tips,digital wellness
+YOUTUBE_FEED_QUERIES=news/current events=current events explained,gaming=gaming highlights
 ```
 
 Manual local ingestion:
@@ -80,11 +81,17 @@ curl -X POST \
   "http://localhost:8000/api/admin/ingest/youtube"
 ```
 
-The job searches recent, embeddable, English, US-region short videos; filters out
-obvious explicit, political, shock, drama, gambling, adult, and low-quality content;
-stores metadata in `feed_videos`; and `/api/feed/flutter-feed?k=12` serves active
-real YouTube cards first. Built-in template cards remain frontend fallback/fill
-content when there are not enough real videos.
+The job searches recent, embeddable, English, US-region short videos across broad
+topic buckets: news/current events, opinion/commentary, travel, food, cute animals,
+fashion/aesthetic, gaming, comedy, internet culture, AI/technology, pop culture,
+sports, wellness/mental health, study/productivity, lifestyle/vlogs,
+education/explainers, and music/culture. It filters obvious explicit, shock,
+humiliation, gambling, adult, violent, and low-quality content; stores
+`source_category` and `source_query` as analysis metadata in `feed_videos`; and all
+three `/api/feed/{mode}` routes draw from the same shared real-video pool. The
+mode changes the reflection/explanation layer, not the source pool. Built-in
+template cards remain frontend fallback/fill content only when there are not
+enough real videos for `k`.
 
 For hosted daily ingestion, configure GitHub repository secrets:
 

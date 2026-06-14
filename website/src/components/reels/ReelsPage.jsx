@@ -44,18 +44,6 @@ function apiItemToCard(item) {
   };
 }
 
-function mergeMetamorphosis(real, synthetic) {
-  if (!real.length) return synthetic;
-
-  const strictReal = real.slice(0, 2);
-  const merged = [];
-  synthetic.forEach((card, index) => {
-    merged.push(card);
-    if (strictReal[index]) merged.push(strictReal[index]);
-  });
-  return [...merged, ...strictReal.slice(synthetic.length)];
-}
-
 function mergeRealFirst(real, synthetic) {
   if (!real.length) return synthetic;
   const realIds = new Set(real.map((card) => card.id));
@@ -65,11 +53,10 @@ function mergeRealFirst(real, synthetic) {
 
 /**
  * Combine real (labeled) videos with the built-in synthetic cards.
- * Metamorphosis stays pause-card-first and only interleaves videos that passed
- * the backend's strict Metamorphosis gate. It never borrows Flutter Feed items.
+ * Every mode uses the same real video pool first; templates only fill when the
+ * backend returns fewer than the target count.
  */
-function mergeForMode(mode, real, synthetic) {
-  if (mode === 'metamorphosis') return mergeMetamorphosis(real, synthetic);
+function mergeForMode(real, synthetic) {
   return mergeRealFirst(real, synthetic);
 }
 
@@ -151,7 +138,7 @@ function diversifyBySource(items) {
 
 function applySessionTuning(cards, mode, selectedTunes) {
   const tunesThatReorder = selectedTunes.filter((key) => key !== 'shorter');
-  if (!tunesThatReorder.length || mode === 'metamorphosis') return cards;
+  if (!tunesThatReorder.length) return cards;
 
   let tuned = cards
     .map((card, index) => ({
@@ -201,7 +188,7 @@ export function ReelsPage() {
         const real = (data.items ?? []).map(apiItemToCard);
 
         if (cancelled) return;
-        setFeed({ mode, cards: mergeForMode(mode, real, synthetic) });
+        setFeed({ mode, cards: mergeForMode(real, synthetic) });
       } catch (error) {
         if (import.meta.env.DEV) {
           console.warn('[Chrysalis algorithm] Falling back to sample cards:', error);

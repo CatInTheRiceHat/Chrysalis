@@ -5,6 +5,9 @@ import sqlite3
 
 from core.ranking.feed import build_feed
 from integrations.youtube_ingest import (
+    DEFAULT_SOURCE_BUCKETS,
+    SourceQuerySpec,
+    configured_source_queries,
     ingest_youtube_videos_sqlite,
     load_active_feed_video_rows_sqlite,
 )
@@ -68,7 +71,7 @@ def test_youtube_ingest_stores_filtered_real_videos_without_duplicate_inserts(tm
     first = ingest_youtube_videos_sqlite(
         db_path=db_path,
         api_key="test-key",
-        queries=["student focus tips"],
+        queries=[SourceQuerySpec("study/productivity", "student focus tips")],
         max_results_per_query=10,
         days_back=7,
         request_json=_fake_youtube,
@@ -81,7 +84,7 @@ def test_youtube_ingest_stores_filtered_real_videos_without_duplicate_inserts(tm
     second = ingest_youtube_videos_sqlite(
         db_path=db_path,
         api_key="test-key",
-        queries=["student focus tips"],
+        queries=[SourceQuerySpec("study/productivity", "student focus tips")],
         max_results_per_query=10,
         days_back=7,
         request_json=_fake_youtube,
@@ -98,6 +101,8 @@ def test_youtube_ingest_stores_filtered_real_videos_without_duplicate_inserts(tm
         conn.close()
 
     assert {row["video_id"] for row in rows} == {"focus2", "calm1"}
+    assert {row["source_category"] for row in rows} == {"study/productivity"}
+    assert {row["source_query"] for row in rows} == {"student focus tips"}
     assert rows[0]["ingest_score"] >= rows[1]["ingest_score"]
     assert all(row["embed_url"].startswith("https://www.youtube-nocookie.com/embed/") for row in rows)
     assert all(row["thumbnail_url"].endswith("/hqdefault.jpg") for row in rows)
@@ -105,3 +110,37 @@ def test_youtube_ingest_stores_filtered_real_videos_without_duplicate_inserts(tm
     feed = build_feed(rows, "flutter-feed", k=10)
     assert {item["youtube_id"] for item in feed} == {"calm1", "focus2"}
     assert all(item["embed_url"].startswith("https://www.youtube-nocookie.com/embed/") for item in feed)
+    assert all(item["source_category"] == "study/productivity" for item in feed)
+
+    mode_sets = {
+        mode: {item["youtube_id"] for item in build_feed(rows, mode, k=10)}
+        for mode in ("flutter-feed", "daily-dew", "metamorphosis")
+    }
+    assert all(video_ids == {"calm1", "focus2"} for video_ids in mode_sets.values())
+
+
+def test_default_youtube_source_buckets_match_broad_feed_brief():
+    categories = {spec.source_category for spec in DEFAULT_SOURCE_BUCKETS}
+    assert categories == {
+        "news/current events",
+        "opinion/commentary",
+        "travel",
+        "food",
+        "cute animals",
+        "fashion/aesthetic",
+        "gaming",
+        "comedy",
+        "internet culture",
+        "AI/technology",
+        "pop culture",
+        "sports",
+        "wellness/mental health",
+        "study/productivity",
+        "lifestyle/vlogs",
+        "education/explainers",
+        "music/culture",
+    }
+    assert configured_source_queries("news/current events=current events explained")[0] == (
+        "news/current events",
+        "current events explained",
+    )

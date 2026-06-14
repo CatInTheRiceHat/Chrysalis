@@ -2,8 +2,8 @@
 Daily YouTube feed ingestion for Chrysalis.
 
 Uses the YouTube Data API only for metadata, stores embeddable short videos in a
-local feed_videos table, and exposes rows in the shape the existing Chrysalis feed
-ranker expects. No videos are downloaded, proxied, converted, or rehosted.
+shared feed_videos table, and exposes rows in the shape the existing Chrysalis
+feed ranker expects. No videos are downloaded, proxied, converted, or rehosted.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Callable, Iterable
+from typing import Callable, Iterable, NamedTuple
 
 from core.database import resolve_database_path
 from core.labeling.explain import build_reasons
@@ -30,24 +30,40 @@ ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = resolve_database_path()
 YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
 
-DEFAULT_QUERIES: tuple[str, ...] = (
-    "teen productivity",
-    "student focus tips",
-    "digital wellness",
-    "social media addiction",
-    "study motivation",
-    "AI literacy for students",
-    "confidence tips for teens",
-    "emotional regulation teens",
-    "healthy phone habits",
-    "self improvement for students",
+class SourceQuerySpec(NamedTuple):
+    source_category: str
+    source_query: str
+
+
+DEFAULT_SOURCE_BUCKETS: tuple[SourceQuerySpec, ...] = (
+    SourceQuerySpec("news/current events", "current events explained"),
+    SourceQuerySpec("opinion/commentary", "thoughtful commentary culture"),
+    SourceQuerySpec("travel", "travel vlog city guide"),
+    SourceQuerySpec("food", "food recipes street food"),
+    SourceQuerySpec("cute animals", "cute animals funny pets"),
+    SourceQuerySpec("fashion/aesthetic", "fashion aesthetic outfit ideas"),
+    SourceQuerySpec("gaming", "gaming highlights cozy gaming"),
+    SourceQuerySpec("comedy", "clean comedy sketch"),
+    SourceQuerySpec("internet culture", "internet culture memes explained"),
+    SourceQuerySpec("AI/technology", "AI technology news explained"),
+    SourceQuerySpec("pop culture", "pop culture news explained"),
+    SourceQuerySpec("sports", "sports highlights athlete story"),
+    SourceQuerySpec("wellness/mental health", "mental health wellness tips"),
+    SourceQuerySpec("study/productivity", "study productivity tips"),
+    SourceQuerySpec("lifestyle/vlogs", "day in my life lifestyle vlog"),
+    SourceQuerySpec("education/explainers", "science history explained"),
+    SourceQuerySpec("music/culture", "music culture new music review"),
 )
 
+DEFAULT_QUERIES: tuple[str, ...] = tuple(spec.source_query for spec in DEFAULT_SOURCE_BUCKETS)
+
 RELEVANCE_TERMS: tuple[str, ...] = (
-    "teen", "teens", "student", "students", "study", "school", "focus",
-    "productivity", "digital wellness", "phone habits", "social media",
-    "motivation", "confidence", "emotional regulation", "mental health",
-    "self improvement", "ai literacy", "learning", "tips", "habit",
+    "news", "current events", "explained", "commentary", "travel", "food",
+    "recipe", "animals", "pets", "fashion", "aesthetic", "gaming", "comedy",
+    "internet culture", "memes", "technology", "ai", "pop culture", "sports",
+    "wellness", "mental health", "study", "productivity", "lifestyle", "vlog",
+    "education", "science", "history", "music", "culture", "review",
+    "guide", "tips", "story", "highlights",
 )
 
 BLOCKED_TERMS: tuple[str, ...] = (
@@ -58,9 +74,8 @@ BLOCKED_TERMS: tuple[str, ...] = (
     "drama", "beef", "exposed", "destroyed", "humiliated", "cringe",
     "caught in 4k", "fight", "brawl", "shocking", "scandal", "prank",
     "gone wrong", "worst", "hate",
-    # Politics/current-event conflict
-    "trump", "biden", "election", "democrat", "republican", "liberal",
-    "conservative", "senate", "congress", "war", "shooting",
+    # Graphic or violent current-event terms
+    "shooting", "graphic violence", "gore",
     # Low-quality feed filler
     "compilation", "tiktok compilation", "reaction compilation",
 )
@@ -95,6 +110,8 @@ class FeedVideoCandidate:
     tags: list[str]
     category_id: str
     topic: str
+    source_category: str
+    source_query: str
     score: float
     status: str
     created_at: str
@@ -141,6 +158,8 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     tags                TEXT,
     category_id         TEXT,
     topic               TEXT,
+    source_category     TEXT,
+    source_query        TEXT,
     score               REAL,
     created_at          TEXT,
     updated_at          TEXT,
@@ -173,6 +192,8 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     tags                JSONB,
     category_id         TEXT,
     topic               TEXT,
+    source_category     TEXT,
+    source_query        TEXT,
     score               REAL,
     created_at          TIMESTAMPTZ,
     updated_at          TIMESTAMPTZ,
@@ -203,13 +224,44 @@ _load_dotenv()
 
 
 def configured_queries(value: str | None = None) -> list[str]:
+    return [spec.source_query for spec in configured_source_queries(value)]
+
+
+def configured_source_queries(value: str | None = None) -> list[SourceQuerySpec]:
     raw = value if value is not None else os.environ.get("YOUTUBE_FEED_QUERIES", "")
-    queries = [q.strip() for q in raw.split(",") if q.strip()]
-    return queries or list(DEFAULT_QUERIES)
+    if not raw.strip():
+        return list(DEFAULT_SOURCE_BUCKETS)
+    return [_parse_source_query_spec(q) for q in raw.split(",") if q.strip()]
+
+
+def _parse_source_query_spec(raw: str) -> SourceQuerySpec:
+    value = raw.strip()
+    for separator in ("::", "|", "="):
+        if separator in value:
+            category, _, query = value.partition(separator)
+            category = category.strip() or "custom"
+            query = query.strip() or category
+            return SourceQuerySpec(category, query)
+    return SourceQuerySpec("custom", value)
+
+
+def _coerce_source_query_specs(queries: Iterable[str | SourceQuerySpec] | None) -> list[SourceQuerySpec]:
+    if queries is None:
+        return configured_source_queries()
+    specs: list[SourceQuerySpec] = []
+    for item in queries:
+        if isinstance(item, SourceQuerySpec):
+            specs.append(item)
+        elif isinstance(item, tuple) and len(item) == 2:
+            specs.append(SourceQuerySpec(str(item[0]).strip() or "custom", str(item[1]).strip()))
+        else:
+            specs.append(_parse_source_query_spec(str(item)))
+    return [spec for spec in specs if spec.source_query]
 
 
 def ensure_sqlite_feed_videos_table(conn: sqlite3.Connection) -> None:
     conn.execute(_CREATE_FEED_VIDEOS_SQLITE)
+    _ensure_sqlite_feed_video_columns(conn)
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_feed_videos_status_score "
         "ON feed_videos (status, score DESC, published_at DESC)"
@@ -218,12 +270,35 @@ def ensure_sqlite_feed_videos_table(conn: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_feed_videos_youtube_id "
         "ON feed_videos (youtube_video_id)"
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_feed_videos_source_category "
+        "ON feed_videos (source_category)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_feed_videos_source_query "
+        "ON feed_videos (source_query)"
+    )
     conn.commit()
+
+
+def _ensure_sqlite_feed_video_columns(conn: sqlite3.Connection) -> None:
+    existing = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(feed_videos)").fetchall()
+    }
+    for column, column_type in {
+        "source_category": "TEXT",
+        "source_query": "TEXT",
+    }.items():
+        if column not in existing:
+            conn.execute(f"ALTER TABLE feed_videos ADD COLUMN {column} {column_type}")
 
 
 def ensure_postgres_feed_videos_table(conn) -> None:
     cur = conn.cursor()
     cur.execute(_CREATE_FEED_VIDEOS_POSTGRES)
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_category TEXT")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_query TEXT")
     cur.execute(
         "CREATE INDEX IF NOT EXISTS idx_feed_videos_status_score "
         "ON feed_videos (status, score DESC, published_at DESC)"
@@ -231,6 +306,14 @@ def ensure_postgres_feed_videos_table(conn) -> None:
     cur.execute(
         "CREATE INDEX IF NOT EXISTS idx_feed_videos_youtube_id "
         "ON feed_videos (youtube_video_id)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_feed_videos_source_category "
+        "ON feed_videos (source_category)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_feed_videos_source_query "
+        "ON feed_videos (source_query)"
     )
     conn.commit()
 
@@ -239,16 +322,17 @@ def ingest_youtube_videos_sqlite(
     *,
     db_path: str | os.PathLike | None = None,
     api_key: str | None = None,
-    queries: Iterable[str] | None = None,
+    queries: Iterable[str | SourceQuerySpec] | None = None,
     max_results_per_query: int = 10,
     days_back: int = 7,
     request_json: RequestJson | None = None,
     now: datetime | None = None,
 ) -> IngestResult:
-    query_list = list(queries or configured_queries())
+    source_specs = _coerce_source_query_specs(queries)
+    query_list = [spec.source_query for spec in source_specs]
     candidates, skipped = fetch_youtube_candidates(
         api_key=api_key,
-        queries=query_list,
+        queries=source_specs,
         max_results_per_query=max_results_per_query,
         days_back=days_back,
         request_json=request_json,
@@ -275,16 +359,17 @@ def ingest_youtube_videos_postgres(
     conn,
     *,
     api_key: str | None = None,
-    queries: Iterable[str] | None = None,
+    queries: Iterable[str | SourceQuerySpec] | None = None,
     max_results_per_query: int = 10,
     days_back: int = 7,
     request_json: RequestJson | None = None,
     now: datetime | None = None,
 ) -> IngestResult:
-    query_list = list(queries or configured_queries())
+    source_specs = _coerce_source_query_specs(queries)
+    query_list = [spec.source_query for spec in source_specs]
     candidates, skipped = fetch_youtube_candidates(
         api_key=api_key,
-        queries=query_list,
+        queries=source_specs,
         max_results_per_query=max_results_per_query,
         days_back=days_back,
         request_json=request_json,
@@ -306,7 +391,7 @@ def ingest_youtube_videos_postgres(
 def fetch_youtube_candidates(
     *,
     api_key: str | None = None,
-    queries: Iterable[str] | None = None,
+    queries: Iterable[str | SourceQuerySpec] | None = None,
     max_results_per_query: int = 10,
     days_back: int = 7,
     request_json: RequestJson | None = None,
@@ -318,17 +403,17 @@ def fetch_youtube_candidates(
 
     max_results_per_query = max(1, min(int(max_results_per_query), 25))
     days_back = max(2, min(int(days_back), 7))
-    query_list = list(queries or configured_queries())
+    source_specs = _coerce_source_query_specs(queries)
     now_utc = now or datetime.now(timezone.utc)
     published_after = (now_utc - timedelta(days=days_back)).replace(microsecond=0)
     published_after_str = published_after.isoformat().replace("+00:00", "Z")
     request = request_json or _youtube_request_json(api_key)
 
     seen: set[str] = set()
-    search_hits: list[tuple[str, str]] = []
+    search_hits: list[tuple[str, SourceQuerySpec]] = []
     skipped = 0
 
-    for query in query_list:
+    for source_spec in source_specs:
         data = request("search", {
             "part": "snippet",
             "type": "video",
@@ -340,7 +425,7 @@ def fetch_youtube_candidates(
             "safeSearch": "strict",
             "relevanceLanguage": "en",
             "regionCode": "US",
-            "q": query,
+            "q": source_spec.source_query,
         }) or {}
         for item in data.get("items", []):
             video_id = ((item.get("id") or {}).get("videoId") or "").strip()
@@ -348,10 +433,10 @@ def fetch_youtube_candidates(
                 skipped += 1
                 continue
             seen.add(video_id)
-            search_hits.append((video_id, query))
+            search_hits.append((video_id, source_spec))
 
     candidates: list[FeedVideoCandidate] = []
-    query_by_id = {video_id: query for video_id, query in search_hits}
+    source_spec_by_id = {video_id: source_spec for video_id, source_spec in search_hits}
 
     for batch in _chunks([video_id for video_id, _ in search_hits], 50):
         data = request("videos", {
@@ -361,7 +446,10 @@ def fetch_youtube_candidates(
         for item in data.get("items", []):
             candidate = _candidate_from_video_item(
                 item,
-                query=query_by_id.get(str(item.get("id")), ""),
+                source_spec=source_spec_by_id.get(
+                    str(item.get("id")),
+                    SourceQuerySpec("custom", ""),
+                ),
                 now=now_utc,
                 days_back=days_back,
             )
@@ -419,33 +507,7 @@ def load_active_feed_video_rows_sqlite(
     *,
     limit: int | None = None,
 ) -> list[dict]:
-    sql = """
-        SELECT
-            youtube_video_id AS video_id,
-            title,
-            description,
-            channel_id,
-            channel_title,
-            topic,
-            category_id,
-            tags,
-            duration_seconds,
-            thumbnail_url,
-            embed_url,
-            watch_url,
-            view_count,
-            published_at,
-            score AS ingest_score,
-            chrysalis_scores,
-            ranking_reason,
-            safety_reason,
-            concern_reason,
-            label_confidence,
-            scoring_version
-        FROM feed_videos
-        WHERE status = 'active'
-        ORDER BY score DESC, published_at DESC
-    """
+    sql = _active_feed_video_rows_sql(include_source_metadata=True)
     params: tuple = ()
     if limit is not None:
         sql += " LIMIT ?"
@@ -453,39 +515,19 @@ def load_active_feed_video_rows_sqlite(
     try:
         return [dict(r) for r in conn.execute(sql, params).fetchall()]
     except sqlite3.OperationalError as exc:
-        if "no such table" in str(exc).lower():
+        message = str(exc).lower()
+        if "no such table" in message:
             return []
+        if _missing_source_metadata_column(message):
+            fallback_sql = _active_feed_video_rows_sql(include_source_metadata=False)
+            if limit is not None:
+                fallback_sql += " LIMIT ?"
+            return [dict(r) for r in conn.execute(fallback_sql, params).fetchall()]
         raise
 
 
 def load_active_feed_video_rows_postgres(conn, *, limit: int | None = None) -> list[dict]:
-    sql = """
-        SELECT
-            youtube_video_id AS video_id,
-            title,
-            description,
-            channel_id,
-            channel_title,
-            topic,
-            category_id,
-            tags,
-            duration_seconds,
-            thumbnail_url,
-            embed_url,
-            watch_url,
-            view_count,
-            published_at,
-            score AS ingest_score,
-            chrysalis_scores,
-            ranking_reason,
-            safety_reason,
-            concern_reason,
-            label_confidence,
-            scoring_version
-        FROM feed_videos
-        WHERE status = 'active'
-        ORDER BY score DESC, published_at DESC
-    """
+    sql = _active_feed_video_rows_sql(include_source_metadata=True)
     params: tuple = ()
     if limit is not None:
         sql += " LIMIT %s"
@@ -494,12 +536,66 @@ def load_active_feed_video_rows_postgres(conn, *, limit: int | None = None) -> l
     try:
         cur.execute(sql, params)
     except Exception as exc:
-        if "feed_videos" in str(exc).lower():
+        message = str(exc).lower()
+        if "feed_videos" in message:
             conn.rollback()
             return []
-        raise
+        if _missing_source_metadata_column(message):
+            conn.rollback()
+            fallback_sql = _active_feed_video_rows_sql(include_source_metadata=False)
+            if limit is not None:
+                fallback_sql += " LIMIT %s"
+            cur = conn.cursor()
+            cur.execute(fallback_sql, params)
+        else:
+            raise
     cols = [d[0] for d in cur.description]
     return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+
+def _active_feed_video_rows_sql(
+    *,
+    include_source_metadata: bool,
+) -> str:
+    source_metadata_columns = (
+        "source_category,\n"
+        "            source_query,"
+        if include_source_metadata
+        else "topic AS source_category,\n"
+        "            NULL AS source_query,"
+    )
+    return f"""
+        SELECT
+            youtube_video_id AS video_id,
+            title,
+            description,
+            channel_id,
+            channel_title,
+            topic,
+            category_id,
+            tags,
+            duration_seconds,
+            {source_metadata_columns}
+            thumbnail_url,
+            embed_url,
+            watch_url,
+            view_count,
+            published_at,
+            score AS ingest_score,
+            chrysalis_scores,
+            ranking_reason,
+            safety_reason,
+            concern_reason,
+            label_confidence,
+            scoring_version
+        FROM feed_videos
+        WHERE status = 'active'
+        ORDER BY score DESC, published_at DESC
+    """
+
+
+def _missing_source_metadata_column(message: str) -> bool:
+    return "source_category" in message or "source_query" in message
 
 
 def merge_primary_rows(primary: list[dict], fallback: list[dict]) -> list[dict]:
@@ -536,7 +632,7 @@ def _youtube_request_json(api_key: str) -> RequestJson:
 def _candidate_from_video_item(
     item: dict,
     *,
-    query: str,
+    source_spec: SourceQuerySpec,
     now: datetime,
     days_back: int,
 ) -> FeedVideoCandidate | None:
@@ -574,14 +670,19 @@ def _candidate_from_video_item(
 
     published_at = str(snippet.get("publishedAt") or "")
     view_count = _safe_int(stats.get("viewCount"))
-    topic = _topic_for_query(query)
+    source_category = source_spec.source_category or "custom"
+    source_query = source_spec.source_query
+    topic = source_category
 
     row_for_scoring = {
         "title": title,
         "description": description,
         "tags": tags,
         "channel_title": snippet.get("channelTitle") or "",
-        "category": topic,
+        "category": source_category,
+        "topic": source_category,
+        "source_category": source_category,
+        "source_query": source_query,
         "category_id": snippet.get("categoryId") or "",
         "duration_seconds": duration_seconds,
         "thumbnail_url": _best_thumbnail(snippet),
@@ -591,7 +692,8 @@ def _candidate_from_video_item(
         title=title,
         description=description,
         tags=tags,
-        query=query,
+        query=source_query,
+        source_category=source_category,
         published_at=published_at,
         duration_seconds=duration_seconds,
         view_count=view_count,
@@ -623,6 +725,8 @@ def _candidate_from_video_item(
         tags=tags,
         category_id=str(snippet.get("categoryId") or ""),
         topic=topic,
+        source_category=source_category,
+        source_query=source_query,
         score=round(relevance, 4),
         status="active",
         created_at=timestamp,
@@ -643,12 +747,12 @@ def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandi
         INSERT INTO feed_videos (
             id, source, youtube_video_id, title, channel_title, channel_id,
             description, thumbnail_url, embed_url, watch_url, published_at,
-            duration_seconds, view_count, tags, category_id, topic, score,
-            created_at, updated_at, status, chrysalis_scores, ranking_reason,
-            safety_reason, concern_reason, label_confidence, scored_at,
-            scoring_version
+            duration_seconds, view_count, tags, category_id, topic,
+            source_category, source_query, score, created_at, updated_at, status,
+            chrysalis_scores, ranking_reason, safety_reason, concern_reason,
+            label_confidence, scored_at, scoring_version
         ) VALUES (
-            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
         )
         ON CONFLICT(youtube_video_id) DO UPDATE SET
             title = excluded.title,
@@ -664,6 +768,8 @@ def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandi
             tags = excluded.tags,
             category_id = excluded.category_id,
             topic = excluded.topic,
+            source_category = excluded.source_category,
+            source_query = excluded.source_query,
             score = excluded.score,
             updated_at = excluded.updated_at,
             status = excluded.status,
@@ -686,13 +792,13 @@ def _upsert_postgres_candidate(cur, candidate: FeedVideoCandidate) -> None:
         INSERT INTO feed_videos (
             id, source, youtube_video_id, title, channel_title, channel_id,
             description, thumbnail_url, embed_url, watch_url, published_at,
-            duration_seconds, view_count, tags, category_id, topic, score,
-            created_at, updated_at, status, chrysalis_scores, ranking_reason,
-            safety_reason, concern_reason, label_confidence, scored_at,
-            scoring_version
+            duration_seconds, view_count, tags, category_id, topic,
+            source_category, source_query, score, created_at, updated_at, status,
+            chrysalis_scores, ranking_reason, safety_reason, concern_reason,
+            label_confidence, scored_at, scoring_version
         ) VALUES (
             %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,
-            %s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s
+            %s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s
         )
         ON CONFLICT(youtube_video_id) DO UPDATE SET
             title = excluded.title,
@@ -708,6 +814,8 @@ def _upsert_postgres_candidate(cur, candidate: FeedVideoCandidate) -> None:
             tags = excluded.tags,
             category_id = excluded.category_id,
             topic = excluded.topic,
+            source_category = excluded.source_category,
+            source_query = excluded.source_query,
             score = excluded.score,
             updated_at = excluded.updated_at,
             status = excluded.status,
@@ -741,6 +849,8 @@ def _candidate_sqlite_values(candidate: FeedVideoCandidate) -> tuple:
         json.dumps(candidate.tags),
         candidate.category_id,
         candidate.topic,
+        candidate.source_category,
+        candidate.source_query,
         candidate.score,
         candidate.created_at,
         candidate.updated_at,
@@ -767,6 +877,7 @@ def _relevance_score(
     description: str,
     tags: list[str],
     query: str,
+    source_category: str,
     published_at: str,
     duration_seconds: int | None,
     view_count: int,
@@ -776,7 +887,11 @@ def _relevance_score(
 ) -> float:
     title_l = title.lower()
     blob = " ".join([title, description, " ".join(tags)]).lower()
-    query_terms = [term for term in query.lower().split() if len(term) > 2]
+    query_terms = [
+        term
+        for term in f"{source_category} {query}".lower().replace("/", " ").split()
+        if len(term) > 2
+    ]
     keyword_hits = 0.0
     for term in (*RELEVANCE_TERMS, *query_terms):
         if term in title_l:
@@ -788,21 +903,22 @@ def _relevance_score(
     recency_score = _recency_score(published_at, now, days_back)
     duration_score = 1.0 if duration_seconds and duration_seconds <= SHORT_TARGET_SECONDS else 0.45
     engagement_score = _clamp01(math.log10(max(view_count, 0) + 1) / 6.0)
-    wellbeing_score = max(
+    quality_score = max(
         float(labels.get("calm", 0.0)),
         float(labels.get("educational", 0.0)),
         float(labels.get("self_love", 0.0)),
         float(labels.get("reflection_value", 0.0)),
         float(labels.get("prosocial", 0.0)),
+        float(labels.get("novelty", 0.0)),
     )
-    risk_penalty = float(labels.get("overall_risk", 0.0)) * 0.35
+    risk_penalty = float(labels.get("overall_risk", 0.0)) * 0.42
 
     return _clamp01(
-        keyword_score * 0.38
+        keyword_score * 0.44
         + recency_score * 0.20
         + duration_score * 0.16
         + engagement_score * 0.12
-        + wellbeing_score * 0.14
+        + quality_score * 0.08
         - risk_penalty
     )
 
@@ -819,19 +935,6 @@ def _recency_score(published_at: str, now: datetime, days_back: int) -> float:
 def _contains_blocked_term(text: str) -> bool:
     lowered = text.lower()
     return any(term in lowered for term in BLOCKED_TERMS)
-
-
-def _topic_for_query(query: str) -> str:
-    q = query.lower()
-    if "ai" in q:
-        return "ai-literacy"
-    if "study" in q or "student" in q or "productivity" in q or "focus" in q:
-        return "student-wellbeing"
-    if "phone" in q or "social media" in q or "digital wellness" in q:
-        return "digital-wellness"
-    if "confidence" in q or "emotional" in q or "self improvement" in q:
-        return "self-growth"
-    return "wellbeing"
 
 
 def _best_thumbnail(snippet: dict) -> str:

@@ -1,21 +1,17 @@
 """
-Mode-specific ranking (v1).
+Shared feed ranking (v2).
 
-Each reels mode is a plain config profile (mirroring the style of `WEIGHTS` in
-core/algorithm.py) describing how to weigh the LabelSet, which risks are hard-capped,
-and how strict the confidence/quality gate is. Ranking is label-based:
-
-    mode_fit = Σ pos_weights·positive  −  Σ risk_weights·risk      (normalized to 0–1)
-
-Gating drops anything below the mode's confidence floor, above any risk cap, or below
-any required positive minimum. Flutter Feed additionally re-spreads topics for variety.
-
-NOTE (v1 scope): this ranks over the real `videos` metadata table using labels only.
-Reusing the richer engagement/Gini engine in core.algorithm.build_prototype_feed is a
-later milestone (that engine expects CSV columns the videos table doesn't carry).
+All reels modes draw from the same safe, broad video pool. Mode-specific behavior
+lives in the reflection/explanation layer, not in separate content pools. Ranking
+therefore applies one shared safety gate, one shared relevance score, then balances
+source metadata so no single ingestion query or category dominates the feed.
 """
 
 from __future__ import annotations
+
+from datetime import date
+import hashlib
+import os
 
 from .. import algorithm as _alg  # reuse calculate_gini for the diversity proxy
 from ..labeling.schema import LabelSet
@@ -26,6 +22,19 @@ MODES = ("daily-dew", "metamorphosis", "flutter-feed")
 
 def is_valid_mode(mode: str) -> bool:
     return mode in MODE_PROFILES
+
+
+SHARED_FEED_CAPS = {
+    "overall_risk": 0.65,
+    "comparison_risk": 0.65,
+    "appearance_focus": 0.65,
+    "shame_or_humiliation_risk": 0.45,
+    "ragebait": 0.45,
+    "age_safety_risk": 0.65,
+    "misinformation_risk": 0.65,
+    "overstimulation": 0.85,
+}
+SHARED_MIN_CONFIDENCE = 0.12
 
 
 # Each profile:
@@ -122,23 +131,48 @@ def score_for_mode(labels: LabelSet, mode: str) -> float:
     return _alg_clamp((value - risk) / norm)
 
 
-def passes_gate(labels: LabelSet, mode: str) -> bool:
-    """Hard filter: confidence floor, risk caps, and required positive minimums."""
-    profile = MODE_PROFILES[mode]
-    if labels.confidence < profile["min_confidence"]:
+def score_for_shared_feed(labels: LabelSet, ingest_score: float | None = None) -> float:
+    """Shared 0-1 relevance score used for every reels mode's video source."""
+    value = (
+        0.18 * labels.prosocial
+        + 0.17 * labels.educational
+        + 0.16 * labels.novelty
+        + 0.14 * labels.calm
+        + 0.12 * labels.reflection_value
+        + 0.10 * labels.self_love
+        + 0.08 * labels.diversity
+    )
+    risk = (
+        0.32 * labels.overall_risk
+        + 0.18 * labels.ragebait
+        + 0.16 * labels.shame_or_humiliation_risk
+        + 0.12 * labels.comparison_risk
+        + 0.10 * labels.appearance_focus
+        + 0.08 * labels.misinformation_risk
+        + 0.06 * labels.age_safety_risk
+        + 0.04 * labels.overstimulation
+    )
+    label_score = _alg_clamp(value - risk + 0.35)
+    if ingest_score is None:
+        return label_score
+    return _alg_clamp((0.62 * label_score) + (0.38 * ingest_score))
+
+
+def passes_shared_feed_gate(labels: LabelSet) -> bool:
+    """Shared safe/relevant filter used by all modes before balancing."""
+    if labels.confidence < SHARED_MIN_CONFIDENCE:
         return False
-    for dim, cap in profile["caps"].items():
+    for dim, cap in SHARED_FEED_CAPS.items():
         if getattr(labels, dim, 0.0) > cap:
             return False
-    for dim, floor in profile["min_pos"].items():
-        if getattr(labels, dim, 0.0) < floor:
-            return False
-    min_any = profile.get("min_any_pos") or {}
-    dims = min_any.get("dims") or ()
-    floor = min_any.get("floor")
-    if dims and floor is not None and max(getattr(labels, dim, 0.0) for dim in dims) < floor:
-        return False
     return True
+
+
+def passes_gate(labels: LabelSet, mode: str) -> bool:
+    """Compatibility wrapper: all modes now use the same video-source gate."""
+    if not is_valid_mode(mode):
+        return False
+    return passes_shared_feed_gate(labels)
 
 
 def rank_videos(
@@ -149,17 +183,20 @@ def rank_videos(
     public_signal_override: bool = False,
 ) -> list[dict]:
     """
-    Gate → score → sort → (Flutter Feed) topic-spread. Each input item must carry a
-    `labels` LabelSet; the returned items are annotated with `mode_fit` and ordered.
-    Inputs are not mutated. Public-signal context is optional and can downrank,
-    request review, or exclude only when the context policy requires it.
+    Shared gate → shared score → source balancing. Each input item must carry a
+    `labels` LabelSet; returned items are annotated with `mode_fit` for API
+    compatibility. Public-signal context can downrank, request review, or exclude
+    only when the context policy requires it.
     """
+    if not is_valid_mode(mode):
+        return []
+
     scored: list[dict] = []
     for item in items:
         labels = item.get("labels")
         if not isinstance(labels, LabelSet):
             labels = LabelSet.from_dict(labels or {})
-        if not passes_gate(labels, mode):
+        if not passes_shared_feed_gate(labels):
             continue
 
         public_eval = evaluate_public_signal(
@@ -173,42 +210,107 @@ def rank_videos(
 
         annotated = dict(item)
         annotated["labels"] = labels
-        annotated["mode_fit"] = _alg_clamp(score_for_mode(labels, mode) + public_eval.score_delta)
+        annotated["mode_fit"] = _alg_clamp(
+            score_for_shared_feed(labels, _safe_score(item.get("ingest_score")))
+            + public_eval.score_delta
+        )
         annotated.update(public_eval.to_item_fields())
         scored.append(annotated)
 
-    scored.sort(key=lambda it: it["mode_fit"], reverse=True)
-
-    if mode == "flutter-feed":
-        scored = _spread_topics(scored)
-
-    return scored[:k]
+    return _balance_source_metadata(scored)[:k]
 
 
-def _spread_topics(items: list[dict]) -> list[dict]:
-    """
-    Light diversity rerank: round-robin across topics (highest mode_fit first within
-    each topic) so the top of the feed doesn't cluster on one topic. Preserves overall
-    quality ordering within a topic.
-    """
+def _balance_source_metadata(items: list[dict]) -> list[dict]:
+    """Round-robin source categories, with query spread inside each category."""
     if len(items) <= 2:
-        return items
+        return sorted(items, key=_feed_sort_key)
 
-    buckets: dict[str, list[dict]] = {}
-    order: list[str] = []
-    for it in items:  # items already sorted by mode_fit desc
-        topic = str(it.get("topic") or it.get("category") or "_")
-        if topic not in buckets:
-            buckets[topic] = []
-            order.append(topic)
-        buckets[topic].append(it)
+    category_buckets: dict[str, list[dict]] = {}
+    for item in sorted(items, key=_feed_sort_key):
+        category = _source_value(item, "source_category", "topic", "category")
+        category_buckets.setdefault(category, []).append(item)
+
+    for category, bucket in category_buckets.items():
+        category_buckets[category] = _spread_source_queries(bucket)
+
+    category_order = sorted(
+        category_buckets,
+        key=lambda category: (
+            -max(_item_score(item) for item in category_buckets[category]),
+            _stable_random_value("category", category),
+        ),
+    )
 
     result: list[dict] = []
-    while any(buckets[t] for t in order):
-        for t in order:
-            if buckets[t]:
-                result.append(buckets[t].pop(0))
+    while any(category_buckets[category] for category in category_order):
+        for category in category_order:
+            if category_buckets[category]:
+                result.append(category_buckets[category].pop(0))
     return result
+
+
+def _spread_source_queries(items: list[dict]) -> list[dict]:
+    if len(items) <= 2:
+        return sorted(items, key=_feed_sort_key)
+
+    query_buckets: dict[str, list[dict]] = {}
+    for item in sorted(items, key=_feed_sort_key):
+        query = _source_value(item, "source_query")
+        query_buckets.setdefault(query, []).append(item)
+
+    query_order = sorted(
+        query_buckets,
+        key=lambda query: (
+            -max(_item_score(item) for item in query_buckets[query]),
+            _stable_random_value("query", query),
+        ),
+    )
+
+    result: list[dict] = []
+    while any(query_buckets[query] for query in query_order):
+        for query in query_order:
+            if query_buckets[query]:
+                result.append(query_buckets[query].pop(0))
+    return result
+
+
+def _feed_sort_key(item: dict) -> tuple[float, float]:
+    return (-round(_item_score(item), 2), _stable_random_value("item", _item_identity(item)))
+
+
+def _item_score(item: dict) -> float:
+    return float(item.get("mode_fit") or item.get("ingest_score") or 0.0)
+
+
+def _source_value(item: dict, *fields: str) -> str:
+    for field in fields:
+        value = str(item.get(field) or "").strip().lower()
+        if value:
+            return value
+    return "_"
+
+
+def _item_identity(item: dict) -> str:
+    return str(item.get("video_id") or item.get("youtube_id") or item.get("id") or "")
+
+
+def _safe_score(value) -> float | None:
+    try:
+        if value is None:
+            return None
+        return _alg_clamp(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _feed_random_seed() -> str:
+    return os.environ.get("CHRYSALIS_FEED_RANDOM_SEED") or date.today().isoformat()
+
+
+def _stable_random_value(*parts: str) -> float:
+    raw = "|".join((_feed_random_seed(), *parts))
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:12]
+    return int(digest, 16) / float(0xFFFFFFFFFFFF)
 
 
 def _alg_clamp(v: float) -> float:

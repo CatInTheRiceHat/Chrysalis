@@ -1,10 +1,10 @@
 """
 Shared, pure feed builder (v1).
 
-`build_feed` takes raw video rows (plain dicts, as read from either the SQLite or
-Postgres `videos` table), labels + ranks + explains them for a mode, and returns the
-clean API shape. No DB or network here, so both API files (api.py / api/index.py) and
-the unit tests call the exact same logic.
+`build_feed` takes raw video rows (plain dicts, as read from either SQLite or
+Postgres), applies the shared safe-feed ranking, and returns mode-specific
+explanations over the same broad video pool. No DB or network here, so both API
+files (api.py / api/index.py) and the unit tests call the exact same logic.
 """
 
 from __future__ import annotations
@@ -59,7 +59,8 @@ def build_feed(
     """
     Returns a list of API-ready items for `mode`:
       { youtube_id, title, source, description, thumbnail, embed_url, watch_url,
-        duration_seconds, tags, channel_id, category_id,
+        duration_seconds, tags, channel_id, category_id, source_category,
+        source_query,
         chrysalis_scores, ranking_reason, safety_reason, concern_reason, mode_fit,
         public_signal, source_safety_status, public_signal_effect,
         public_signal_reason }
@@ -75,7 +76,10 @@ def build_feed(
         candidates.append({
             "_row": row,
             "labels": labels,
-            "topic": row.get("topic") or row.get("category"),
+            "topic": row.get("source_category") or row.get("topic") or row.get("category"),
+            "source_category": row.get("source_category") or row.get("topic") or row.get("category"),
+            "source_query": row.get("source_query") or "",
+            "ingest_score": row.get("ingest_score"),
             "video_id": row.get("video_id") or row.get("youtube_id") or "",
             "channel_id": row.get("channel_id") or "",
             "channel_title": row.get("channel_title") or row.get("channel") or "",
@@ -115,6 +119,8 @@ def build_feed(
             "tags": tags,
             "channel_id": row.get("channel_id") or "",
             "category_id": row.get("category_id") or row.get("category") or None,
+            "source_category": row.get("source_category") or row.get("topic") or row.get("category") or None,
+            "source_query": row.get("source_query") or None,
             "chrysalis_scores": labels.to_dict(),
             "ranking_reason": reasons["ranking_reason"],
             "safety_reason": reasons["safety_reason"],

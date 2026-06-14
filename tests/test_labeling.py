@@ -2,10 +2,10 @@
 Tests for the Chrysalis v1 video labeling + mode ranking system.
 
 Verifies the core product guarantees with small hand-built metadata samples:
-  - calm/grounding content scores well and survives Daily Dew
+  - calm/grounding content scores well and survives the shared safe-feed gate
   - ragebait/shame content scores high-risk and is gated out everywhere
-  - Metamorphosis blocks high-stimulation content but admits very-calm content
-  - Flutter Feed keeps topic variety while filtering high-risk items
+  - all modes draw from the same real-video source pool
+  - the shared feed keeps source variety while filtering high-risk items
   - explanations only surface a concern when a real risk is present
 """
 
@@ -102,7 +102,7 @@ def test_title_matches_are_weighted_more_than_description():
 
 
 # ── Mode ranking ─────────────────────────────────────────────────────────────
-def test_daily_dew_prefers_calm_over_ragebait():
+def test_shared_gate_keeps_calm_and_blocks_ragebait():
     calm = score_metadata(CALM)
     rage = score_metadata(RAGEBAIT)
     assert passes_gate(calm, "daily-dew")
@@ -110,11 +110,13 @@ def test_daily_dew_prefers_calm_over_ragebait():
     assert score_for_mode(calm, "daily-dew") > score_for_mode(rage, "daily-dew")
 
 
-def test_daily_dew_rejects_neutral_low_risk_content():
+def test_shared_gate_allows_neutral_low_risk_content():
     neutral = score_metadata(NEUTRAL_LOW_RISK)
     assert neutral.confidence >= 0.25
     assert neutral.overall_risk < 0.3
-    assert not passes_gate(neutral, "daily-dew")
+    assert passes_gate(neutral, "daily-dew")
+    assert passes_gate(neutral, "metamorphosis")
+    assert passes_gate(neutral, "flutter-feed")
 
 
 def test_ragebait_gated_out_of_every_mode():
@@ -123,14 +125,15 @@ def test_ragebait_gated_out_of_every_mode():
         assert not passes_gate(rage, mode), f"ragebait should fail {mode}"
 
 
-def test_metamorphosis_blocks_high_stimulation_admits_calm():
+def test_all_modes_use_same_shared_video_gate():
     calm = score_metadata(CALM)
     hyper = score_metadata(HYPER)
-    assert passes_gate(calm, "metamorphosis")
-    assert not passes_gate(hyper, "metamorphosis")
+    for mode in ("daily-dew", "metamorphosis", "flutter-feed"):
+        assert passes_gate(calm, mode)
+        assert not passes_gate(hyper, mode)
 
 
-def test_flutter_feed_keeps_variety_filters_risk():
+def test_shared_feed_keeps_variety_filters_risk():
     items = [
         {"labels": score_metadata(CALM), "topic": "music"},
         {"labels": score_metadata(LEARN), "topic": "education"},
@@ -144,6 +147,39 @@ def test_flutter_feed_keeps_variety_filters_risk():
     assert "entertainment" not in topics  # ragebait gone
     # variety preserved across the survivors
     assert len(set(topics)) >= 2
+
+
+def test_source_metadata_balancing_limits_dominant_categories_and_queries():
+    rows = []
+    for index in range(6):
+        rows.append({
+            "video_id": f"game-{index}",
+            "title": "A calm educational guide with a creative idea",
+            "description": "Learn one useful thing in a low-risk, reflective format.",
+            "source_category": "gaming",
+            "source_query": "gaming highlights" if index % 2 else "cozy gaming",
+        })
+    for index in range(2):
+        rows.append({
+            "video_id": f"travel-{index}",
+            "title": "A calm educational guide with a creative idea",
+            "description": "Learn one useful thing in a low-risk, reflective format.",
+            "source_category": "travel",
+            "source_query": "travel vlog city guide",
+        })
+        rows.append({
+            "video_id": f"food-{index}",
+            "title": "A calm educational guide with a creative idea",
+            "description": "Learn one useful thing in a low-risk, reflective format.",
+            "source_category": "food",
+            "source_query": "food recipes street food",
+        })
+
+    feed = build_feed(rows, "flutter-feed", k=6)
+    categories = [item["source_category"] for item in feed]
+    queries = [item["source_query"] for item in feed]
+    assert max(categories.count(category) for category in set(categories)) <= 2
+    assert max(queries.count(query) for query in set(queries)) <= 2
 
 
 # ── Explanations ─────────────────────────────────────────────────────────────
@@ -162,14 +198,24 @@ def test_build_feed_shape_and_gating():
     feed = build_feed(rows, "daily-dew", k=12)
     ids = {it["youtube_id"] for it in feed}
     assert "rage1" not in ids and "hyper1" not in ids
-    assert "neutral1" not in ids
     assert "calm1" in ids
     item = feed[0]
     for key in ("youtube_id", "title", "thumbnail", "chrysalis_scores",
+                "source_category", "source_query",
                 "ranking_reason", "safety_reason", "concern_reason", "mode_fit",
                 "public_signal", "source_safety_status", "public_signal_effect",
                 "public_signal_reason"):
         assert key in item
+
+
+def test_all_modes_share_video_ids_but_change_explanation_copy():
+    daily = build_feed([CALM], "daily-dew", k=12)
+    metamorphosis = build_feed([CALM], "metamorphosis", k=12)
+    flutter = build_feed([CALM], "flutter-feed", k=12)
+    assert {item["youtube_id"] for item in daily} == {"calm1"}
+    assert {item["youtube_id"] for item in metamorphosis} == {"calm1"}
+    assert {item["youtube_id"] for item in flutter} == {"calm1"}
+    assert daily[0]["ranking_reason"] != metamorphosis[0]["ranking_reason"]
 
 
 def test_build_feed_unknown_mode_is_empty():

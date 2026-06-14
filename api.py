@@ -229,8 +229,8 @@ def admin_ingest_youtube(
 @app.get("/api/feed/{mode}")
 def chrysalis_feed(mode: str, k: int = 12):
     """
-    Labeled + mode-ranked + explained feed for a reels mode
-    (daily-dew, metamorphosis, flutter-feed). Reads the local `videos` table.
+    Shared real-video feed for a reels mode (daily-dew, metamorphosis,
+    flutter-feed). Modes change explanation/reflection copy, not the source pool.
     Returns an empty list when there are no scored candidates — the frontend then
     falls back to its built-in sample cards.
     """

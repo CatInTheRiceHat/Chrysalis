@@ -1,7 +1,8 @@
 /**
- * Content for the Chrysalis Algorithm experience — grouped by mode.
+ * Built-in fallback/prompt cards for the Chrysalis Algorithm experience.
  *
- * This is a wellbeing feed, not an entertainment feed. Three modes:
+ * Real YouTube videos come from one shared broad feed pool. These cards are
+ * mode-specific UI fallbacks that appear only when the real pool is short:
  *   daily-dew     — short, grounding, positive daily drop (light & quick)
  *   metamorphosis — screen-time regulation: pause, breathe, notice scrolling
  *   flutter-feed  — a healthier personalized feed with more user control
