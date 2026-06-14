@@ -4,7 +4,7 @@ import os
 import sqlite3
 from datetime import date
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -25,6 +25,12 @@ from core.ranking.feed import build_feed
 from core.ranking.modes import is_valid_mode, MODES
 from core.public_signals.storage import load_cached_context_sqlite, load_or_scan_context_sqlite
 from integrations.youtube_service import fetch_videos_by_topic, get_youtube_id_for_video, get_all_topics_cache_status
+from integrations.youtube_ingest import (
+    YouTubeIngestError,
+    ingest_youtube_videos_sqlite,
+    load_active_feed_video_rows_sqlite,
+    merge_primary_rows,
+)
 from migration_scheduler import create_scheduler
 from core.cocoon import (
     CocoonProfile,
@@ -38,6 +44,20 @@ REFRESH_PUBLIC_SIGNALS_ON_FEED = os.getenv(
     "CHRYSALIS_REFRESH_PUBLIC_SIGNALS_ON_FEED",
     "",
 ).lower() in {"1", "true", "yes"}
+
+
+def _require_feed_ingest_secret(
+    header_secret: str | None,
+    query_secret: str | None,
+) -> None:
+    expected = os.environ.get("FEED_INGEST_SECRET", "")
+    if not expected:
+        raise HTTPException(
+            status_code=500,
+            detail="FEED_INGEST_SECRET is not configured on the backend.",
+        )
+    if header_secret != expected and query_secret != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 @asynccontextmanager
@@ -181,6 +201,31 @@ def youtube_cache():
     return get_all_topics_cache_status()
 
 
+@app.post("/api/admin/ingest/youtube")
+def admin_ingest_youtube(
+    secret: str | None = None,
+    x_feed_ingest_secret: str | None = Header(default=None, alias="X-Feed-Ingest-Secret"),
+    max_results_per_query: int = 10,
+    days_back: int = 7,
+):
+    """
+    Run the daily YouTube Data API ingestion.
+
+    Auth: pass FEED_INGEST_SECRET either as `X-Feed-Ingest-Secret` or as a
+    `?secret=` query parameter. This endpoint stores metadata only.
+    """
+    _require_feed_ingest_secret(x_feed_ingest_secret, secret)
+    try:
+        result = ingest_youtube_videos_sqlite(
+            db_path=DB_PATH,
+            max_results_per_query=max_results_per_query,
+            days_back=days_back,
+        )
+    except YouTubeIngestError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return result.to_dict()
+
+
 @app.get("/api/feed/{mode}")
 def chrysalis_feed(mode: str, k: int = 12):
     """
@@ -196,7 +241,12 @@ def chrysalis_feed(mode: str, k: int = 12):
     conn.row_factory = sqlite3.Row
     public_signal_context = None
     try:
-        rows = [dict(r) for r in conn.execute("SELECT * FROM videos").fetchall()]
+        feed_rows = load_active_feed_video_rows_sqlite(conn)
+        try:
+            legacy_rows = [dict(r) for r in conn.execute("SELECT * FROM videos").fetchall()]
+        except sqlite3.OperationalError:
+            legacy_rows = []
+        rows = merge_primary_rows(feed_rows, legacy_rows)
         try:
             # Feed reads are read-only by default. Set
             # CHRYSALIS_REFRESH_PUBLIC_SIGNALS_ON_FEED=1 only when you explicitly

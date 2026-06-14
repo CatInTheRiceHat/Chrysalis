@@ -758,9 +758,6 @@
   width: 52px;
   height: 52px;
   overflow: hidden;
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--accent-soft) 18%, var(--card));
-  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
 }
 .mode-card__logo img {
   width: 82%;

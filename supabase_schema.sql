@@ -61,6 +61,44 @@ CREATE TABLE IF NOT EXISTS videos (
 CREATE INDEX IF NOT EXISTS idx_videos_scoring_version ON videos (scoring_version);
 CREATE INDEX IF NOT EXISTS idx_videos_topic           ON videos (topic);
 
+-- Videos discovered by the daily YouTube feed ingestion endpoint. These are
+-- metadata rows only; playback remains a standard YouTube iframe embed.
+CREATE TABLE IF NOT EXISTS feed_videos (
+    id                  TEXT PRIMARY KEY,
+    source              TEXT NOT NULL DEFAULT 'youtube',
+    youtube_video_id    TEXT NOT NULL UNIQUE,
+    title               TEXT,
+    channel_title       TEXT,
+    channel_id          TEXT,
+    description         TEXT,
+    thumbnail_url       TEXT,
+    embed_url           TEXT,
+    watch_url           TEXT,
+    published_at        TEXT,
+    duration_seconds    INTEGER,
+    view_count          BIGINT,
+    tags                JSONB,
+    category_id         TEXT,
+    topic               TEXT,
+    score               REAL,
+    created_at          TIMESTAMPTZ,
+    updated_at          TIMESTAMPTZ,
+    status              TEXT NOT NULL DEFAULT 'active',
+    chrysalis_scores    JSONB,
+    ranking_reason      TEXT,
+    safety_reason       TEXT,
+    concern_reason      TEXT,
+    label_confidence    REAL,
+    scored_at           TIMESTAMPTZ,
+    scoring_version     TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_feed_videos_status_score
+    ON feed_videos (status, score DESC, published_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_feed_videos_youtube_id
+    ON feed_videos (youtube_video_id);
+
 -- Public Signal Scanner v1. These records are expiring context/review signals,
 -- not permanent creator blacklists. v1 writes stub/neutral records unless a
 -- future approved public-search provider is connected.

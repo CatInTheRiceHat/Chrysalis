@@ -22,6 +22,8 @@ from ..public_signals.ranking import PublicSignalContext
 from .modes import rank_videos, is_valid_mode
 
 _THUMB = "https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+_EMBED = "https://www.youtube-nocookie.com/embed/{vid}"
+_WATCH = "https://www.youtube.com/watch?v={vid}"
 
 # Cap tags surfaced to the client — enough to be useful, not a debug dump.
 _MAX_API_TAGS = 15
@@ -56,7 +58,7 @@ def build_feed(
 ) -> list[dict]:
     """
     Returns a list of API-ready items for `mode`:
-      { youtube_id, title, source, description, thumbnail,
+      { youtube_id, title, source, description, thumbnail, embed_url, watch_url,
         duration_seconds, tags, channel_id, category_id,
         chrysalis_scores, ranking_reason, safety_reason, concern_reason, mode_fit,
         public_signal, source_safety_status, public_signal_effect,
@@ -104,6 +106,8 @@ def build_feed(
                 row.get("thumbnail_url") or row.get("thumbnail")
                 or (_THUMB.format(vid=vid) if vid else None)
             ),
+            "embed_url": row.get("embed_url") or (_EMBED.format(vid=vid) if vid else None),
+            "watch_url": row.get("watch_url") or (_WATCH.format(vid=vid) if vid else None),
             "duration_seconds": parse_duration_seconds(
                 row.get("duration_seconds") if row.get("duration_seconds") is not None
                 else row.get("duration")

@@ -24,6 +24,12 @@ from core.metrics import diversity_at_k, max_streak, prosocial_ratio
 from core.ranking.feed import build_feed
 from core.ranking.modes import is_valid_mode, MODES
 from core.public_signals.storage import load_cached_context_postgres, load_or_scan_context_postgres
+from integrations.youtube_ingest import (
+    YouTubeIngestError,
+    ingest_youtube_videos_postgres,
+    load_active_feed_video_rows_postgres,
+    merge_primary_rows,
+)
 from integrations.youtube_service import (
     fetch_videos_by_topic,
     get_youtube_id_for_video,
@@ -64,6 +70,17 @@ REFRESH_PUBLIC_SIGNALS_ON_FEED = os.getenv(
     "CHRYSALIS_REFRESH_PUBLIC_SIGNALS_ON_FEED",
     "",
 ).lower() in {"1", "true", "yes"}
+
+
+def _require_feed_ingest_secret(header_secret: str | None, query_secret: str | None) -> None:
+    expected = os.environ.get("FEED_INGEST_SECRET", "")
+    if not expected:
+        raise HTTPException(
+            status_code=500,
+            detail="FEED_INGEST_SECRET is not configured on the backend.",
+        )
+    if header_secret != expected and query_secret != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 class RunLocalRequest(BaseModel):
@@ -163,6 +180,28 @@ def youtube_cache():
     return get_all_topics_cache_status()
 
 
+@app.post("/api/admin/ingest/youtube")
+def admin_ingest_youtube(
+    secret: str | None = None,
+    x_feed_ingest_secret: str | None = Header(None, alias="X-Feed-Ingest-Secret"),
+    max_results_per_query: int = 10,
+    days_back: int = 7,
+):
+    _require_feed_ingest_secret(x_feed_ingest_secret, secret)
+    conn = get_db()
+    try:
+        result = ingest_youtube_videos_postgres(
+            conn,
+            max_results_per_query=max_results_per_query,
+            days_back=days_back,
+        )
+    except YouTubeIngestError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    finally:
+        conn.close()
+    return result.to_dict()
+
+
 @app.get("/api/feed/{mode}")
 def chrysalis_feed(mode: str, k: int = 12):
     """
@@ -179,9 +218,15 @@ def chrysalis_feed(mode: str, k: int = 12):
     conn = get_db()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT * FROM videos")
-        cols = [d[0] for d in cur.description]
-        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        feed_rows = load_active_feed_video_rows_postgres(conn)
+        try:
+            cur.execute("SELECT * FROM videos")
+            cols = [d[0] for d in cur.description]
+            legacy_rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        except Exception:
+            conn.rollback()
+            legacy_rows = []
+        rows = merge_primary_rows(feed_rows, legacy_rows)
         try:
             # Feed reads are read-only by default. Set
             # CHRYSALIS_REFRESH_PUBLIC_SIGNALS_ON_FEED=1 only when you explicitly

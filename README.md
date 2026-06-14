@@ -20,7 +20,11 @@ pip install pandas numpy matplotlib fastapi uvicorn python-multipart
 
 # Set up your YouTube API key (optional, for live video data)
 cp .env.example .env
-# Edit .env and add your YOUTUBE_API_KEY
+# Edit .env and add backend-only secrets:
+#   YOUTUBE_API_KEY
+#   FEED_INGEST_SECRET
+# Optional:
+#   YOUTUBE_FEED_QUERIES=teen productivity,student focus tips,digital wellness
 # Optional: pin local SQLite storage. Relative paths resolve from project root.
 DATABASE_PATH=./chrysalis.db
 
@@ -42,6 +46,55 @@ npm run dev
 `website/.env.local` should contain `VITE_API_URL=http://localhost:8000`.
 The local API allows Vite on `localhost` or `127.0.0.1` ports `5173` and `5174`,
 so `/reels` can still fetch live cards when Vite moves to the next open port.
+
+### Daily YouTube feed ingestion
+
+The Algorithm feed is populated by a backend-only YouTube Data API ingestion job.
+The React frontend never calls YouTube Data API and never receives `YOUTUBE_API_KEY`.
+
+Required backend env vars:
+
+```bash
+YOUTUBE_API_KEY=...
+FEED_INGEST_SECRET=...
+DATABASE_PATH=./chrysalis.db
+```
+
+Optional query override:
+
+```bash
+YOUTUBE_FEED_QUERIES=teen productivity,student focus tips,digital wellness
+```
+
+Manual local ingestion:
+
+```bash
+DATABASE_PATH=./chrysalis.db python scripts/ingest_youtube_feed.py --max-results 10 --days-back 7
+```
+
+Or run through the API:
+
+```bash
+curl -X POST \
+  -H "X-Feed-Ingest-Secret: $FEED_INGEST_SECRET" \
+  "http://localhost:8000/api/admin/ingest/youtube"
+```
+
+The job searches recent, embeddable, English, US-region short videos; filters out
+obvious explicit, political, shock, drama, gambling, adult, and low-quality content;
+stores metadata in `feed_videos`; and `/api/feed/flutter-feed?k=12` serves active
+real YouTube cards first. Built-in template cards remain frontend fallback/fill
+content when there are not enough real videos.
+
+For hosted daily ingestion, configure GitHub repository secrets:
+
+```bash
+CHRYSALIS_API_BASE_URL=https://your-deployed-api.example
+FEED_INGEST_SECRET=...
+```
+
+Then enable `.github/workflows/youtube-feed-ingest.yml`, which calls the admin
+endpoint once per day and can also be run manually with `workflow_dispatch`.
 
 ## Project Structure
 
@@ -95,6 +148,8 @@ python graphs.py --summary results/data/experiment_summary.csv
 | `/api/run/local` | POST | Run algorithm with custom weights |
 | `/api/youtube/videos/{topic}` | GET | Fetch live YouTube video IDs |
 | `/api/youtube/cache` | GET | Debug YouTube cache status |
+| `/api/admin/ingest/youtube` | POST | Secret-protected daily YouTube feed ingestion |
+| `/api/feed/{mode}` | GET | Serve Chrysalis-ranked Algorithm feed cards |
 
 ## Configuration
 

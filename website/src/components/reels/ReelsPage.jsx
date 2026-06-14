@@ -19,6 +19,7 @@ const LEGACY_MODE_KEY = 'chrysalis-reels-mode';
 const LEGACY_INTENTION_KEY = 'chrysalis-reels-intention';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '';
+const TARGET_CARD_COUNT = 12;
 
 /** Map a backend /api/feed item into the card shape ReelCard expects. */
 function apiItemToCard(item) {
@@ -29,6 +30,8 @@ function apiItemToCard(item) {
     source: item.source,
     description: item.description,
     thumbnail: item.thumbnail,
+    embed_url: item.embed_url,
+    watch_url: item.watch_url,
     ranking_reason: item.ranking_reason,
     safety_reason: item.safety_reason,
     concern_reason: item.concern_reason,
@@ -53,6 +56,13 @@ function mergeMetamorphosis(real, synthetic) {
   return [...merged, ...strictReal.slice(synthetic.length)];
 }
 
+function mergeRealFirst(real, synthetic) {
+  if (!real.length) return synthetic;
+  const realIds = new Set(real.map((card) => card.id));
+  const filler = synthetic.filter((card) => !realIds.has(card.id));
+  return [...real, ...filler].slice(0, Math.max(real.length, Math.min(TARGET_CARD_COUNT, real.length + filler.length)));
+}
+
 /**
  * Combine real (labeled) videos with the built-in synthetic cards.
  * Metamorphosis stays pause-card-first and only interleaves videos that passed
@@ -60,7 +70,7 @@ function mergeMetamorphosis(real, synthetic) {
  */
 function mergeForMode(mode, real, synthetic) {
   if (mode === 'metamorphosis') return mergeMetamorphosis(real, synthetic);
-  return real.length ? real : synthetic;
+  return mergeRealFirst(real, synthetic);
 }
 
 function storedValue(key, legacyKey) {
@@ -183,7 +193,7 @@ export function ReelsPage() {
 
     async function loadFeed() {
       try {
-        const response = await fetch(`${API_URL}/api/feed/${mode}`);
+        const response = await fetch(`${API_URL}/api/feed/${mode}?k=${TARGET_CARD_COUNT}`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         if (cancelled) return;

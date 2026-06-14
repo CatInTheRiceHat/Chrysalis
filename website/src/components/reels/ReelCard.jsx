@@ -31,6 +31,12 @@ function buildSignalHint(reel) {
   return 'Curated for this mode';
 }
 
+function buildEmbedSrc(baseUrl, originParam) {
+  if (!baseUrl) return null;
+  const separator = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${separator}autoplay=1&mute=1&playsinline=1&controls=1&rel=0&modestbranding=1${originParam}`;
+}
+
 /**
  * A single full-viewport Algorithm card. Two kinds of card:
  *  - real video (has `youtube_id`): thumbnail poster + tap-to-play YouTube embed,
@@ -54,6 +60,8 @@ export function ReelCard({
   const embedOrigin = typeof window !== 'undefined'
     ? `&origin=${encodeURIComponent(window.location.origin)}`
     : '';
+  const embedUrl = reel.embed_url || (hasVideo ? `https://www.youtube-nocookie.com/embed/${reel.youtube_id}` : null);
+  const embedSrc = buildEmbedSrc(embedUrl, embedOrigin);
 
   return (
     <article className="reel-card">
@@ -86,7 +94,7 @@ export function ReelCard({
               playing ? (
                 <iframe
                   className="reel-media reel-embed"
-                  src={`https://www.youtube.com/embed/${reel.youtube_id}?autoplay=1&mute=1&playsinline=1&controls=1&rel=0&modestbranding=1${embedOrigin}`}
+                  src={embedSrc}
                   title={reel.title}
                   loading="lazy"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
