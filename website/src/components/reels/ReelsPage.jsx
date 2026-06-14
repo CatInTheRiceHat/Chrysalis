@@ -359,8 +359,8 @@ export function ReelsPage() {
         {onboarded ? (
           <div className="algorithm-mode-pill">
             <span className="algorithm-mode-pill__prefix">Current algorithm mode:</span>
-            <span className="algorithm-mode-pill__icon" aria-hidden="true">
-              {currentMode?.icon ?? '🌸'}
+            <span className="algorithm-mode-pill__logo" aria-hidden="true">
+              <img src={currentMode?.logo ?? '/images/flutter-feed.png'} alt="" />
             </span>
             <span>{currentMode?.label ?? 'Flutter Feed'}</span>
           </div>

@@ -752,7 +752,21 @@
   background: color-mix(in srgb, var(--accent-soft) 22%, var(--card));
   box-shadow: 0 0 0 2px var(--accent), 0 18px 40px rgba(124, 109, 140, 0.22);
 }
-.mode-card__icon { font-size: 1.7rem; line-height: 1; }
+.mode-card__logo {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent-soft) 18%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+.mode-card__logo img {
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+}
 .mode-card__title {
   font-size: 0.98rem;
   font-weight: 600;
@@ -839,9 +853,18 @@
   font-weight: 600;
   pointer-events: none;
 }
-.algorithm-mode-pill__icon {
-  font-size: 1rem;
-  line-height: 1;
+.algorithm-mode-pill__logo {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+  border-radius: 9px;
+}
+.algorithm-mode-pill__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .algorithm-mode-pill__prefix {
   position: absolute;

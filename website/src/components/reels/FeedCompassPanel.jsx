@@ -24,7 +24,7 @@ const MODE_COPY = {
     },
   },
   metamorphosis: {
-    label: 'Metamorphosis Mode',
+    label: 'Metamorphosis',
     description: 'A slower mode that prioritizes pauses, breaks, and scroll awareness.',
     fallbackScores: {
       calm: 0.9,

@@ -40,7 +40,9 @@ export function OnboardingStartScreen({ initialMode = null, onStart }) {
               aria-pressed={isSelected}
               onClick={() => setSelectedMode(mode.key)}
             >
-              <span className="mode-card__icon" aria-hidden="true">{mode.icon}</span>
+              <span className="mode-card__logo" aria-hidden="true">
+                <img src={mode.logo} alt="" loading="lazy" />
+              </span>
               <span className="mode-card__title">{mode.label}</span>
               <span className="mode-card__desc">{mode.description}</span>
             </button>
