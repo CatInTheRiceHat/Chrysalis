@@ -1,5 +1,5 @@
 /**
- * Content for the Chrysalis "Flutter Feed" (/reels) — grouped by mode.
+ * Content for the Chrysalis Algorithm experience — grouped by mode.
  *
  * This is a wellbeing feed, not an entertainment feed. Three modes:
  *   daily-dew     — short, grounding, positive daily drop (light & quick)
@@ -14,42 +14,41 @@
  *   label       wellbeing tag shown as the accent chip
  *   description short supporting line
  *   image       path under /public (omit to render the branded gradient wash)
- *   reason      why this reached you — reserved for the rail "Why am I seeing
- *               this?" action (stored now, not yet displayed)
+ *   reason      why this reached you — shown by the "Why this algorithm?" action
  */
 
 export const MODES = [
-  { key: 'daily-dew',     label: 'Daily Dew',          blurb: 'A short daily drop of grounding, positive content.' },
-  { key: 'metamorphosis', label: 'Metamorphosis', blurb: 'Slow down, pause, breathe, notice your scrolling.' },
-  { key: 'flutter-feed',  label: 'Flutter Feed',       blurb: 'A healthier personalized feed, with more control.' },
+  {
+    key: 'daily-dew',
+    label: 'Daily Dew',
+    icon: '🌅',
+    description: 'A short, gentle reset with calm and reflective content.',
+    blurb: 'A short, gentle reset with calm and reflective content.',
+  },
+  {
+    key: 'metamorphosis',
+    label: 'Metamorphosis Mode',
+    icon: '🦋',
+    description: 'A slower mode for pauses, breaks, and scroll awareness.',
+    blurb: 'A slower mode for pauses, breaks, and scroll awareness.',
+  },
+  {
+    key: 'flutter-feed',
+    label: 'Flutter Feed',
+    icon: '🌸',
+    description: 'A healthier personalized feed with variety, positivity, and transparency.',
+    blurb: 'A healthier personalized feed with variety, positivity, and transparency.',
+  },
 ];
 
 export const DEFAULT_MODE = 'flutter-feed';
 
-/** Onboarding intentions → which mode each one opens. */
-export const INTENTIONS = [
-  {
-    id: 'reset',
-    icon: '🌅',
-    mode: 'daily-dew',
-    title: 'I want a small positive reset.',
-    description: 'A light, quick grounding drop to start fresh.',
-  },
-  {
-    id: 'lesstime',
-    icon: '🦋',
-    mode: 'metamorphosis',
-    title: 'I want to spend less time scrolling.',
-    description: 'Gentle nudges to pause, breathe, and step away.',
-  },
-  {
-    id: 'healthier',
-    icon: '🌸',
-    mode: 'flutter-feed',
-    title: 'I want a healthier version of my normal feed.',
-    description: 'Your usual feed, balanced for positivity and diversity.',
-  },
-];
+/** Legacy onboarding IDs from the old intention picker, kept for localStorage migration. */
+export const LEGACY_INTENTION_MODES = {
+  reset: 'daily-dew',
+  lesstime: 'metamorphosis',
+  healthier: 'flutter-feed',
+};
 
 export const reelsByMode = {
   'daily-dew': [
@@ -107,7 +106,7 @@ export const reelsByMode = {
       label: 'Pause',
       description: 'In for four, hold for four, out for four. The feed will wait for you.',
       image: '/images/metamorphosis.png',
-      reason: 'A deliberate pause card that slows the pace between reels.',
+      reason: 'A deliberate pause card that slows the pace between cards.',
     },
   ],
   'flutter-feed': [
@@ -122,7 +121,7 @@ export const reelsByMode = {
     },
     {
       id: 'regenerate',
-      title: 'Regenerate this feed',
+      title: 'Regenerate this algorithm view',
       source: '@chrysalis · Controls',
       label: 'Your call',
       description: 'Not feeling it? Reshuffle with a fresh blend of topics and tones in one tap.',

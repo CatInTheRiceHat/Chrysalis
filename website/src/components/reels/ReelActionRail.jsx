@@ -4,7 +4,7 @@ import { Heart, Bookmark, Sparkles, RefreshCw, HelpCircle, Share2, X } from 'luc
 const REFLECTION_OPTIONS = ['Calmer', 'Curious', 'Not for me'];
 
 /**
- * Side action rail for a single reel. All actions are local/demo-safe: no API
+ * Side action rail for one Algorithm card. All actions are local/demo-safe: no API
  * writes, no permanent personalization, and no internal ranking metadata leaks.
  */
 export function ReelActionRail({
@@ -84,10 +84,10 @@ export function ReelActionRail({
 
   const handleShare = async () => {
     const pageUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareTitle = title ? `${title} | Chrysalis` : 'Chrysalis reel';
+    const shareTitle = title ? `${title} | Chrysalis` : 'Chrysalis algorithm card';
     const shareText = source
-      ? `A Chrysalis card from ${source}.`
-      : 'A Chrysalis card for a calmer session.';
+      ? `A Chrysalis algorithm card from ${source}.`
+      : 'A Chrysalis algorithm card for a calmer session.';
 
     try {
       if (navigator.share) {
@@ -107,7 +107,7 @@ export function ReelActionRail({
   };
 
   return (
-    <div className="reel-rail" role="group" aria-label="Reel actions">
+    <div className="reel-rail" role="group" aria-label="Algorithm card actions">
       <Action
         label="Like"
         pressed={liked}
@@ -130,7 +130,7 @@ export function ReelActionRail({
         label="Reflect"
         pressed={showReflect || Boolean(reflection)}
         expanded={showReflect}
-        ariaLabel={showReflect ? 'Close reflection prompt' : 'Reflect on this reel'}
+        ariaLabel={showReflect ? 'Close reflection prompt' : 'Reflect on this card'}
         onClick={toggleReflect}
       >
         <Sparkles size={20} aria-hidden="true" />
@@ -148,13 +148,13 @@ export function ReelActionRail({
         label="Why?"
         pressed={showWhy}
         expanded={showWhy}
-        ariaLabel="Why am I seeing this?"
+        ariaLabel="Why this algorithm?"
         onClick={toggleWhy}
       >
         <HelpCircle size={20} aria-hidden="true" />
       </Action>
 
-      <Action label="Share" ariaLabel="Share this reel" onClick={handleShare}>
+      <Action label="Share" ariaLabel="Share this card" onClick={handleShare}>
         <Share2 size={20} aria-hidden="true" />
       </Action>
 
@@ -186,7 +186,7 @@ export function ReelActionRail({
       )}
 
       {showWhy && (
-        <div className="reel-why" role="dialog" aria-label="Why am I seeing this?">
+        <div className="reel-why" role="dialog" aria-label="Why this algorithm?">
           <button
             type="button"
             className="reel-why__close"
@@ -195,7 +195,7 @@ export function ReelActionRail({
           >
             <X size={15} aria-hidden="true" />
           </button>
-          <p className="reel-why__title">Why am I seeing this?</p>
+          <p className="reel-why__title">Why this algorithm?</p>
           <p className="reel-why__body">
             {rankingReason || fallbackReason || 'Curated by Chrysalis to support your wellbeing.'}
           </p>

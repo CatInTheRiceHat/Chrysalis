@@ -53,12 +53,6 @@ const MODE_COPY = {
   },
 };
 
-const INTENTION_LABELS = {
-  reset: 'Small positive reset',
-  lesstime: 'Spend less time scrolling',
-  healthier: 'Healthier normal feed',
-};
-
 const BALANCE_ROWS = [
   { key: 'calm', label: 'Calm' },
   { key: 'prosocial', label: 'Prosocial' },
@@ -77,10 +71,10 @@ const TUNE_OPTIONS = [
 ];
 
 const TUNE_MESSAGES = {
-  calm: 'Tuning toward calmer cards this session.',
-  variety: 'Tuning toward a wider mix of sources and topics.',
-  comparison: 'Tuning away from comparison-heavy signals.',
-  uplifting: 'Tuning toward more prosocial and self-love signals.',
+  calm: 'Your algorithm is gently tuning toward calmer cards this session.',
+  variety: 'Your algorithm is gently tuning toward a wider mix of sources and topics.',
+  comparison: 'Your algorithm is gently tuning away from comparison-heavy signals.',
+  uplifting: 'Your algorithm is gently tuning toward more prosocial and self-love signals.',
 };
 
 function clamp01(value) {
@@ -106,11 +100,6 @@ function sessionPace(viewedCount) {
   return 'Pause soon';
 }
 
-function intentionLabel(selectedIntention) {
-  if (!selectedIntention) return 'Healthier normal feed';
-  return INTENTION_LABELS[selectedIntention.id] || selectedIntention.title || 'Today’s intention';
-}
-
 function tuneMessages(selectedTunes, viewedCount) {
   const messages = selectedTunes
     .filter((key) => key !== 'shorter')
@@ -120,7 +109,7 @@ function tuneMessages(selectedTunes, viewedCount) {
   if (selectedTunes.includes('shorter')) {
     messages.push(viewedCount >= 3
       ? 'Want to take a cocoon break?'
-      : 'Tuning toward a shorter, lighter session.');
+      : 'Your algorithm is gently tuning toward a shorter, lighter session.');
   }
 
   return messages;
@@ -129,7 +118,6 @@ function tuneMessages(selectedTunes, viewedCount) {
 export function FeedCompassPanel({
   activeMode,
   activeCard,
-  selectedIntention,
   feedStatus,
   viewedCount,
   breakReminderCount,
@@ -150,12 +138,12 @@ export function FeedCompassPanel({
   const sessionTuneMessages = tuneMessages(selectedTunes, viewedCount);
 
   return (
-    <section className="feed-compass" aria-label="Feed Compass">
+    <section className="feed-compass" aria-label="Algorithm Compass">
       <div className="feed-compass__head">
         <div>
           <span className="feed-compass__eyebrow">
             <Compass size={13} aria-hidden="true" />
-            Feed Compass
+            Algorithm Compass
           </span>
           <h2>{mode.label}</h2>
         </div>
@@ -164,7 +152,7 @@ export function FeedCompassPanel({
             type="button"
             className="feed-compass__close"
             onClick={onClose}
-            aria-label="Close Feed Compass"
+            aria-label="Close Algorithm Compass"
             autoFocus
           >
             <X size={16} aria-hidden="true" />
@@ -174,14 +162,14 @@ export function FeedCompassPanel({
 
       <p className="feed-compass__mode-copy">{mode.description}</p>
 
-      <div className="feed-compass__section feed-compass__intention">
+      <div className="feed-compass__section feed-compass__mode">
         <div>
-          <span className="feed-compass__label">Today’s intention</span>
-          <p>{intentionLabel(selectedIntention)}</p>
+          <span className="feed-compass__label">Algorithm mode</span>
+          <p>{mode.label}</p>
         </div>
         <button type="button" onClick={onResetIntro}>
           <RefreshCw size={13} aria-hidden="true" />
-          Change intention
+          Change mode
         </button>
       </div>
 
@@ -224,7 +212,7 @@ export function FeedCompassPanel({
       </div>
 
       <div className="feed-compass__section">
-        <span className="feed-compass__label">Why this feed</span>
+        <span className="feed-compass__label">Why this algorithm</span>
         <p className="feed-compass__why">{whyText}</p>
         {activeCard?.safety_reason && (
           <p className="feed-compass__safety">{activeCard.safety_reason}</p>
@@ -252,7 +240,7 @@ export function FeedCompassPanel({
           <SlidersHorizontal size={15} aria-hidden="true" />
           <span>Quick tune</span>
         </div>
-        <div className="feed-compass__tunes" role="group" aria-label="Session feed tuning">
+        <div className="feed-compass__tunes" role="group" aria-label="Session algorithm tuning">
           {TUNE_OPTIONS.map((option) => {
             const selected = selectedTunes.includes(option.key);
             return (

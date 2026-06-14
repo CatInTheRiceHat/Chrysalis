@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Lenis from 'lenis';
 import { AnimatePresence } from 'motion/react';
 import { Navbar } from './components/Navbar';
-import { AlgorithmPage } from './components/LiveDemo';
 import { IntroScreen } from './components/IntroScreen';
 import { RebootPage } from './components/RebootPage';
 import { ReelsPage } from './components/reels/ReelsPage';
@@ -15,10 +14,10 @@ function MainPage() {
 
 function AppShell({ showIntro, setShowIntro }) {
   const { pathname } = useLocation();
-  const isReels = pathname === '/reels';
+  const isAlgorithmExperience = pathname === '/algorithm' || pathname === '/reels';
 
   useEffect(() => {
-    if (isReels) return undefined;
+    if (isAlgorithmExperience) return undefined;
     const lenis = new Lenis();
     function raf(time) {
       lenis.raf(time);
@@ -29,10 +28,10 @@ function AppShell({ showIntro, setShowIntro }) {
       cancelAnimationFrame(rafId);
       lenis.destroy();
     };
-  }, [isReels]);
+  }, [isAlgorithmExperience]);
 
   useEffect(() => {
-    if (isReels || typeof window === 'undefined' || !window.location.hash) {
+    if (isAlgorithmExperience || typeof window === 'undefined' || !window.location.hash) {
       return;
     }
     const id = window.location.hash.slice(1);
@@ -40,21 +39,21 @@ function AppShell({ showIntro, setShowIntro }) {
       document.getElementById(id)?.scrollIntoView({ behavior: 'auto' });
     }, 100);
     return () => clearTimeout(timeout);
-  }, [isReels]);
+  }, [isAlgorithmExperience]);
 
   return (
     <>
       <AnimatePresence>
-        {showIntro && !isReels && (
+        {showIntro && !isAlgorithmExperience && (
           <IntroScreen key="intro" onDone={() => setShowIntro(false)} />
         )}
       </AnimatePresence>
       <div className="min-h-screen overflow-x-hidden">
-        {!isReels && <Navbar />}
+        {!isAlgorithmExperience && <Navbar />}
         <Routes>
           <Route path="/" element={<MainPage />} />
-          <Route path="/algorithm" element={<AlgorithmPage />} />
-          <Route path="/reels" element={<ReelsPage />} />
+          <Route path="/algorithm" element={<ReelsPage />} />
+          <Route path="/reels" element={<Navigate to="/algorithm" replace />} />
         </Routes>
       </div>
     </>
@@ -63,7 +62,10 @@ function AppShell({ showIntro, setShowIntro }) {
 
 function App() {
   const [showIntro, setShowIntro] = useState(() => {
-    if (typeof window !== 'undefined' && window.location.pathname === '/reels') {
+    if (
+      typeof window !== 'undefined'
+      && ['/algorithm', '/reels'].includes(window.location.pathname)
+    ) {
       return false;
     }
     if (typeof window !== 'undefined' && window.location.hash) {

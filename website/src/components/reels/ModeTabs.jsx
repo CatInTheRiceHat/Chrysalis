@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 
 /**
- * Floating tab bar that sits over the feed and switches the active mode.
+ * Floating tab bar that sits over the Algorithm experience and switches mode.
  * Implements the WAI-ARIA tabs pattern: a tablist of role="tab" buttons with
  * roving focus and Left/Right/Home/End keyboard navigation.
  *
@@ -26,7 +26,7 @@ export function ModeTabs({ modes, activeMode, onChange }) {
   };
 
   return (
-    <div className="reels-tabs" role="tablist" aria-label="Feed modes">
+    <div className="reels-tabs" role="tablist" aria-label="Algorithm modes">
       {modes.map((mode, index) => {
         const isActive = mode.key === activeMode;
         return (

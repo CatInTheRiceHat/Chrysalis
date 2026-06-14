@@ -2,7 +2,7 @@ import { Sun, Moon } from 'lucide-react';
 
 /**
  * Accessible light/dark toggle. Controlled — pass `theme` ("light" | "dark")
- * and an `onToggle` handler. Reusable anywhere inside a [data-reels] subtree.
+ * and an `onToggle` handler. Reusable anywhere inside a [data-algorithm] subtree.
  */
 export function ThemeToggle({ theme, onToggle }) {
   const isDark = theme === 'dark';

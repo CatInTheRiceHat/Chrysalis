@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { motion as MOTION } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
-import { INTENTIONS, DEFAULT_MODE } from './reelsData';
+import { MODES, DEFAULT_MODE } from './reelsData';
 
 /**
- * First-run start screen for /reels. Asks how the user wants their feed to
- * support them today, then opens the feed on the matching mode.
+ * First-run start screen for the Algorithm experience. The user chooses one
+ * guided mode, then stays in that mode until they return here to change it.
  *
  * Props:
+ *   initialMode — optional current mode to preselect when returning here.
  *   onStart(mode) — called with the chosen mode key when the user begins.
  */
-export function OnboardingStartScreen({ onStart }) {
-  const [selectedId, setSelectedId] = useState(null);
-  const selected = INTENTIONS.find((i) => i.id === selectedId);
+export function OnboardingStartScreen({ initialMode = null, onStart }) {
+  const [selectedMode, setSelectedMode] = useState(initialMode);
+  const selected = MODES.find((mode) => mode.key === selectedMode);
 
   return (
     <MOTION.div
@@ -22,26 +23,26 @@ export function OnboardingStartScreen({ onStart }) {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="reels-onboard__head">
-        <h1 className="reels-onboard__title">Welcome to your Chrysalis feed.</h1>
+        <h1 className="reels-onboard__title">Choose your Chrysalis algorithm.</h1>
         <p className="reels-onboard__subtitle">
-          Before you scroll, choose how you want your feed to support you today.
+          Pick the mode you want the algorithm to guide you through today.
         </p>
       </div>
 
-      <div className="intention-grid" role="group" aria-label="Choose your intention">
-        {INTENTIONS.map((intention) => {
-          const isSelected = intention.id === selectedId;
+      <div className="mode-grid" role="group" aria-label="Choose your Chrysalis algorithm mode">
+        {MODES.map((mode) => {
+          const isSelected = mode.key === selectedMode;
           return (
             <button
-              key={intention.id}
+              key={mode.key}
               type="button"
-              className={`intention-card${isSelected ? ' is-selected' : ''}`}
+              className={`mode-card${isSelected ? ' is-selected' : ''}`}
               aria-pressed={isSelected}
-              onClick={() => setSelectedId(intention.id)}
+              onClick={() => setSelectedMode(mode.key)}
             >
-              <span className="intention-card__icon" aria-hidden="true">{intention.icon}</span>
-              <span className="intention-card__title">{intention.title}</span>
-              <span className="intention-card__desc">{intention.description}</span>
+              <span className="mode-card__icon" aria-hidden="true">{mode.icon}</span>
+              <span className="mode-card__title">{mode.label}</span>
+              <span className="mode-card__desc">{mode.description}</span>
             </button>
           );
         })}
@@ -53,15 +54,15 @@ export function OnboardingStartScreen({ onStart }) {
           className="onboard-cta"
           disabled={!selected}
           aria-disabled={!selected}
-          onClick={() => selected && onStart(selected.mode, selected.id)}
+          onClick={() => selected && onStart(selected.key)}
         >
-          Start My Feed
+          Start My Algorithm
           <ArrowRight size={17} aria-hidden="true" />
         </button>
         <button
           type="button"
           className="onboard-skip"
-          onClick={() => onStart(DEFAULT_MODE, null)}
+          onClick={() => onStart(DEFAULT_MODE)}
         >
           Skip for now
         </button>

@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { Leaf, ShieldAlert } from 'lucide-react';
 
 /**
- * Reel text block. On desktop this becomes the left-side editorial info panel;
+ * Algorithm card text block. On desktop this becomes the left-side editorial info panel;
  * on mobile it stays as the compact bottom overlay with a local more/less
  * description toggle.
  */

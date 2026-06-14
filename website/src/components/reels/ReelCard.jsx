@@ -32,7 +32,7 @@ function buildSignalHint(reel) {
 }
 
 /**
- * A single full-viewport reel. Two kinds of card:
+ * A single full-viewport Algorithm card. Two kinds of card:
  *  - real video (has `youtube_id`): thumbnail poster + tap-to-play YouTube embed,
  *    with a "curated by Chrysalis" badge and ranking/safety/concern reasons.
  *  - synthetic card (has `image`): the built-in wellbeing/pause cards.

@@ -5,15 +5,18 @@ import { ArrowLeft, ChevronDown, Compass, RotateCcw } from 'lucide-react';
 import { ReelCard } from './ReelCard';
 import { FeedCompassPanel } from './FeedCompassPanel';
 import { ThemeToggle } from './ThemeToggle';
-import { ModeTabs } from './ModeTabs';
 import { OnboardingStartScreen } from './OnboardingStartScreen';
-import { MODES, reelsByMode, DEFAULT_MODE, INTENTIONS } from './reelsData';
+import { MODES, reelsByMode, DEFAULT_MODE, LEGACY_INTENTION_MODES } from './reelsData';
 import '../../reels.css';
 
-const THEME_KEY = 'chrysalis-reels-theme';
-const ONBOARDED_KEY = 'chrysalis-reels-onboarded';
-const MODE_KEY = 'chrysalis-reels-mode';
-const INTENTION_KEY = 'chrysalis-reels-intention';
+const THEME_KEY = 'chrysalis-algorithm-theme';
+const ONBOARDED_KEY = 'chrysalis-algorithm-onboarded';
+const MODE_KEY = 'chrysalis-algorithm-mode';
+const INTENTION_KEY = 'chrysalis-algorithm-intention';
+const LEGACY_THEME_KEY = 'chrysalis-reels-theme';
+const LEGACY_ONBOARDED_KEY = 'chrysalis-reels-onboarded';
+const LEGACY_MODE_KEY = 'chrysalis-reels-mode';
+const LEGACY_INTENTION_KEY = 'chrysalis-reels-intention';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '';
 
@@ -60,30 +63,31 @@ function mergeForMode(mode, real, synthetic) {
   return real.length ? real : synthetic;
 }
 
+function storedValue(key, legacyKey) {
+  if (typeof window === 'undefined') return null;
+  const current = window.localStorage.getItem(key);
+  return current ?? window.localStorage.getItem(legacyKey);
+}
+
 function initialTheme() {
   if (typeof window === 'undefined') return 'light';
-  const saved = window.localStorage.getItem(THEME_KEY);
+  const saved = storedValue(THEME_KEY, LEGACY_THEME_KEY);
   if (saved === 'light' || saved === 'dark') return saved;
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 function initialMode() {
   if (typeof window === 'undefined') return DEFAULT_MODE;
-  const saved = window.localStorage.getItem(MODE_KEY);
-  return saved && reelsByMode[saved] ? saved : DEFAULT_MODE;
+  const saved = storedValue(MODE_KEY, LEGACY_MODE_KEY);
+  if (saved && reelsByMode[saved]) return saved;
+  const legacyIntention = storedValue(INTENTION_KEY, LEGACY_INTENTION_KEY);
+  const migratedMode = LEGACY_INTENTION_MODES[legacyIntention];
+  return migratedMode && reelsByMode[migratedMode] ? migratedMode : DEFAULT_MODE;
 }
 
 function initialOnboarded() {
   if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem(ONBOARDED_KEY) === '1';
-}
-
-function initialIntentionId(mode) {
-  if (typeof window !== 'undefined') {
-    const saved = window.localStorage.getItem(INTENTION_KEY);
-    if (INTENTIONS.some((intention) => intention.id === saved)) return saved;
-  }
-  return INTENTIONS.find((intention) => intention.mode === mode)?.id ?? null;
+  return storedValue(ONBOARDED_KEY, LEGACY_ONBOARDED_KEY) === '1';
 }
 
 function cardSessionKey(mode, index, reel) {
@@ -159,7 +163,7 @@ export function ReelsPage() {
   const [theme, setTheme] = useState(initialTheme);
   const [onboarded, setOnboarded] = useState(initialOnboarded);
   const [mode, setMode] = useState(initialMode);
-  const [selectedIntentionId, setSelectedIntentionId] = useState(() => initialIntentionId(initialMode()));
+  const [modeSelectionInitial, setModeSelectionInitial] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [viewedCards, setViewedCards] = useState(() => new Set());
   const [breakReminderCards, setBreakReminderCards] = useState(() => new Set());
@@ -167,7 +171,7 @@ export function ReelsPage() {
   const [compassOpen, setCompassOpen] = useState(false);
   const [toast, setToast] = useState(null);
   // Feed for the active mode, tagged with the mode it belongs to so a stale
-  // response never renders under the wrong tab.
+  // response never renders under the wrong guided mode.
   const [feed, setFeed] = useState({ mode: null, cards: null });
 
   // Fetch the labeled/ranked feed for the active mode; fall back to synthetic
@@ -190,7 +194,7 @@ export function ReelsPage() {
         setFeed({ mode, cards: mergeForMode(mode, real, synthetic) });
       } catch (error) {
         if (import.meta.env.DEV) {
-          console.warn('[Chrysalis reels] Falling back to sample cards:', error);
+          console.warn('[Chrysalis algorithm] Falling back to sample cards:', error);
         }
         if (!cancelled) setFeed({ mode, cards: synthetic });
       }
@@ -212,14 +216,6 @@ export function ReelsPage() {
   useEffect(() => {
     window.localStorage.setItem(MODE_KEY, mode);
   }, [mode]);
-
-  useEffect(() => {
-    if (selectedIntentionId) {
-      window.localStorage.setItem(INTENTION_KEY, selectedIntentionId);
-    } else {
-      window.localStorage.removeItem(INTENTION_KEY);
-    }
-  }, [selectedIntentionId]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -267,15 +263,10 @@ export function ReelsPage() {
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
-  const changeMode = (nextMode) => {
+  const startFeed = (chosenMode) => {
+    const nextMode = reelsByMode[chosenMode] ? chosenMode : DEFAULT_MODE;
     setMode(nextMode);
-    setActiveIndex(0);
-    setCompassOpen(false);
-  };
-
-  const startFeed = (chosenMode, intentionId) => {
-    setMode(reelsByMode[chosenMode] ? chosenMode : DEFAULT_MODE);
-    setSelectedIntentionId(intentionId);
+    setModeSelectionInitial(nextMode);
     setActiveIndex(0);
     setCompassOpen(false);
     setOnboarded(true);
@@ -290,12 +281,13 @@ export function ReelsPage() {
   );
   const activeCard = tunedCards[Math.min(activeIndex, Math.max(tunedCards.length - 1, 0))]
     ?? tunedCards[0];
-  const selectedIntention = INTENTIONS.find((intention) => intention.id === selectedIntentionId)
-    || INTENTIONS.find((intention) => intention.mode === mode);
+  const currentMode = MODES.find((item) => item.key === mode)
+    || MODES.find((item) => item.key === DEFAULT_MODE);
   const currentFeedStatus = feedStatus(tunedCards);
 
   const resetIntro = () => {
     setCompassOpen(false);
+    setModeSelectionInitial(mode);
     setOnboarded(false);
   };
 
@@ -347,7 +339,6 @@ export function ReelsPage() {
     <FeedCompassPanel
       activeMode={mode}
       activeCard={activeCard}
-      selectedIntention={selectedIntention}
       feedStatus={currentFeedStatus}
       viewedCount={viewedCards.size}
       breakReminderCount={breakReminderCards.size}
@@ -358,7 +349,7 @@ export function ReelsPage() {
   );
 
   return (
-    <main className="reels-shell" data-reels data-theme={theme}>
+    <main className="reels-shell" data-algorithm data-theme={theme}>
       <div className={`reels-controls${onboarded ? '' : ' reels-controls--simple'}`}>
         <Link to="/" className="reel-back" aria-label="Back to Chrysalis home">
           <ArrowLeft size={17} aria-hidden="true" />
@@ -366,7 +357,13 @@ export function ReelsPage() {
         </Link>
 
         {onboarded ? (
-          <ModeTabs modes={MODES} activeMode={mode} onChange={changeMode} />
+          <div className="algorithm-mode-pill">
+            <span className="algorithm-mode-pill__prefix">Current algorithm mode:</span>
+            <span className="algorithm-mode-pill__icon" aria-hidden="true">
+              {currentMode?.icon ?? '🌸'}
+            </span>
+            <span>{currentMode?.label ?? 'Flutter Feed'}</span>
+          </div>
         ) : (
           <span className="reels-controls__spacer" aria-hidden="true" />
         )}
@@ -377,11 +374,11 @@ export function ReelsPage() {
               type="button"
               className="reels-fab reels-fab--wide"
               onClick={resetIntro}
-              aria-label="Change your intention and retake onboarding"
-              title="Change intention"
+              aria-label="Change mode and return to mode selection"
+              title="Change mode"
             >
               <RotateCcw size={16} aria-hidden="true" />
-              <span className="reels-fab__text">Change intention</span>
+              <span className="reels-fab__text">Change mode</span>
             </button>
           )}
           {onboarded && (
@@ -389,10 +386,10 @@ export function ReelsPage() {
               type="button"
               className="reels-fab reels-compass-trigger"
               onClick={() => setCompassOpen(true)}
-              aria-label="Open Feed Compass"
+              aria-label="Open Algorithm Compass"
               aria-haspopup="dialog"
               aria-expanded={compassOpen}
-              title="Feed Compass"
+              title="Algorithm Compass"
             >
               <Compass size={18} aria-hidden="true" />
             </button>
@@ -403,7 +400,11 @@ export function ReelsPage() {
 
       <AnimatePresence mode="wait">
         {!onboarded ? (
-          <OnboardingStartScreen key="onboard" onStart={startFeed} />
+          <OnboardingStartScreen
+            key="onboard"
+            initialMode={modeSelectionInitial}
+            onStart={startFeed}
+          />
         ) : (
           <MOTION.div
             key="feed"
@@ -444,7 +445,7 @@ export function ReelsPage() {
                   className="feed-compass-sheet"
                   role="dialog"
                   aria-modal="true"
-                  aria-label="Feed Compass"
+                  aria-label="Algorithm Compass"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -461,7 +462,6 @@ export function ReelsPage() {
                     <FeedCompassPanel
                       activeMode={mode}
                       activeCard={activeCard}
-                      selectedIntention={selectedIntention}
                       feedStatus={currentFeedStatus}
                       viewedCount={viewedCards.size}
                       breakReminderCount={breakReminderCards.size}
