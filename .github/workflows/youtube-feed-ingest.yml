@@ -2,7 +2,8 @@ name: YouTube Feed Ingest
 
 on:
   schedule:
-    - cron: "17 14 * * *"
+    - cron: "7 6,18 * * *"
+      timezone: "America/Los_Angeles"
   workflow_dispatch:
 
 jobs:
