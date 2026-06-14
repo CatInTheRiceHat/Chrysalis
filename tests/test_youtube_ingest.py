@@ -16,12 +16,18 @@ from integrations.youtube_ingest import (
 NOW = datetime(2026, 6, 14, 12, 0, tzinfo=timezone.utc)
 
 
-def _video(video_id: str, title: str, duration: str = "PT1M20S", views: str = "12000") -> dict:
+def _video(
+    video_id: str,
+    title: str,
+    duration: str = "PT1M20S",
+    views: str = "12000",
+    description: str | None = None,
+) -> dict:
     return {
         "id": video_id,
         "snippet": {
             "title": title,
-            "description": (
+            "description": description or (
                 "Short student wellbeing tips for study focus, digital wellness, "
                 "confidence, and healthy phone habits."
             ),
@@ -56,7 +62,15 @@ def _fake_youtube(endpoint: str, params: dict) -> dict:
     if endpoint == "videos":
         ids = str(params["id"]).split(",")
         all_items = {
-            "calm1": _video("calm1", "Student focus tips for a calm study reset"),
+            "calm1": _video(
+                "calm1",
+                "Student focus tips for a calm study reset",
+                description=(
+                    "Short student wellbeing tips for study focus, digital wellness, "
+                    "confidence, and healthy phone habits. Subscribe for more resets! "
+                    "Links below: https://example.com #study #focus #productivity #school"
+                ),
+            ),
             "focus2": _video("focus2", "AI literacy for students in 60 seconds", "PT58S", "22000"),
             "bad3": _video("bad3", "Political drama exposed and destroyed", "PT45S", "90000"),
             "long4": _video("long4", "Student focus tips full workshop", "PT6M", "5000"),
@@ -103,6 +117,10 @@ def test_youtube_ingest_stores_filtered_real_videos_without_duplicate_inserts(tm
     assert {row["video_id"] for row in rows} == {"focus2", "calm1"}
     assert {row["source_category"] for row in rows} == {"study/productivity"}
     assert {row["source_query"] for row in rows} == {"student focus tips"}
+    raw_calm = next(row for row in rows if row["video_id"] == "calm1")
+    assert "Subscribe for more resets" in raw_calm["description"]
+    assert "Subscribe" not in raw_calm["short_description"]
+    assert "https://example.com" not in raw_calm["short_description"]
     assert rows[0]["ingest_score"] >= rows[1]["ingest_score"]
     assert all(row["embed_url"].startswith("https://www.youtube-nocookie.com/embed/") for row in rows)
     assert all(row["thumbnail_url"].endswith("/hqdefault.jpg") for row in rows)
@@ -111,6 +129,10 @@ def test_youtube_ingest_stores_filtered_real_videos_without_duplicate_inserts(tm
     assert {item["youtube_id"] for item in feed} == {"calm1", "focus2"}
     assert all(item["embed_url"].startswith("https://www.youtube-nocookie.com/embed/") for item in feed)
     assert all(item["source_category"] == "study/productivity" for item in feed)
+    calm_card = next(item for item in feed if item["youtube_id"] == "calm1")
+    assert calm_card["description"] == raw_calm["description"]
+    assert calm_card["short_description"] == raw_calm["short_description"]
+    assert calm_card["displayDescription"] == raw_calm["short_description"]
 
     mode_sets = {
         mode: {item["youtube_id"] for item in build_feed(rows, mode, k=10)}

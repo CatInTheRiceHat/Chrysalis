@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 
+from ..feed_captions import build_short_description
 from ..labeling.schema import LabelSet, SCORING_VERSION
 from ..labeling.metadata_scoring import (
     score_metadata,
@@ -60,7 +61,7 @@ def build_feed(
     Returns a list of API-ready items for `mode`:
       { youtube_id, title, source, description, thumbnail, embed_url, watch_url,
         duration_seconds, tags, channel_id, category_id, source_category,
-        source_query,
+        source_query, short_description, display_description,
         chrysalis_scores, ranking_reason, safety_reason, concern_reason, mode_fit,
         public_signal, source_safety_status, public_signal_effect,
         public_signal_reason }
@@ -101,11 +102,21 @@ def build_feed(
         reasons = build_reasons(labels, mode)
         vid = row.get("video_id") or row.get("youtube_id") or ""
         tags = _normalize_tags(row.get("tags"))[:_MAX_API_TAGS]
+        raw_description = row.get("description") or ""
+        short_description = (
+            row.get("short_description")
+            or row.get("display_description")
+            or build_short_description(raw_description)
+        )
         items.append({
             "youtube_id": vid,
             "title": row.get("title") or "",
             "source": row.get("channel_title") or row.get("channel") or "Chrysalis",
-            "description": row.get("description") or "",
+            "description": raw_description,
+            "short_description": short_description,
+            "shortDescription": short_description,
+            "display_description": short_description,
+            "displayDescription": short_description,
             "thumbnail": (
                 row.get("thumbnail_url") or row.get("thumbnail")
                 or (_THUMB.format(vid=vid) if vid else None)

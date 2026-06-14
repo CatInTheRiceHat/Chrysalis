@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Leaf, ShieldAlert } from 'lucide-react';
 
 /**
@@ -18,9 +18,35 @@ export function ReelCaption({
   isLiveVideo = false,
 }) {
   const descriptionId = useId();
+  const descriptionRef = useRef(null);
   const [expanded, setExpanded] = useState(false);
+  const [hasOverflow, setHasOverflow] = useState(false);
   const showReviewSignal = Boolean(publicSignalEffect && publicSignalEffect !== 'none');
-  const canExpand = placement === 'mobile' && Boolean(description && description.length > 96);
+  const canExpand = placement === 'mobile'
+    && Boolean(description)
+    && (hasOverflow || description.length > 96);
+
+  useEffect(() => {
+    if (placement !== 'mobile' || !description || !descriptionRef.current) return undefined;
+
+    let frame = 0;
+    const measure = () => {
+      const node = descriptionRef.current;
+      if (!node) return;
+      setHasOverflow(node.scrollHeight > node.clientHeight + 1);
+    };
+    const scheduleMeasure = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(measure);
+    };
+
+    scheduleMeasure();
+    window.addEventListener('resize', scheduleMeasure);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', scheduleMeasure);
+    };
+  }, [description, placement]);
 
   return (
     <div className={`reel-caption reel-caption--${placement}${expanded ? ' is-expanded' : ''}`}>
@@ -47,7 +73,7 @@ export function ReelCaption({
       <h2 className="reel-caption__title">{title}</h2>
       {source && <span className="reel-caption__source">{source}</span>}
       {description && (
-        <p className="reel-caption__desc" id={descriptionId}>
+        <p className="reel-caption__desc" id={descriptionId} ref={descriptionRef}>
           {description}
         </p>
       )}
@@ -59,7 +85,7 @@ export function ReelCaption({
           aria-controls={descriptionId}
           onClick={() => setExpanded((value) => !value)}
         >
-          {expanded ? 'less' : 'more'}
+          {expanded ? 'less' : '...more'}
         </button>
       )}
       {placement === 'desktop' && signalHint && (

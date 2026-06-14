@@ -22,6 +22,7 @@ import urllib.request
 from typing import Callable, Iterable, NamedTuple
 
 from core.database import resolve_database_path
+from core.feed_captions import build_short_description
 from core.labeling.explain import build_reasons
 from core.labeling.metadata_scoring import parse_duration_seconds, score_metadata
 from core.labeling.schema import SCORING_VERSION
@@ -101,6 +102,7 @@ class FeedVideoCandidate:
     channel_title: str
     channel_id: str
     description: str
+    short_description: str
     thumbnail_url: str
     embed_url: str
     watch_url: str
@@ -149,6 +151,7 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     channel_title       TEXT,
     channel_id          TEXT,
     description         TEXT,
+    short_description   TEXT,
     thumbnail_url       TEXT,
     embed_url           TEXT,
     watch_url           TEXT,
@@ -183,6 +186,7 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     channel_title       TEXT,
     channel_id          TEXT,
     description         TEXT,
+    short_description   TEXT,
     thumbnail_url       TEXT,
     embed_url           TEXT,
     watch_url           TEXT,
@@ -289,6 +293,7 @@ def _ensure_sqlite_feed_video_columns(conn: sqlite3.Connection) -> None:
     for column, column_type in {
         "source_category": "TEXT",
         "source_query": "TEXT",
+        "short_description": "TEXT",
     }.items():
         if column not in existing:
             conn.execute(f"ALTER TABLE feed_videos ADD COLUMN {column} {column_type}")
@@ -299,6 +304,7 @@ def ensure_postgres_feed_videos_table(conn) -> None:
     cur.execute(_CREATE_FEED_VIDEOS_POSTGRES)
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_category TEXT")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_query TEXT")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS short_description TEXT")
     cur.execute(
         "CREATE INDEX IF NOT EXISTS idx_feed_videos_status_score "
         "ON feed_videos (status, score DESC, published_at DESC)"
@@ -557,12 +563,14 @@ def _active_feed_video_rows_sql(
     *,
     include_source_metadata: bool,
 ) -> str:
-    source_metadata_columns = (
+    optional_columns = (
         "source_category,\n"
-        "            source_query,"
+        "            source_query,\n"
+        "            short_description,"
         if include_source_metadata
         else "topic AS source_category,\n"
-        "            NULL AS source_query,"
+        "            NULL AS source_query,\n"
+        "            NULL AS short_description,"
     )
     return f"""
         SELECT
@@ -575,7 +583,7 @@ def _active_feed_video_rows_sql(
             category_id,
             tags,
             duration_seconds,
-            {source_metadata_columns}
+            {optional_columns}
             thumbnail_url,
             embed_url,
             watch_url,
@@ -595,7 +603,11 @@ def _active_feed_video_rows_sql(
 
 
 def _missing_source_metadata_column(message: str) -> bool:
-    return "source_category" in message or "source_query" in message
+    return (
+        "source_category" in message
+        or "source_query" in message
+        or "short_description" in message
+    )
 
 
 def merge_primary_rows(primary: list[dict], fallback: list[dict]) -> list[dict]:
@@ -716,6 +728,7 @@ def _candidate_from_video_item(
         channel_title=str(snippet.get("channelTitle") or ""),
         channel_id=str(snippet.get("channelId") or ""),
         description=description,
+        short_description=build_short_description(description),
         thumbnail_url=_best_thumbnail(snippet),
         embed_url=f"https://www.youtube-nocookie.com/embed/{video_id}",
         watch_url=f"https://www.youtube.com/watch?v={video_id}",
@@ -746,19 +759,20 @@ def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandi
         """
         INSERT INTO feed_videos (
             id, source, youtube_video_id, title, channel_title, channel_id,
-            description, thumbnail_url, embed_url, watch_url, published_at,
+            description, short_description, thumbnail_url, embed_url, watch_url, published_at,
             duration_seconds, view_count, tags, category_id, topic,
             source_category, source_query, score, created_at, updated_at, status,
             chrysalis_scores, ranking_reason, safety_reason, concern_reason,
             label_confidence, scored_at, scoring_version
         ) VALUES (
-            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
         )
         ON CONFLICT(youtube_video_id) DO UPDATE SET
             title = excluded.title,
             channel_title = excluded.channel_title,
             channel_id = excluded.channel_id,
             description = excluded.description,
+            short_description = excluded.short_description,
             thumbnail_url = excluded.thumbnail_url,
             embed_url = excluded.embed_url,
             watch_url = excluded.watch_url,
@@ -791,20 +805,21 @@ def _upsert_postgres_candidate(cur, candidate: FeedVideoCandidate) -> None:
         """
         INSERT INTO feed_videos (
             id, source, youtube_video_id, title, channel_title, channel_id,
-            description, thumbnail_url, embed_url, watch_url, published_at,
+            description, short_description, thumbnail_url, embed_url, watch_url, published_at,
             duration_seconds, view_count, tags, category_id, topic,
             source_category, source_query, score, created_at, updated_at, status,
             chrysalis_scores, ranking_reason, safety_reason, concern_reason,
             label_confidence, scored_at, scoring_version
         ) VALUES (
-            %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,
-            %s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s
+            %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,
+            %s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s
         )
         ON CONFLICT(youtube_video_id) DO UPDATE SET
             title = excluded.title,
             channel_title = excluded.channel_title,
             channel_id = excluded.channel_id,
             description = excluded.description,
+            short_description = excluded.short_description,
             thumbnail_url = excluded.thumbnail_url,
             embed_url = excluded.embed_url,
             watch_url = excluded.watch_url,
@@ -840,6 +855,7 @@ def _candidate_sqlite_values(candidate: FeedVideoCandidate) -> tuple:
         candidate.channel_title,
         candidate.channel_id,
         candidate.description,
+        candidate.short_description,
         candidate.thumbnail_url,
         candidate.embed_url,
         candidate.watch_url,

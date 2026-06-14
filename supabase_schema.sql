@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     channel_title       TEXT,
     channel_id          TEXT,
     description         TEXT,
+    short_description   TEXT,
     thumbnail_url       TEXT,
     embed_url           TEXT,
     watch_url           TEXT,

@@ -329,6 +329,7 @@ def test_missing_metadata_does_not_crash():
 def test_build_feed_includes_new_fields():
     row = dict(
         CALM,
+        short_description="A compact calm caption for the card.",
         tags=["calm", "gratitude"],
         duration_seconds=300,
         thumbnail_url="https://example.com/t.jpg",
@@ -338,13 +339,41 @@ def test_build_feed_includes_new_fields():
     feed = build_feed([row], "daily-dew", k=12)
     assert feed, "calm video should survive Daily Dew"
     item = feed[0]
-    for key in ("duration_seconds", "tags", "channel_id", "category_id", "thumbnail"):
+    for key in (
+        "duration_seconds",
+        "tags",
+        "channel_id",
+        "category_id",
+        "thumbnail",
+        "short_description",
+        "shortDescription",
+        "display_description",
+        "displayDescription",
+    ):
         assert key in item
     assert item["duration_seconds"] == 300
     assert item["tags"] == ["calm", "gratitude"]
     assert item["channel_id"] == "UC123"
     assert item["category_id"] == "10"
     assert item["thumbnail"] == "https://example.com/t.jpg"
+    assert item["description"] == CALM["description"]
+    assert item["short_description"] == "A compact calm caption for the card."
+    assert item["displayDescription"] == "A compact calm caption for the card."
+
+
+def test_build_feed_generates_short_description_fallback_for_old_rows():
+    raw = (
+        "A gentle study reset with a calm timer and one reflection question for "
+        "the afternoon. Subscribe for more study resets. https://example.com"
+    )
+    row = dict(CALM, description=raw)
+    feed = build_feed([row], "flutter-feed", k=12)
+    assert feed
+    item = feed[0]
+    assert item["description"] == raw
+    assert "Subscribe" not in item["short_description"]
+    assert "https://example.com" not in item["short_description"]
+    assert item["display_description"] == item["short_description"]
 
 
 def test_build_feed_old_rows_without_new_fields():

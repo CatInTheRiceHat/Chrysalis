@@ -23,12 +23,21 @@ const TARGET_CARD_COUNT = 12;
 
 /** Map a backend /api/feed item into the card shape ReelCard expects. */
 function apiItemToCard(item) {
+  const displayDescription = item.display_description
+    || item.displayDescription
+    || item.short_description
+    || item.shortDescription
+    || item.description;
+
   return {
     id: item.youtube_id,
     youtube_id: item.youtube_id,
     title: item.title,
     source: item.source,
-    description: item.description,
+    description: displayDescription,
+    raw_description: item.description,
+    short_description: item.short_description || item.shortDescription || displayDescription,
+    display_description: item.display_description || item.displayDescription || displayDescription,
     thumbnail: item.thumbnail,
     embed_url: item.embed_url,
     watch_url: item.watch_url,
