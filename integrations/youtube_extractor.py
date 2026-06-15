@@ -59,6 +59,7 @@ if str(ROOT) not in sys.path:
 from core.database import resolve_database_path
 # Shared, safe ISO-8601 → seconds parser (also used by the scorer + Postgres cron).
 from core.labeling.metadata_scoring import parse_duration_seconds
+from core.preferences import normalize_language_code, normalize_region_code
 
 # Load .env if present (same pattern as youtube_service.py)
 _env_path = ROOT / ".env"
@@ -472,8 +473,17 @@ def _best_thumbnail(snippet: dict) -> str:
     return ""
 
 
-def _fetch_ids_by_topic(topic: str, max_results: int = 15) -> list[str]:
-    """Fetch most-popular video IDs for a given topic category."""
+def _fetch_ids_by_topic(
+    topic: str,
+    max_results: int = 15,
+    relevance_language: str = "en",
+    region_code: str = "US",
+) -> list[str]:
+    """Fetch most-popular video IDs for a given topic category.
+
+    ``region_code`` targets the regional chart. ``relevance_language`` is used
+    as ``hl`` so returned metadata can be localized when YouTube has it.
+    """
     if not YOUTUBE_API_KEY:
         print(f"[extractor] No YOUTUBE_API_KEY — cannot fetch IDs for '{topic}'")
         return []
@@ -483,7 +493,8 @@ def _fetch_ids_by_topic(topic: str, max_results: int = 15) -> list[str]:
         "part": "id",
         "chart": "mostPopular",
         "videoCategoryId": cat_id,
-        "regionCode": "US",
+        "hl": normalize_language_code(relevance_language),
+        "regionCode": normalize_region_code(region_code),
         "maxResults": str(max_results),
     })
 

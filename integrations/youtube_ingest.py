@@ -32,6 +32,7 @@ from core.feed_integrity import score_feed_integrity
 from core.labeling.explain import build_reasons
 from core.labeling.metadata_scoring import parse_duration_seconds, score_metadata
 from core.labeling.schema import SCORING_VERSION
+from core.preferences import normalize_language_code, normalize_region_code
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = resolve_database_path()
@@ -376,6 +377,8 @@ def ingest_youtube_videos_sqlite(
     queries: Iterable[str | SourceQuerySpec] | None = None,
     max_results_per_query: int = 10,
     days_back: int = 7,
+    relevance_language: str = "en",
+    region_code: str = "US",
     request_json: RequestJson | None = None,
     now: datetime | None = None,
 ) -> IngestResult:
@@ -386,6 +389,8 @@ def ingest_youtube_videos_sqlite(
         queries=source_specs,
         max_results_per_query=max_results_per_query,
         days_back=days_back,
+        relevance_language=relevance_language,
+        region_code=region_code,
         request_json=request_json,
         now=now,
     )
@@ -413,6 +418,8 @@ def ingest_youtube_videos_postgres(
     queries: Iterable[str | SourceQuerySpec] | None = None,
     max_results_per_query: int = 10,
     days_back: int = 7,
+    relevance_language: str = "en",
+    region_code: str = "US",
     request_json: RequestJson | None = None,
     now: datetime | None = None,
 ) -> IngestResult:
@@ -423,6 +430,8 @@ def ingest_youtube_videos_postgres(
         queries=source_specs,
         max_results_per_query=max_results_per_query,
         days_back=days_back,
+        relevance_language=relevance_language,
+        region_code=region_code,
         request_json=request_json,
         now=now,
     )
@@ -445,6 +454,8 @@ def fetch_youtube_candidates(
     queries: Iterable[str | SourceQuerySpec] | None = None,
     max_results_per_query: int = 10,
     days_back: int = 7,
+    relevance_language: str = "en",
+    region_code: str = "US",
     request_json: RequestJson | None = None,
     now: datetime | None = None,
 ) -> tuple[list[FeedVideoCandidate], int]:
@@ -454,6 +465,8 @@ def fetch_youtube_candidates(
 
     max_results_per_query = max(1, min(int(max_results_per_query), 25))
     days_back = max(2, min(int(days_back), 7))
+    relevance_language = normalize_language_code(relevance_language)
+    region_code = normalize_region_code(region_code)
     source_specs = _coerce_source_query_specs(queries)
     now_utc = now or datetime.now(timezone.utc)
     published_after = (now_utc - timedelta(days=days_back)).replace(microsecond=0)
@@ -474,8 +487,8 @@ def fetch_youtube_candidates(
             "videoDuration": "short",
             "videoEmbeddable": "true",
             "safeSearch": "strict",
-            "relevanceLanguage": "en",
-            "regionCode": "US",
+            "relevanceLanguage": relevance_language,
+            "regionCode": region_code,
             "q": source_spec.source_query,
         }) or {}
         for item in data.get("items", []):

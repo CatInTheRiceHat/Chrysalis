@@ -11,6 +11,8 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+from core.preferences import normalize_language_code, normalize_region_code
+
 # Load .env file manually (zero dependencies)
 _env_path = Path(__file__).parent.parent / ".env"
 if _env_path.exists():
@@ -41,7 +43,7 @@ FALLBACK_IDS = {topic: _FALLBACK_IDS for topic in (
     "entertainment", "education", "lifestyle", "news", "gaming", "music", "sports"
 )}
 
-# In-memory cache: { topic: { "ids": [...], "fetched_at": timestamp } }
+# In-memory cache: { (topic, language, region): { "ids": [...], "fetched_at": timestamp } }
 _cache = {}
 CACHE_TTL_SECONDS = 4 * 60 * 60  # 4 hours
 
@@ -61,19 +63,30 @@ def _api_request(endpoint: str, params: dict) -> dict | None:
         return None
 
 
-def fetch_videos_by_topic(topic: str, max_results: int = 12) -> list[str]:
+def fetch_videos_by_topic(
+    topic: str,
+    max_results: int = 12,
+    relevance_language: str = "en",
+    region_code: str = "US",
+) -> list[str]:
     """
     Fetch real YouTube video IDs for a given Chrysalis topic.
     Uses mostPopular chart filtered by category (costs 1 quota unit).
-    Results are cached for CACHE_TTL_SECONDS.
-    
+    Results are cached for CACHE_TTL_SECONDS, keyed by topic + language + region.
+
+    ``region_code`` targets the regional chart. ``relevance_language`` is used
+    as ``hl`` so returned metadata can be localized when YouTube has it.
+
     Returns a list of video ID strings.
     """
     topic = topic.lower()
-    
+    relevance_language = normalize_language_code(relevance_language)
+    region_code = normalize_region_code(region_code)
+    cache_key = (topic, relevance_language, region_code)
+
     # Check cache
-    if topic in _cache:
-        entry = _cache[topic]
+    if cache_key in _cache:
+        entry = _cache[cache_key]
         age = time.time() - entry["fetched_at"]
         if age < CACHE_TTL_SECONDS and entry["ids"]:
             return entry["ids"]
@@ -89,18 +102,19 @@ def fetch_videos_by_topic(topic: str, max_results: int = 12) -> list[str]:
         "part": "id,snippet",
         "chart": "mostPopular",
         "videoCategoryId": category_id,
-        "regionCode": "US",
+        "hl": relevance_language,
+        "regionCode": region_code,
         "maxResults": str(max_results),
     })
 
     if data and "items" in data:
         ids = [item["id"] for item in data["items"]]
         # Cache the results
-        _cache[topic] = {
+        _cache[cache_key] = {
             "ids": ids,
             "fetched_at": time.time(),
         }
-        print(f"[youtube_service] Fetched {len(ids)} videos for '{topic}' (category {category_id})")
+        print(f"[youtube_service] Fetched {len(ids)} videos for '{topic}' (category {category_id}, lang {relevance_language}, region {region_code})")
         return ids
 
     # API failed — use fallbacks
@@ -127,17 +141,22 @@ def get_youtube_id_for_video(topic: str, seed: str) -> str:
 
 
 def get_all_topics_cache_status() -> dict:
-    """Return info about what's currently cached (for debugging)."""
-    status = {}
-    for topic in TOPIC_TO_CATEGORY_ID:
-        if topic in _cache:
-            entry = _cache[topic]
-            age = time.time() - entry["fetched_at"]
-            status[topic] = {
-                "count": len(entry["ids"]),
-                "age_minutes": round(age / 60, 1),
-                "fresh": age < CACHE_TTL_SECONDS,
-            }
-        else:
-            status[topic] = {"count": 0, "age_minutes": None, "fresh": False}
+    """Return info about what's currently cached (for debugging).
+
+    Default en/US entries keep the old topic-only shape; other locale entries
+    are surfaced as "topic@lang/region" so the same topic can appear per locale.
+    """
+    status = {
+        topic: {"count": 0, "age_minutes": None, "fresh": False}
+        for topic in TOPIC_TO_CATEGORY_ID
+    }
+    for cache_key, entry in _cache.items():
+        topic, language, region = cache_key
+        age = time.time() - entry["fetched_at"]
+        label = topic if (language, region) == ("en", "US") else f"{topic}@{language}/{region}"
+        status[label] = {
+            "count": len(entry["ids"]),
+            "age_minutes": round(age / 60, 1),
+            "fresh": age < CACHE_TTL_SECONDS,
+        }
     return status

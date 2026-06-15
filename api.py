@@ -31,6 +31,14 @@ from integrations.youtube_ingest import (
     load_active_feed_video_rows_sqlite,
     merge_primary_rows,
 )
+from core.preferences import (
+    DEFAULT_LANGUAGE,
+    DEFAULT_REGION,
+    default_preferences,
+    ensure_sqlite_preferences_table,
+    get_preferences,
+    upsert_preferences,
+)
 from migration_scheduler import create_scheduler
 from core.cocoon import (
     CocoonProfile,
@@ -58,6 +66,27 @@ def _require_feed_ingest_secret(
         )
     if header_secret != expected and query_secret != expected:
         raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+def _load_content_preferences(session_id: str | None, user_id: str | None) -> dict:
+    """Load saved language/region preferences (English + US defaults if none).
+
+    Preference lookup should never block the feed: if the local DB is missing or
+    locked, callers still get safe defaults.
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+    except Exception:
+        return default_preferences(user_id=user_id, session_id=session_id)
+    try:
+        ensure_sqlite_preferences_table(conn)
+        return get_preferences(
+            conn, backend="sqlite", user_id=user_id, session_id=session_id
+        )
+    except Exception:
+        return default_preferences(user_id=user_id, session_id=session_id)
+    finally:
+        conn.close()
 
 
 @asynccontextmanager
@@ -190,10 +219,30 @@ def run_local(request: RunLocalRequest):
     }
 
 @app.get("/api/youtube/videos/{topic}")
-def youtube_videos(topic: str, max_results: int = 12):
-    """Standalone endpoint to fetch live YouTube video IDs by topic."""
-    ids = fetch_videos_by_topic(topic, max_results=max_results)
-    return {"topic": topic, "video_ids": ids, "count": len(ids)}
+def youtube_videos(
+    topic: str,
+    max_results: int = 12,
+    session_id: str | None = None,
+    user_id: str | None = None,
+):
+    """Standalone endpoint to fetch live YouTube video IDs by topic.
+
+    Honors the caller's saved language/region preferences (defaults en/US).
+    """
+    prefs = _load_content_preferences(session_id, user_id)
+    ids = fetch_videos_by_topic(
+        topic,
+        max_results=max_results,
+        relevance_language=prefs["preferred_language"],
+        region_code=prefs["region_code"],
+    )
+    return {
+        "topic": topic,
+        "video_ids": ids,
+        "count": len(ids),
+        "relevance_language": prefs["preferred_language"],
+        "region_code": prefs["region_code"],
+    }
 
 @app.get("/api/youtube/cache")
 def youtube_cache():
@@ -207,12 +256,18 @@ def admin_ingest_youtube(
     x_feed_ingest_secret: str | None = Header(default=None, alias="X-Feed-Ingest-Secret"),
     max_results_per_query: int = 10,
     days_back: int = 7,
+    relevance_language: str = DEFAULT_LANGUAGE,
+    region_code: str = DEFAULT_REGION,
 ):
     """
     Run the daily YouTube Data API ingestion.
 
     Auth: pass FEED_INGEST_SECRET either as `X-Feed-Ingest-Secret` or as a
     `?secret=` query parameter. This endpoint stores metadata only.
+
+    `relevance_language` / `region_code` target ingestion globally (defaults
+    en/US). Per-user preferences live in user_content_preferences and shape the
+    live topic-fetch and feed responses, not this global batch.
     """
     _require_feed_ingest_secret(x_feed_ingest_secret, secret)
     try:
@@ -220,6 +275,8 @@ def admin_ingest_youtube(
             db_path=DB_PATH,
             max_results_per_query=max_results_per_query,
             days_back=days_back,
+            relevance_language=relevance_language,
+            region_code=region_code,
         )
     except YouTubeIngestError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -227,15 +284,26 @@ def admin_ingest_youtube(
 
 
 @app.get("/api/feed/{mode}")
-def chrysalis_feed(mode: str, k: int = 12, seed: str | None = None):
+def chrysalis_feed(
+    mode: str,
+    k: int = 12,
+    seed: str | None = None,
+    session_id: str | None = None,
+    user_id: str | None = None,
+):
     """
     Shared real-video feed for a reels mode (daily-dew, metamorphosis,
     flutter-feed). Modes change explanation/reflection copy, not the source pool.
     Returns an empty list when there are no scored candidates — the frontend then
     falls back to its built-in sample cards.
+
+    Language/region preferences are loaded and echoed back, but the served pool
+    is pre-ingested and not re-queried per request (see migration 009 notes).
     """
     if not is_valid_mode(mode):
         raise HTTPException(status_code=400, detail=f"mode must be one of {list(MODES)}")
+
+    prefs = _load_content_preferences(session_id, user_id)
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -269,7 +337,57 @@ def chrysalis_feed(mode: str, k: int = 12, seed: str | None = None):
         public_signal_context=public_signal_context,
         shuffle_seed=seed,
     )
-    return {"mode": mode, **payload}
+    return {
+        "mode": mode,
+        "relevance_language": prefs["preferred_language"],
+        "region_code": prefs["region_code"],
+        **payload,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Content preferences (language + region targeting)
+# ---------------------------------------------------------------------------
+
+class ContentPreferencesRequest(BaseModel):
+    user_id: str | None = None
+    session_id: str | None = None
+    preferred_language: str | None = None
+    region_code: str | None = None
+    use_approx_location: bool | None = None
+    location_city: str | None = None
+    location_country: str | None = None
+    has_completed_language_setup: bool | None = None
+
+
+@app.get("/api/preferences")
+def get_content_preferences(session_id: str | None = None, user_id: str | None = None):
+    """Return current content preferences (English + US defaults if none saved)."""
+    return _load_content_preferences(session_id, user_id)
+
+
+@app.post("/api/preferences")
+def save_content_preferences(request: ContentPreferencesRequest):
+    """Create or update content preferences for the current user/session."""
+    if not request.user_id and not request.session_id:
+        raise HTTPException(status_code=400, detail="user_id or session_id is required.")
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        ensure_sqlite_preferences_table(conn)
+        return upsert_preferences(
+            conn,
+            backend="sqlite",
+            user_id=request.user_id,
+            session_id=request.session_id,
+            preferred_language=request.preferred_language,
+            region_code=request.region_code,
+            use_approx_location=request.use_approx_location,
+            location_city=request.location_city,
+            location_country=request.location_country,
+            has_completed_language_setup=request.has_completed_language_setup,
+        )
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
