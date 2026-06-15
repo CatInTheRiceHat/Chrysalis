@@ -21,7 +21,7 @@ from core.algorithm import (
 )
 from core.metrics import diversity_at_k, max_streak, prosocial_ratio
 from core.database import resolve_database_path
-from core.ranking.feed import build_feed
+from core.ranking.feed import build_feed_payload
 from core.ranking.modes import is_valid_mode, MODES
 from core.public_signals.storage import load_cached_context_sqlite, load_or_scan_context_sqlite
 from integrations.youtube_service import fetch_videos_by_topic, get_youtube_id_for_video, get_all_topics_cache_status
@@ -262,8 +262,8 @@ def chrysalis_feed(mode: str, k: int = 12):
     finally:
         conn.close()
 
-    items = build_feed(rows, mode, k=k, public_signal_context=public_signal_context)
-    return {"mode": mode, "count": len(items), "items": items}
+    payload = build_feed_payload(rows, mode, k=k, public_signal_context=public_signal_context)
+    return {"mode": mode, **payload}
 
 
 # ---------------------------------------------------------------------------

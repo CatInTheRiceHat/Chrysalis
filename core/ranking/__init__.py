@@ -10,7 +10,7 @@ from .modes import (
     passes_gate,
     rank_videos,
 )
-from .feed import build_feed
+from .feed import build_feed, build_feed_payload
 
 __all__ = [
     "MODE_PROFILES",
@@ -22,4 +22,5 @@ __all__ = [
     "passes_gate",
     "rank_videos",
     "build_feed",
+    "build_feed_payload",
 ]

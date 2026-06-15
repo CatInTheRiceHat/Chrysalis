@@ -14,6 +14,7 @@ import hashlib
 import os
 
 from .. import algorithm as _alg  # reuse calculate_gini for the diversity proxy
+from ..feed_integrity import DEFAULT_INTEGRITY_SCORE, INTEGRITY_MIN_SCORE
 from ..labeling.schema import LabelSet
 from ..public_signals.ranking import PublicSignalContext, evaluate_public_signal
 
@@ -198,6 +199,11 @@ def rank_videos(
             labels = LabelSet.from_dict(labels or {})
         if not passes_shared_feed_gate(labels):
             continue
+        integrity_score = _safe_score(item.get("integrity_score"))
+        if integrity_score is None:
+            integrity_score = DEFAULT_INTEGRITY_SCORE
+        if integrity_score < INTEGRITY_MIN_SCORE:
+            continue
 
         public_eval = evaluate_public_signal(
             item,
@@ -210,8 +216,10 @@ def rank_videos(
 
         annotated = dict(item)
         annotated["labels"] = labels
+        annotated["integrity_score"] = round(integrity_score, 4)
         annotated["mode_fit"] = _alg_clamp(
-            score_for_shared_feed(labels, _safe_score(item.get("ingest_score")))
+            (0.90 * score_for_shared_feed(labels, _safe_score(item.get("ingest_score"))))
+            + (0.10 * integrity_score)
             + public_eval.score_delta
         )
         annotated.update(public_eval.to_item_fields())
@@ -221,7 +229,11 @@ def rank_videos(
 
 
 def _balance_source_metadata(items: list[dict]) -> list[dict]:
-    """Round-robin source categories, with query spread inside each category."""
+    """
+    Round-robin source categories, with query/style/scale spread inside each
+    category. Production style and creator scale are diversity metadata, not
+    polish gates.
+    """
     if len(items) <= 2:
         return sorted(items, key=_feed_sort_key)
 
@@ -251,12 +263,15 @@ def _balance_source_metadata(items: list[dict]) -> list[dict]:
 
 def _spread_source_queries(items: list[dict]) -> list[dict]:
     if len(items) <= 2:
-        return sorted(items, key=_feed_sort_key)
+        return _spread_style_and_scale(items)
 
     query_buckets: dict[str, list[dict]] = {}
     for item in sorted(items, key=_feed_sort_key):
         query = _source_value(item, "source_query")
         query_buckets.setdefault(query, []).append(item)
+
+    for query, bucket in query_buckets.items():
+        query_buckets[query] = _spread_style_and_scale(bucket)
 
     query_order = sorted(
         query_buckets,
@@ -271,6 +286,36 @@ def _spread_source_queries(items: list[dict]) -> list[dict]:
         for query in query_order:
             if query_buckets[query]:
                 result.append(query_buckets[query].pop(0))
+    return result
+
+
+def _spread_style_and_scale(items: list[dict]) -> list[dict]:
+    balanced = _spread_metadata_field(items, "production_style", salt="production_style")
+    return _spread_metadata_field(balanced, "creator_scale", salt="creator_scale")
+
+
+def _spread_metadata_field(items: list[dict], field: str, *, salt: str) -> list[dict]:
+    if len(items) <= 2:
+        return sorted(items, key=_feed_sort_key)
+
+    buckets: dict[str, list[dict]] = {}
+    for item in sorted(items, key=_feed_sort_key):
+        value = _source_value(item, field)
+        buckets.setdefault(value, []).append(item)
+
+    order = sorted(
+        buckets,
+        key=lambda value: (
+            -max(_item_score(item) for item in buckets[value]),
+            _stable_random_value(salt, value),
+        ),
+    )
+
+    result: list[dict] = []
+    while any(buckets[value] for value in order):
+        for value in order:
+            if buckets[value]:
+                result.append(buckets[value].pop(0))
     return result
 
 

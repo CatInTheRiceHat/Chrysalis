@@ -72,7 +72,7 @@ def _fake_youtube(endpoint: str, params: dict) -> dict:
                 ),
             ),
             "focus2": _video("focus2", "AI literacy for students in 60 seconds", "PT58S", "22000"),
-            "bad3": _video("bad3", "Political drama exposed and destroyed", "PT45S", "90000"),
+            "bad3": _video("bad3", "Free money crypto giveaway telegram crypto", "PT45S", "90000"),
             "long4": _video("long4", "Student focus tips full workshop", "PT6M", "5000"),
         }
         return {"items": [all_items[video_id] for video_id in ids if video_id in all_items]}
@@ -121,6 +121,10 @@ def test_youtube_ingest_stores_filtered_real_videos_without_duplicate_inserts(tm
     assert "Subscribe for more resets" in raw_calm["description"]
     assert "Subscribe" not in raw_calm["short_description"]
     assert "https://example.com" not in raw_calm["short_description"]
+    assert raw_calm["integrity_score"] >= 0.38
+    assert raw_calm["integrity_flags"]
+    assert raw_calm["production_style"] in {"polished", "casual", "amateur", "low_budget", "chaotic", "unknown"}
+    assert raw_calm["creator_scale"] in {"small", "mid", "large", "unknown"}
     assert rows[0]["ingest_score"] >= rows[1]["ingest_score"]
     assert all(row["embed_url"].startswith("https://www.youtube-nocookie.com/embed/") for row in rows)
     assert all(row["thumbnail_url"].endswith("/hqdefault.jpg") for row in rows)
@@ -133,6 +137,10 @@ def test_youtube_ingest_stores_filtered_real_videos_without_duplicate_inserts(tm
     assert calm_card["description"] == raw_calm["description"]
     assert calm_card["short_description"] == raw_calm["short_description"]
     assert calm_card["displayDescription"] == raw_calm["short_description"]
+    assert calm_card["integrity_score"] >= 0.38
+    assert calm_card["feed_validity_score"] == calm_card["integrity_score"]
+    assert calm_card["production_style"] == raw_calm["production_style"]
+    assert calm_card["creator_scale"] == raw_calm["creator_scale"]
 
     mode_sets = {
         mode: {item["youtube_id"] for item in build_feed(rows, mode, k=10)}

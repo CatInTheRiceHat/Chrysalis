@@ -23,6 +23,7 @@ from typing import Callable, Iterable, NamedTuple
 
 from core.database import resolve_database_path
 from core.feed_captions import build_short_description
+from core.feed_integrity import score_feed_integrity
 from core.labeling.explain import build_reasons
 from core.labeling.metadata_scoring import parse_duration_seconds, score_metadata
 from core.labeling.schema import SCORING_VERSION
@@ -68,17 +69,13 @@ RELEVANCE_TERMS: tuple[str, ...] = (
 )
 
 BLOCKED_TERMS: tuple[str, ...] = (
-    # Explicit/adult/substance/gambling
-    "18+", "nsfw", "porn", "sex tape", "onlyfans", "nude", "vape", "weed",
+    # Hard blocks stay narrow: explicit/adult/gambling/scam/violent unsafe terms.
+    "18+", "nsfw", "porn", "sex tape", "onlyfans", "nude",
     "casino", "gambling", "betting", "parlay",
-    # Shock/drama/humiliation/rage
-    "drama", "beef", "exposed", "destroyed", "humiliated", "cringe",
-    "caught in 4k", "fight", "brawl", "shocking", "scandal", "prank",
-    "gone wrong", "worst", "hate",
-    # Graphic or violent current-event terms
-    "shooting", "graphic violence", "gore",
-    # Low-quality feed filler
-    "compilation", "tiktok compilation", "reaction compilation",
+    "free robux", "gift card generator", "telegram crypto",
+    "graphic violence", "gore", "beheading", "execution video",
+    "blackout challenge", "choking challenge", "train surfing",
+    "hate speech", "white power", "extremist propaganda",
 )
 
 SHORT_TARGET_SECONDS = 180
@@ -114,6 +111,10 @@ class FeedVideoCandidate:
     topic: str
     source_category: str
     source_query: str
+    integrity_score: float
+    integrity_flags: dict
+    production_style: str
+    creator_scale: str
     score: float
     status: str
     created_at: str
@@ -163,6 +164,10 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     topic               TEXT,
     source_category     TEXT,
     source_query        TEXT,
+    integrity_score     REAL,
+    integrity_flags     TEXT,
+    production_style    TEXT,
+    creator_scale       TEXT,
     score               REAL,
     created_at          TEXT,
     updated_at          TEXT,
@@ -198,6 +203,10 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     topic               TEXT,
     source_category     TEXT,
     source_query        TEXT,
+    integrity_score     REAL,
+    integrity_flags     JSONB,
+    production_style    TEXT,
+    creator_scale       TEXT,
     score               REAL,
     created_at          TIMESTAMPTZ,
     updated_at          TIMESTAMPTZ,
@@ -282,6 +291,10 @@ def ensure_sqlite_feed_videos_table(conn: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_feed_videos_source_query "
         "ON feed_videos (source_query)"
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_feed_videos_integrity_score "
+        "ON feed_videos (integrity_score)"
+    )
     conn.commit()
 
 
@@ -294,6 +307,10 @@ def _ensure_sqlite_feed_video_columns(conn: sqlite3.Connection) -> None:
         "source_category": "TEXT",
         "source_query": "TEXT",
         "short_description": "TEXT",
+        "integrity_score": "REAL",
+        "integrity_flags": "TEXT",
+        "production_style": "TEXT",
+        "creator_scale": "TEXT",
     }.items():
         if column not in existing:
             conn.execute(f"ALTER TABLE feed_videos ADD COLUMN {column} {column_type}")
@@ -305,6 +322,10 @@ def ensure_postgres_feed_videos_table(conn) -> None:
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_category TEXT")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_query TEXT")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS short_description TEXT")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS integrity_score REAL")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS integrity_flags JSONB")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS production_style TEXT")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS creator_scale TEXT")
     cur.execute(
         "CREATE INDEX IF NOT EXISTS idx_feed_videos_status_score "
         "ON feed_videos (status, score DESC, published_at DESC)"
@@ -320,6 +341,10 @@ def ensure_postgres_feed_videos_table(conn) -> None:
     cur.execute(
         "CREATE INDEX IF NOT EXISTS idx_feed_videos_source_query "
         "ON feed_videos (source_query)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_feed_videos_integrity_score "
+        "ON feed_videos (integrity_score)"
     )
     conn.commit()
 
@@ -513,65 +538,78 @@ def load_active_feed_video_rows_sqlite(
     *,
     limit: int | None = None,
 ) -> list[dict]:
-    sql = _active_feed_video_rows_sql(include_source_metadata=True)
-    params: tuple = ()
-    if limit is not None:
-        sql += " LIMIT ?"
-        params = (int(limit),)
-    try:
-        return [dict(r) for r in conn.execute(sql, params).fetchall()]
-    except sqlite3.OperationalError as exc:
-        message = str(exc).lower()
-        if "no such table" in message:
-            return []
-        if _missing_source_metadata_column(message):
-            fallback_sql = _active_feed_video_rows_sql(include_source_metadata=False)
-            if limit is not None:
-                fallback_sql += " LIMIT ?"
-            return [dict(r) for r in conn.execute(fallback_sql, params).fetchall()]
-        raise
+    params: tuple = (int(limit),) if limit is not None else ()
+    for options in _active_feed_video_column_attempts():
+        sql = _active_feed_video_rows_sql(**options)
+        if limit is not None:
+            sql += " LIMIT ?"
+        try:
+            return [dict(r) for r in conn.execute(sql, params).fetchall()]
+        except sqlite3.OperationalError as exc:
+            message = str(exc).lower()
+            if "no such table" in message:
+                return []
+            if _missing_optional_feed_video_column(message):
+                continue
+            raise
+    return []
 
 
 def load_active_feed_video_rows_postgres(conn, *, limit: int | None = None) -> list[dict]:
-    sql = _active_feed_video_rows_sql(include_source_metadata=True)
     params: tuple = ()
     if limit is not None:
-        sql += " LIMIT %s"
         params = (int(limit),)
     cur = conn.cursor()
-    try:
-        cur.execute(sql, params)
-    except Exception as exc:
-        message = str(exc).lower()
-        if "feed_videos" in message:
+    for options in _active_feed_video_column_attempts():
+        sql = _active_feed_video_rows_sql(**options)
+        if limit is not None:
+            sql += " LIMIT %s"
+        try:
+            cur.execute(sql, params)
+            cols = [d[0] for d in cur.description]
+            return [dict(zip(cols, r)) for r in cur.fetchall()]
+        except Exception as exc:
+            message = str(exc).lower()
             conn.rollback()
-            return []
-        if _missing_source_metadata_column(message):
-            conn.rollback()
-            fallback_sql = _active_feed_video_rows_sql(include_source_metadata=False)
-            if limit is not None:
-                fallback_sql += " LIMIT %s"
-            cur = conn.cursor()
-            cur.execute(fallback_sql, params)
-        else:
+            if "feed_videos" in message and "does not exist" in message:
+                return []
+            if _missing_optional_feed_video_column(message):
+                cur = conn.cursor()
+                continue
             raise
-    cols = [d[0] for d in cur.description]
-    return [dict(zip(cols, r)) for r in cur.fetchall()]
+    return []
 
 
 def _active_feed_video_rows_sql(
     *,
     include_source_metadata: bool,
+    include_short_description: bool,
+    include_integrity_metadata: bool,
 ) -> str:
-    optional_columns = (
-        "source_category,\n"
-        "            source_query,\n"
-        "            short_description,"
-        if include_source_metadata
-        else "topic AS source_category,\n"
-        "            NULL AS source_query,\n"
-        "            NULL AS short_description,"
-    )
+    if include_source_metadata:
+        source_columns = "source_category,\n            source_query,"
+    else:
+        source_columns = "topic AS source_category,\n            NULL AS source_query,"
+
+    if include_short_description:
+        short_description_column = "short_description,"
+    else:
+        short_description_column = "NULL AS short_description,"
+
+    if include_integrity_metadata:
+        integrity_columns = (
+            "integrity_score,\n"
+            "            integrity_flags,\n"
+            "            production_style,\n"
+            "            creator_scale,"
+        )
+    else:
+        integrity_columns = (
+            "NULL AS integrity_score,\n"
+            "            NULL AS integrity_flags,\n"
+            "            NULL AS production_style,\n"
+            "            NULL AS creator_scale,"
+        )
     return f"""
         SELECT
             youtube_video_id AS video_id,
@@ -583,7 +621,9 @@ def _active_feed_video_rows_sql(
             category_id,
             tags,
             duration_seconds,
-            {optional_columns}
+            {source_columns}
+            {short_description_column}
+            {integrity_columns}
             thumbnail_url,
             embed_url,
             watch_url,
@@ -602,11 +642,40 @@ def _active_feed_video_rows_sql(
     """
 
 
-def _missing_source_metadata_column(message: str) -> bool:
+def _active_feed_video_column_attempts() -> list[dict]:
+    return [
+        {
+            "include_source_metadata": True,
+            "include_short_description": True,
+            "include_integrity_metadata": True,
+        },
+        {
+            "include_source_metadata": True,
+            "include_short_description": True,
+            "include_integrity_metadata": False,
+        },
+        {
+            "include_source_metadata": True,
+            "include_short_description": False,
+            "include_integrity_metadata": False,
+        },
+        {
+            "include_source_metadata": False,
+            "include_short_description": False,
+            "include_integrity_metadata": False,
+        },
+    ]
+
+
+def _missing_optional_feed_video_column(message: str) -> bool:
     return (
         "source_category" in message
         or "source_query" in message
         or "short_description" in message
+        or "integrity_score" in message
+        or "integrity_flags" in message
+        or "production_style" in message
+        or "creator_scale" in message
     )
 
 
@@ -685,21 +754,31 @@ def _candidate_from_video_item(
     source_category = source_spec.source_category or "custom"
     source_query = source_spec.source_query
     topic = source_category
+    thumbnail_url = _best_thumbnail(snippet)
+    short_description = build_short_description(description)
 
     row_for_scoring = {
         "title": title,
         "description": description,
+        "short_description": short_description,
         "tags": tags,
         "channel_title": snippet.get("channelTitle") or "",
+        "video_id": video_id,
         "category": source_category,
         "topic": source_category,
         "source_category": source_category,
         "source_query": source_query,
         "category_id": snippet.get("categoryId") or "",
         "duration_seconds": duration_seconds,
-        "thumbnail_url": _best_thumbnail(snippet),
+        "thumbnail_url": thumbnail_url,
+        "embed_url": f"https://www.youtube-nocookie.com/embed/{video_id}",
+        "watch_url": f"https://www.youtube.com/watch?v={video_id}",
+        "view_count": view_count,
+        "like_count": _safe_int(stats.get("likeCount")),
+        "comment_count": _safe_int(stats.get("commentCount")),
     }
     labels = score_metadata(row_for_scoring)
+    integrity = score_feed_integrity(row_for_scoring, labels=labels.to_dict())
     relevance = _relevance_score(
         title=title,
         description=description,
@@ -728,8 +807,8 @@ def _candidate_from_video_item(
         channel_title=str(snippet.get("channelTitle") or ""),
         channel_id=str(snippet.get("channelId") or ""),
         description=description,
-        short_description=build_short_description(description),
-        thumbnail_url=_best_thumbnail(snippet),
+        short_description=short_description,
+        thumbnail_url=thumbnail_url,
         embed_url=f"https://www.youtube-nocookie.com/embed/{video_id}",
         watch_url=f"https://www.youtube.com/watch?v={video_id}",
         published_at=published_at,
@@ -740,6 +819,10 @@ def _candidate_from_video_item(
         topic=topic,
         source_category=source_category,
         source_query=source_query,
+        integrity_score=integrity["integrity_score"],
+        integrity_flags=integrity["integrity_flags"],
+        production_style=integrity["production_style"],
+        creator_scale=integrity["creator_scale"],
         score=round(relevance, 4),
         status="active",
         created_at=timestamp,
@@ -755,17 +838,19 @@ def _candidate_from_video_item(
 
 
 def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandidate) -> None:
+    placeholders = ",".join(["?"] * 34)
     conn.execute(
-        """
+        f"""
         INSERT INTO feed_videos (
             id, source, youtube_video_id, title, channel_title, channel_id,
             description, short_description, thumbnail_url, embed_url, watch_url, published_at,
             duration_seconds, view_count, tags, category_id, topic,
-            source_category, source_query, score, created_at, updated_at, status,
+            source_category, source_query, integrity_score, integrity_flags,
+            production_style, creator_scale, score, created_at, updated_at, status,
             chrysalis_scores, ranking_reason, safety_reason, concern_reason,
             label_confidence, scored_at, scoring_version
         ) VALUES (
-            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+            {placeholders}
         )
         ON CONFLICT(youtube_video_id) DO UPDATE SET
             title = excluded.title,
@@ -784,6 +869,10 @@ def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandi
             topic = excluded.topic,
             source_category = excluded.source_category,
             source_query = excluded.source_query,
+            integrity_score = excluded.integrity_score,
+            integrity_flags = excluded.integrity_flags,
+            production_style = excluded.production_style,
+            creator_scale = excluded.creator_scale,
             score = excluded.score,
             updated_at = excluded.updated_at,
             status = excluded.status,
@@ -801,18 +890,21 @@ def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandi
 
 def _upsert_postgres_candidate(cur, candidate: FeedVideoCandidate) -> None:
     values = _candidate_postgres_values(candidate)
+    placeholders = ["%s"] * 34
+    for index in (14, 20, 27):
+        placeholders[index] = "%s::jsonb"
     cur.execute(
-        """
+        f"""
         INSERT INTO feed_videos (
             id, source, youtube_video_id, title, channel_title, channel_id,
             description, short_description, thumbnail_url, embed_url, watch_url, published_at,
             duration_seconds, view_count, tags, category_id, topic,
-            source_category, source_query, score, created_at, updated_at, status,
+            source_category, source_query, integrity_score, integrity_flags,
+            production_style, creator_scale, score, created_at, updated_at, status,
             chrysalis_scores, ranking_reason, safety_reason, concern_reason,
             label_confidence, scored_at, scoring_version
         ) VALUES (
-            %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,
-            %s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s
+            {",".join(placeholders)}
         )
         ON CONFLICT(youtube_video_id) DO UPDATE SET
             title = excluded.title,
@@ -831,6 +923,10 @@ def _upsert_postgres_candidate(cur, candidate: FeedVideoCandidate) -> None:
             topic = excluded.topic,
             source_category = excluded.source_category,
             source_query = excluded.source_query,
+            integrity_score = excluded.integrity_score,
+            integrity_flags = excluded.integrity_flags,
+            production_style = excluded.production_style,
+            creator_scale = excluded.creator_scale,
             score = excluded.score,
             updated_at = excluded.updated_at,
             status = excluded.status,
@@ -867,6 +963,10 @@ def _candidate_sqlite_values(candidate: FeedVideoCandidate) -> tuple:
         candidate.topic,
         candidate.source_category,
         candidate.source_query,
+        candidate.integrity_score,
+        json.dumps(candidate.integrity_flags),
+        candidate.production_style,
+        candidate.creator_scale,
         candidate.score,
         candidate.created_at,
         candidate.updated_at,
@@ -883,7 +983,7 @@ def _candidate_sqlite_values(candidate: FeedVideoCandidate) -> tuple:
 
 def _candidate_postgres_values(candidate: FeedVideoCandidate) -> tuple:
     values = list(_candidate_sqlite_values(candidate))
-    # tags and chrysalis_scores are JSONB parameters in the Postgres statement.
+    # tags, integrity_flags, and chrysalis_scores are JSONB parameters in Postgres.
     return tuple(values)
 
 
@@ -918,8 +1018,8 @@ def _relevance_score(
 
     recency_score = _recency_score(published_at, now, days_back)
     duration_score = 1.0 if duration_seconds and duration_seconds <= SHORT_TARGET_SECONDS else 0.45
-    engagement_score = _clamp01(math.log10(max(view_count, 0) + 1) / 6.0)
-    quality_score = max(
+    engagement_boost = _clamp01(math.log10(max(view_count, 0) + 1) / 6.0)
+    metadata_signal_score = max(
         float(labels.get("calm", 0.0)),
         float(labels.get("educational", 0.0)),
         float(labels.get("self_love", 0.0)),
@@ -930,11 +1030,11 @@ def _relevance_score(
     risk_penalty = float(labels.get("overall_risk", 0.0)) * 0.42
 
     return _clamp01(
-        keyword_score * 0.44
-        + recency_score * 0.20
-        + duration_score * 0.16
-        + engagement_score * 0.12
-        + quality_score * 0.08
+        keyword_score * 0.46
+        + recency_score * 0.22
+        + duration_score * 0.17
+        + metadata_signal_score * 0.11
+        + engagement_boost * 0.04
         - risk_penalty
     )
 

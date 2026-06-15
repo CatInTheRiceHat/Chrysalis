@@ -21,7 +21,7 @@ from core.algorithm import (
     validate_and_clean,
 )
 from core.metrics import diversity_at_k, max_streak, prosocial_ratio
-from core.ranking.feed import build_feed
+from core.ranking.feed import build_feed_payload
 from core.ranking.modes import is_valid_mode, MODES
 from core.public_signals.storage import load_cached_context_postgres, load_or_scan_context_postgres
 from integrations.youtube_ingest import (
@@ -242,8 +242,8 @@ def chrysalis_feed(mode: str, k: int = 12):
     finally:
         conn.close()
 
-    items = build_feed(rows, mode, k=k, public_signal_context=public_signal_context)
-    return {"mode": mode, "count": len(items), "items": items}
+    payload = build_feed_payload(rows, mode, k=k, public_signal_context=public_signal_context)
+    return {"mode": mode, **payload}
 
 
 @app.get("/api/migration/today")

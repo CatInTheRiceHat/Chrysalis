@@ -83,6 +83,10 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     topic               TEXT,
     source_category     TEXT,
     source_query        TEXT,
+    integrity_score     REAL,
+    integrity_flags     JSONB,
+    production_style    TEXT,
+    creator_scale       TEXT,
     score               REAL,
     created_at          TIMESTAMPTZ,
     updated_at          TIMESTAMPTZ,
@@ -107,6 +111,9 @@ CREATE INDEX IF NOT EXISTS idx_feed_videos_source_category
 
 CREATE INDEX IF NOT EXISTS idx_feed_videos_source_query
     ON feed_videos (source_query);
+
+CREATE INDEX IF NOT EXISTS idx_feed_videos_integrity_score
+    ON feed_videos (integrity_score);
 
 -- Public Signal Scanner v1. These records are expiring context/review signals,
 -- not permanent creator blacklists. v1 writes stub/neutral records unless a

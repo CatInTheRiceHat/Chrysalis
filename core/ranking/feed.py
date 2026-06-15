@@ -9,9 +9,11 @@ files (api.py / api/index.py) and the unit tests call the exact same logic.
 
 from __future__ import annotations
 
+from collections import Counter
 import json
 
 from ..feed_captions import build_short_description
+from ..feed_integrity import INTEGRITY_MIN_SCORE, normalize_integrity_flags, resolve_feed_integrity
 from ..labeling.schema import LabelSet, SCORING_VERSION
 from ..labeling.metadata_scoring import (
     score_metadata,
@@ -68,12 +70,49 @@ def build_feed(
     Empty input (or an unknown mode) yields an empty list. New metadata fields are
     null/empty for older rows that predate richer extraction.
     """
+    items, _debug = _build_feed_result(
+        rows,
+        mode,
+        k=k,
+        public_signal_context=public_signal_context,
+        public_signal_override=public_signal_override,
+    )
+    return items
+
+
+def build_feed_payload(
+    rows: list[dict],
+    mode: str,
+    k: int = 12,
+    public_signal_context: PublicSignalContext | None = None,
+    public_signal_override: bool = False,
+) -> dict:
+    items, debug = _build_feed_result(
+        rows,
+        mode,
+        k=k,
+        public_signal_context=public_signal_context,
+        public_signal_override=public_signal_override,
+    )
+    payload = {"count": len(items), "items": items, **debug}
+    payload["debug"] = dict(debug)
+    return payload
+
+
+def _build_feed_result(
+    rows: list[dict],
+    mode: str,
+    k: int = 12,
+    public_signal_context: PublicSignalContext | None = None,
+    public_signal_override: bool = False,
+) -> tuple[list[dict], dict]:
     if not is_valid_mode(mode) or not rows:
-        return []
+        return [], _debug_metadata([], [], k)
 
     candidates: list[dict] = []
     for row in rows:
         labels = _labels_for_row(row)
+        integrity = resolve_feed_integrity(row, labels.to_dict())
         candidates.append({
             "_row": row,
             "labels": labels,
@@ -81,6 +120,10 @@ def build_feed(
             "source_category": row.get("source_category") or row.get("topic") or row.get("category"),
             "source_query": row.get("source_query") or "",
             "ingest_score": row.get("ingest_score"),
+            "integrity_score": integrity["integrity_score"],
+            "integrity_flags": integrity["integrity_flags"],
+            "production_style": integrity["production_style"],
+            "creator_scale": integrity["creator_scale"],
             "video_id": row.get("video_id") or row.get("youtube_id") or "",
             "channel_id": row.get("channel_id") or "",
             "channel_title": row.get("channel_title") or row.get("channel") or "",
@@ -137,9 +180,65 @@ def build_feed(
             "safety_reason": reasons["safety_reason"],
             "concern_reason": reasons["concern_reason"],
             "mode_fit": round(cand["mode_fit"], 4),
+            "integrity_score": round(float(cand.get("integrity_score") or 0.0), 4),
+            "integrityScore": round(float(cand.get("integrity_score") or 0.0), 4),
+            "feed_validity_score": round(float(cand.get("integrity_score") or 0.0), 4),
+            "feedValidityScore": round(float(cand.get("integrity_score") or 0.0), 4),
+            "integrity_flags": normalize_integrity_flags(cand.get("integrity_flags")),
+            "integrityFlags": normalize_integrity_flags(cand.get("integrity_flags")),
+            "production_style": cand.get("production_style") or "unknown",
+            "productionStyle": cand.get("production_style") or "unknown",
+            "creator_scale": cand.get("creator_scale") or "unknown",
+            "creatorScale": cand.get("creator_scale") or "unknown",
             "public_signal": cand.get("public_signal"),
             "source_safety_status": cand.get("source_safety_status", "neutral"),
             "public_signal_effect": cand.get("public_signal_effect", "none"),
             "public_signal_reason": cand.get("public_signal_reason"),
         })
-    return items
+    return items, _debug_metadata(candidates, ranked, k)
+
+
+def _debug_metadata(candidates: list[dict], ranked: list[dict], k: int) -> dict:
+    integrity_scores = [
+        float(item.get("integrity_score"))
+        for item in ranked
+        if item.get("integrity_score") is not None
+    ]
+    flag_counts: Counter[str] = Counter()
+    for item in candidates:
+        flags = normalize_integrity_flags(item.get("integrity_flags"))
+        flag_counts.update(flags["negative"])
+        flag_counts.update(flags["positive"])
+
+    return {
+        "real_count": len(ranked),
+        "template_count": max(0, int(k) - len(ranked)),
+        "average_integrity_score": (
+            round(sum(integrity_scores) / len(integrity_scores), 4)
+            if integrity_scores else 0.0
+        ),
+        "category_counts": dict(_counts_for(ranked, "source_category", "topic", "category")),
+        "source_query_counts": dict(_counts_for(ranked, "source_query")),
+        "production_style_counts": dict(_counts_for(ranked, "production_style")),
+        "creator_scale_counts": dict(_counts_for(ranked, "creator_scale")),
+        "integrity_flag_counts": dict(sorted(flag_counts.items())),
+        "low_integrity_filtered_count": sum(
+            1
+            for item in candidates
+            if item.get("integrity_score") is not None
+            and float(item["integrity_score"]) < INTEGRITY_MIN_SCORE
+        ),
+    }
+
+
+def _counts_for(items: list[dict], *fields: str) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for item in items:
+        value = None
+        for field in fields:
+            raw = item.get(field)
+            if raw:
+                value = str(raw)
+                break
+        counts[value or "unknown"] += 1
+    return counts

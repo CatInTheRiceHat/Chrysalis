@@ -14,7 +14,7 @@ import pytest
 from core.labeling.metadata_scoring import score_metadata, parse_duration_seconds
 from core.labeling.explain import build_reasons
 from core.ranking.modes import passes_gate, score_for_mode, rank_videos
-from core.ranking.feed import build_feed
+from core.ranking.feed import build_feed, build_feed_payload
 
 
 # ── Sample metadata ─────────────────────────────────────────────────────────
@@ -180,6 +180,107 @@ def test_source_metadata_balancing_limits_dominant_categories_and_queries():
     queries = [item["source_query"] for item in feed]
     assert max(categories.count(category) for category in set(categories)) <= 2
     assert max(queries.count(query) for query in set(queries)) <= 2
+
+
+def test_integrity_gate_filters_spam_but_keeps_safe_amateur_content():
+    rows = [
+        {
+            "video_id": "safe-amateur",
+            "title": "My awkward phone vlog about tiny clay frogs",
+            "description": "Low budget day in my life making a little pottery shelf at home.",
+            "source_category": "lifestyle/vlogs",
+            "source_query": "day in my life lifestyle vlog",
+            "integrity_score": 0.58,
+            "integrity_flags": {"negative": [], "positive": ["authentic_vlog"]},
+            "production_style": "low_budget",
+            "creator_scale": "small",
+        },
+        {
+            "video_id": "polished-explainer",
+            "title": "A useful explainer about pottery tools",
+            "description": "A clear guide with simple context for beginners.",
+            "source_category": "education/explainers",
+            "source_query": "science history explained",
+            "integrity_score": 0.86,
+            "integrity_flags": {"negative": [], "positive": ["clear_explainer"]},
+            "production_style": "polished",
+            "creator_scale": "mid",
+        },
+        {
+            "video_id": "spam",
+            "title": "FREE MONEY CRYPTO GIVEAWAY TELEGRAM CRYPTO!!!!",
+            "description": "Guaranteed profit. Double your money with my telegram crypto bot.",
+            "source_category": "internet culture",
+            "source_query": "internet culture memes explained",
+            "integrity_score": 0.12,
+            "integrity_flags": {"negative": ["clickbait_spam"], "positive": []},
+            "production_style": "chaotic",
+            "creator_scale": "large",
+        },
+    ]
+
+    feed = build_feed(rows, "flutter-feed", k=10)
+    ids = {item["youtube_id"] for item in feed}
+    assert "safe-amateur" in ids
+    assert "polished-explainer" in ids
+    assert "spam" not in ids
+
+
+def test_production_style_and_creator_scale_are_balanced_not_gated():
+    rows = []
+    for index in range(4):
+        rows.append({
+            "video_id": f"polished-{index}",
+            "title": "A calm educational guide with a creative idea",
+            "description": "Learn one useful thing in a low-risk, reflective format.",
+            "source_category": "education/explainers",
+            "source_query": "science history explained",
+            "integrity_score": 0.82,
+            "integrity_flags": {"negative": [], "positive": ["clear_explainer"]},
+            "production_style": "polished",
+            "creator_scale": "large",
+        })
+        rows.append({
+            "video_id": f"casual-{index}",
+            "title": "A calm casual vlog with a creative idea",
+            "description": "A low-budget but safe day in my life update.",
+            "source_category": "education/explainers",
+            "source_query": "science history explained",
+            "integrity_score": 0.68,
+            "integrity_flags": {"negative": [], "positive": ["authentic_vlog"]},
+            "production_style": "casual",
+            "creator_scale": "small",
+        })
+
+    feed = build_feed(rows, "flutter-feed", k=6)
+    styles = {item["production_style"] for item in feed}
+    scales = {item["creator_scale"] for item in feed}
+    assert {"polished", "casual"} <= styles
+    assert {"large", "small"} <= scales
+
+
+def test_feed_payload_includes_integrity_debug_metadata():
+    rows = [
+        dict(CALM, integrity_score=0.82, production_style="polished", creator_scale="mid"),
+        dict(LEARN, integrity_score=0.72, production_style="casual", creator_scale="small"),
+        dict(
+            RAGEBAIT,
+            integrity_score=0.12,
+            integrity_flags={"negative": ["unsafe_or_ragebait"], "positive": []},
+            production_style="chaotic",
+            creator_scale="large",
+        ),
+    ]
+
+    payload = build_feed_payload(rows, "flutter-feed", k=5)
+    assert payload["real_count"] == len(payload["items"])
+    assert payload["template_count"] == max(0, 5 - len(payload["items"]))
+    assert payload["average_integrity_score"] > 0
+    assert payload["low_integrity_filtered_count"] == 1
+    assert payload["category_counts"]
+    assert payload["production_style_counts"]
+    assert payload["creator_scale_counts"]
+    assert payload["integrity_flag_counts"]["unsafe_or_ragebait"] == 1
 
 
 # ── Explanations ─────────────────────────────────────────────────────────────
@@ -349,6 +450,16 @@ def test_build_feed_includes_new_fields():
         "shortDescription",
         "display_description",
         "displayDescription",
+        "integrity_score",
+        "integrityScore",
+        "feed_validity_score",
+        "feedValidityScore",
+        "integrity_flags",
+        "integrityFlags",
+        "production_style",
+        "productionStyle",
+        "creator_scale",
+        "creatorScale",
     ):
         assert key in item
     assert item["duration_seconds"] == 300
