@@ -22,7 +22,12 @@ import urllib.request
 from typing import Callable, Iterable, NamedTuple
 
 from core.database import resolve_database_path
-from core.feed_captions import build_short_description
+from core.feed_captions import (
+    build_display_channel,
+    build_display_hashtags,
+    build_display_title,
+    build_short_description,
+)
 from core.feed_integrity import score_feed_integrity
 from core.labeling.explain import build_reasons
 from core.labeling.metadata_scoring import parse_duration_seconds, score_metadata
@@ -100,6 +105,9 @@ class FeedVideoCandidate:
     channel_id: str
     description: str
     short_description: str
+    display_title: str
+    display_channel: str
+    display_hashtags: list[str]
     thumbnail_url: str
     embed_url: str
     watch_url: str
@@ -153,6 +161,9 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     channel_id          TEXT,
     description         TEXT,
     short_description   TEXT,
+    display_title       TEXT,
+    display_channel     TEXT,
+    display_hashtags    TEXT,
     thumbnail_url       TEXT,
     embed_url           TEXT,
     watch_url           TEXT,
@@ -192,6 +203,9 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     channel_id          TEXT,
     description         TEXT,
     short_description   TEXT,
+    display_title       TEXT,
+    display_channel     TEXT,
+    display_hashtags    JSONB,
     thumbnail_url       TEXT,
     embed_url           TEXT,
     watch_url           TEXT,
@@ -307,6 +321,9 @@ def _ensure_sqlite_feed_video_columns(conn: sqlite3.Connection) -> None:
         "source_category": "TEXT",
         "source_query": "TEXT",
         "short_description": "TEXT",
+        "display_title": "TEXT",
+        "display_channel": "TEXT",
+        "display_hashtags": "TEXT",
         "integrity_score": "REAL",
         "integrity_flags": "TEXT",
         "production_style": "TEXT",
@@ -322,6 +339,9 @@ def ensure_postgres_feed_videos_table(conn) -> None:
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_category TEXT")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_query TEXT")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS short_description TEXT")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS display_title TEXT")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS display_channel TEXT")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS display_hashtags JSONB")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS integrity_score REAL")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS integrity_flags JSONB")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS production_style TEXT")
@@ -584,6 +604,7 @@ def _active_feed_video_rows_sql(
     *,
     include_source_metadata: bool,
     include_short_description: bool,
+    include_display_metadata: bool,
     include_integrity_metadata: bool,
 ) -> str:
     if include_source_metadata:
@@ -595,6 +616,19 @@ def _active_feed_video_rows_sql(
         short_description_column = "short_description,"
     else:
         short_description_column = "NULL AS short_description,"
+
+    if include_display_metadata:
+        display_columns = (
+            "display_title,\n"
+            "            display_channel,\n"
+            "            display_hashtags,"
+        )
+    else:
+        display_columns = (
+            "NULL AS display_title,\n"
+            "            NULL AS display_channel,\n"
+            "            NULL AS display_hashtags,"
+        )
 
     if include_integrity_metadata:
         integrity_columns = (
@@ -623,6 +657,7 @@ def _active_feed_video_rows_sql(
             duration_seconds,
             {source_columns}
             {short_description_column}
+            {display_columns}
             {integrity_columns}
             thumbnail_url,
             embed_url,
@@ -647,21 +682,31 @@ def _active_feed_video_column_attempts() -> list[dict]:
         {
             "include_source_metadata": True,
             "include_short_description": True,
+            "include_display_metadata": True,
             "include_integrity_metadata": True,
         },
         {
             "include_source_metadata": True,
             "include_short_description": True,
+            "include_display_metadata": False,
+            "include_integrity_metadata": True,
+        },
+        {
+            "include_source_metadata": True,
+            "include_short_description": True,
+            "include_display_metadata": False,
             "include_integrity_metadata": False,
         },
         {
             "include_source_metadata": True,
             "include_short_description": False,
+            "include_display_metadata": False,
             "include_integrity_metadata": False,
         },
         {
             "include_source_metadata": False,
             "include_short_description": False,
+            "include_display_metadata": False,
             "include_integrity_metadata": False,
         },
     ]
@@ -672,6 +717,9 @@ def _missing_optional_feed_video_column(message: str) -> bool:
         "source_category" in message
         or "source_query" in message
         or "short_description" in message
+        or "display_title" in message
+        or "display_channel" in message
+        or "display_hashtags" in message
         or "integrity_score" in message
         or "integrity_flags" in message
         or "production_style" in message
@@ -756,13 +804,17 @@ def _candidate_from_video_item(
     topic = source_category
     thumbnail_url = _best_thumbnail(snippet)
     short_description = build_short_description(description)
+    channel_title = str(snippet.get("channelTitle") or "")
+    display_title = build_display_title(title)
+    display_channel = build_display_channel(channel_title)
+    display_hashtags = build_display_hashtags(title, description)
 
     row_for_scoring = {
         "title": title,
         "description": description,
         "short_description": short_description,
         "tags": tags,
-        "channel_title": snippet.get("channelTitle") or "",
+        "channel_title": channel_title,
         "video_id": video_id,
         "category": source_category,
         "topic": source_category,
@@ -804,10 +856,13 @@ def _candidate_from_video_item(
         source="youtube",
         youtube_video_id=video_id,
         title=title,
-        channel_title=str(snippet.get("channelTitle") or ""),
+        channel_title=channel_title,
         channel_id=str(snippet.get("channelId") or ""),
         description=description,
         short_description=short_description,
+        display_title=display_title,
+        display_channel=display_channel,
+        display_hashtags=display_hashtags,
         thumbnail_url=thumbnail_url,
         embed_url=f"https://www.youtube-nocookie.com/embed/{video_id}",
         watch_url=f"https://www.youtube.com/watch?v={video_id}",
@@ -838,12 +893,13 @@ def _candidate_from_video_item(
 
 
 def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandidate) -> None:
-    placeholders = ",".join(["?"] * 34)
+    placeholders = ",".join(["?"] * 37)
     conn.execute(
         f"""
         INSERT INTO feed_videos (
             id, source, youtube_video_id, title, channel_title, channel_id,
-            description, short_description, thumbnail_url, embed_url, watch_url, published_at,
+            description, short_description, display_title, display_channel,
+            display_hashtags, thumbnail_url, embed_url, watch_url, published_at,
             duration_seconds, view_count, tags, category_id, topic,
             source_category, source_query, integrity_score, integrity_flags,
             production_style, creator_scale, score, created_at, updated_at, status,
@@ -858,6 +914,9 @@ def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandi
             channel_id = excluded.channel_id,
             description = excluded.description,
             short_description = excluded.short_description,
+            display_title = excluded.display_title,
+            display_channel = excluded.display_channel,
+            display_hashtags = excluded.display_hashtags,
             thumbnail_url = excluded.thumbnail_url,
             embed_url = excluded.embed_url,
             watch_url = excluded.watch_url,
@@ -890,14 +949,15 @@ def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandi
 
 def _upsert_postgres_candidate(cur, candidate: FeedVideoCandidate) -> None:
     values = _candidate_postgres_values(candidate)
-    placeholders = ["%s"] * 34
-    for index in (14, 20, 27):
+    placeholders = ["%s"] * 37
+    for index in (10, 17, 23, 30):
         placeholders[index] = "%s::jsonb"
     cur.execute(
         f"""
         INSERT INTO feed_videos (
             id, source, youtube_video_id, title, channel_title, channel_id,
-            description, short_description, thumbnail_url, embed_url, watch_url, published_at,
+            description, short_description, display_title, display_channel,
+            display_hashtags, thumbnail_url, embed_url, watch_url, published_at,
             duration_seconds, view_count, tags, category_id, topic,
             source_category, source_query, integrity_score, integrity_flags,
             production_style, creator_scale, score, created_at, updated_at, status,
@@ -912,6 +972,9 @@ def _upsert_postgres_candidate(cur, candidate: FeedVideoCandidate) -> None:
             channel_id = excluded.channel_id,
             description = excluded.description,
             short_description = excluded.short_description,
+            display_title = excluded.display_title,
+            display_channel = excluded.display_channel,
+            display_hashtags = excluded.display_hashtags,
             thumbnail_url = excluded.thumbnail_url,
             embed_url = excluded.embed_url,
             watch_url = excluded.watch_url,
@@ -952,6 +1015,9 @@ def _candidate_sqlite_values(candidate: FeedVideoCandidate) -> tuple:
         candidate.channel_id,
         candidate.description,
         candidate.short_description,
+        candidate.display_title,
+        candidate.display_channel,
+        json.dumps(candidate.display_hashtags),
         candidate.thumbnail_url,
         candidate.embed_url,
         candidate.watch_url,
@@ -983,7 +1049,7 @@ def _candidate_sqlite_values(candidate: FeedVideoCandidate) -> tuple:
 
 def _candidate_postgres_values(candidate: FeedVideoCandidate) -> tuple:
     values = list(_candidate_sqlite_values(candidate))
-    # tags, integrity_flags, and chrysalis_scores are JSONB parameters in Postgres.
+    # display_hashtags, tags, integrity_flags, and chrysalis_scores are JSONB in Postgres.
     return tuple(values)
 
 

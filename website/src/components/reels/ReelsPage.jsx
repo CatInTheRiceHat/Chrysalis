@@ -20,25 +20,88 @@ const LEGACY_INTENTION_KEY = 'chrysalis-reels-intention';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '';
 const TARGET_CARD_COUNT = 12;
+const HASHTAG_RE = /#[\w-]+/g;
+const TRAILING_TITLE_SEPARATOR_RE = new RegExp(String.raw`[\s|/\\_:;,.=-]+$`);
+
+function truncateAtWord(text, maxChars) {
+  if (text.length <= maxChars) return text;
+  const limit = Math.max(0, maxChars - 3);
+  let shortened = text.slice(0, limit).trim();
+  if (shortened.includes(' ')) shortened = shortened.replace(/\s+\S*$/, '').trim();
+  return `${shortened.replace(/[.,;:|-]+$/, '').trim()}...`;
+}
+
+function compactText(value, maxChars) {
+  const text = String(value || '')
+    .replace(/https?:\/\/\S+|www\.\S+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return truncateAtWord(text, maxChars);
+}
+
+function compactTitle(value) {
+  const text = String(value || '')
+    .replace(/https?:\/\/\S+|www\.\S+/gi, ' ')
+    .replace(HASHTAG_RE, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(TRAILING_TITLE_SEPARATOR_RE, '')
+    .trim();
+  return compactText(text || value, 82);
+}
+
+function compactCaption(value) {
+  const text = String(value || '')
+    .replace(/https?:\/\/\S+|www\.\S+/gi, ' ')
+    .replace(HASHTAG_RE, ' ')
+    .replace(/\b(subscribe|follow for more|follow me|links? below|link in bio|like and comment)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return truncateAtWord(text, 140);
+}
+
+function displayHashtags(item, rawTitle, rawDescription) {
+  const raw = item.display_hashtags || item.displayHashtags;
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean).slice(0, 3);
+
+  const seen = new Set();
+  const tags = [];
+  for (const match of `${rawTitle || ''} ${rawDescription || ''}`.matchAll(HASHTAG_RE)) {
+    const tag = match[0];
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tags.push(tag);
+    if (tags.length >= 3) break;
+  }
+  return tags;
+}
 
 /** Map a backend /api/feed item into the card shape ReelCard expects. */
 function apiItemToCard(item) {
   const youtubeId = item.youtube_id || item.youtubeId;
+  const rawTitle = item.title || '';
+  const rawDescription = item.description || '';
+  const rawSource = item.channel_title || item.channelTitle || item.raw_source || item.source || '';
   const displayDescription = item.display_description
     || item.displayDescription
     || item.short_description
     || item.shortDescription
-    || item.description;
+    || compactCaption(rawDescription);
+  const displayTitle = item.display_title || item.displayTitle || compactTitle(rawTitle);
+  const displaySource = item.display_channel || item.displayChannel || compactText(rawSource, 30);
 
   return {
     id: youtubeId || item.embed_url || item.embedUrl,
     youtube_id: youtubeId,
-    title: item.title,
-    source: item.source,
+    title: displayTitle,
+    raw_title: rawTitle,
+    source: displaySource,
+    raw_source: rawSource,
     description: displayDescription,
-    raw_description: item.description,
+    raw_description: rawDescription,
     short_description: item.short_description || item.shortDescription || displayDescription,
     display_description: item.display_description || item.displayDescription || displayDescription,
+    display_hashtags: displayHashtags(item, rawTitle, rawDescription),
     thumbnail: item.thumbnail,
     embed_url: item.embed_url || item.embedUrl,
     watch_url: item.watch_url,

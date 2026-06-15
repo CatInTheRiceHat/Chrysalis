@@ -345,6 +345,8 @@ def test_build_feed_shape_and_gating():
     assert "calm1" in ids
     item = feed[0]
     for key in ("youtube_id", "title", "thumbnail", "chrysalis_scores",
+                "display_title", "displayTitle", "display_channel", "displayChannel",
+                "display_hashtags", "displayHashtags",
                 "source_category", "source_query",
                 "ranking_reason", "safety_reason", "concern_reason", "mode_fit",
                 "public_signal", "source_safety_status", "public_signal_effect",
@@ -473,6 +475,11 @@ def test_missing_metadata_does_not_crash():
 def test_build_feed_includes_new_fields():
     row = dict(
         CALM,
+        title=(
+            "A calm rain reset with a very very long YouTube title that would "
+            "otherwise take over the whole reel #calm #rain #study #focus"
+        ),
+        channel_title="A Very Long Channel Name That Should Not Break The Reel Card",
         short_description="A compact calm caption for the card.",
         tags=["calm", "gratitude"],
         duration_seconds=300,
@@ -511,6 +518,13 @@ def test_build_feed_includes_new_fields():
     assert item["category_id"] == "10"
     assert item["thumbnail"] == "https://example.com/t.jpg"
     assert item["description"] == CALM["description"]
+    assert item["title"] == row["title"]
+    assert item["channel_title"] == row["channel_title"]
+    assert "#" not in item["display_title"]
+    assert len(item["display_title"]) <= 82
+    assert len(item["display_channel"]) <= 30
+    assert item["source"] == item["display_channel"]
+    assert item["display_hashtags"] == ["#calm", "#rain", "#study"]
     assert item["short_description"] == "A compact calm caption for the card."
     assert item["displayDescription"] == "A compact calm caption for the card."
 

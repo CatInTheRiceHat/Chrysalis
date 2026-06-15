@@ -121,6 +121,9 @@ def test_youtube_ingest_stores_filtered_real_videos_without_duplicate_inserts(tm
     assert "Subscribe for more resets" in raw_calm["description"]
     assert "Subscribe" not in raw_calm["short_description"]
     assert "https://example.com" not in raw_calm["short_description"]
+    assert raw_calm["display_title"] == "Student focus tips for a calm study reset"
+    assert raw_calm["display_channel"] == "Student Wellness Lab"
+    assert raw_calm["display_hashtags"]
     assert raw_calm["integrity_score"] >= 0.38
     assert raw_calm["integrity_flags"]
     assert raw_calm["production_style"] in {"polished", "casual", "amateur", "low_budget", "chaotic", "unknown"}
@@ -135,6 +138,10 @@ def test_youtube_ingest_stores_filtered_real_videos_without_duplicate_inserts(tm
     assert all(item["source_category"] == "study/productivity" for item in feed)
     calm_card = next(item for item in feed if item["youtube_id"] == "calm1")
     assert calm_card["description"] == raw_calm["description"]
+    assert calm_card["title"] == raw_calm["title"]
+    assert calm_card["display_title"] == raw_calm["display_title"]
+    assert calm_card["source"] == raw_calm["display_channel"]
+    assert calm_card["display_hashtags"] == ["#study", "#focus", "#productivity"]
     assert calm_card["short_description"] == raw_calm["short_description"]
     assert calm_card["displayDescription"] == raw_calm["short_description"]
     assert calm_card["integrity_score"] >= 0.38

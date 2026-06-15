@@ -66,6 +66,7 @@ export function ReelCard({
   const hasVideo = Boolean(videoSource);
   const poster = reel.thumbnail || reel.image;
   const displayLabel = reel.label || (hasVideo ? 'Curated' : null);
+  const displayHashtags = Array.isArray(reel.display_hashtags) ? reel.display_hashtags.slice(0, 3) : [];
   const signalHint = buildSignalHint(reel);
   const embedOrigin = typeof window !== 'undefined' ? window.location.origin : undefined;
   const embedSrc = buildYouTubeEmbedUrl(videoSource, {
@@ -103,6 +104,7 @@ export function ReelCard({
           source={reel.source}
           label={displayLabel}
           description={reel.description}
+          hashtags={displayHashtags}
           concernReason={reel.concern_reason}
           publicSignalEffect={reel.public_signal_effect}
           placement="desktop"
@@ -171,6 +173,7 @@ export function ReelCard({
               source={reel.source}
               label={displayLabel}
               description={reel.description}
+              hashtags={displayHashtags}
               concernReason={reel.concern_reason}
               publicSignalEffect={reel.public_signal_effect}
               placement="mobile"

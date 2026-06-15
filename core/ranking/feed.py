@@ -13,7 +13,12 @@ from collections import Counter
 import json
 import secrets
 
-from ..feed_captions import build_short_description
+from ..feed_captions import (
+    build_display_channel,
+    build_display_hashtags,
+    build_display_title,
+    build_short_description,
+)
 from ..feed_integrity import INTEGRITY_MIN_SCORE, normalize_integrity_flags, resolve_feed_integrity
 from ..labeling.schema import LabelSet, SCORING_VERSION
 from ..labeling.metadata_scoring import (
@@ -170,21 +175,33 @@ def _build_feed_result(
         reasons = build_reasons(labels, mode)
         vid = _row_video_id(row)
         tags = _normalize_tags(row.get("tags"))[:_MAX_API_TAGS]
+        raw_title = row.get("title") or ""
+        raw_channel = row.get("channel_title") or row.get("channel") or "Chrysalis"
         raw_description = row.get("description") or ""
         short_description = (
             row.get("short_description")
             or row.get("display_description")
             or build_short_description(raw_description)
         )
+        display_title = row.get("display_title") or build_display_title(raw_title)
+        display_channel = row.get("display_channel") or build_display_channel(raw_channel)
+        display_hashtags = _display_hashtags_for_row(row, raw_title, raw_description)
         items.append({
             "youtube_id": vid,
-            "title": row.get("title") or "",
-            "source": row.get("channel_title") or row.get("channel") or "Chrysalis",
+            "title": raw_title,
+            "display_title": display_title,
+            "displayTitle": display_title,
+            "source": display_channel,
+            "channel_title": raw_channel,
+            "display_channel": display_channel,
+            "displayChannel": display_channel,
             "description": raw_description,
             "short_description": short_description,
             "shortDescription": short_description,
             "display_description": short_description,
             "displayDescription": short_description,
+            "display_hashtags": display_hashtags,
+            "displayHashtags": display_hashtags,
             "thumbnail": (
                 row.get("thumbnail_url") or row.get("thumbnail")
                 or (_THUMB.format(vid=vid) if vid else None)
@@ -274,6 +291,19 @@ def _counts_for(items: list[dict], *fields: str) -> Counter[str]:
                 break
         counts[value or "unknown"] += 1
     return counts
+
+
+def _display_hashtags_for_row(row: dict, title: str, description: str) -> list[str]:
+    raw = row.get("display_hashtags") or row.get("displayHashtags")
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (TypeError, ValueError):
+            raw = [raw]
+    if isinstance(raw, list):
+        tags = [str(tag).strip() for tag in raw if str(tag).strip()]
+        return tags[:3]
+    return build_display_hashtags(title, description)
 
 
 def _row_video_id(row: dict) -> str:
