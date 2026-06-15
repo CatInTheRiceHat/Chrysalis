@@ -23,6 +23,7 @@ const TARGET_CARD_COUNT = 12;
 
 /** Map a backend /api/feed item into the card shape ReelCard expects. */
 function apiItemToCard(item) {
+  const youtubeId = item.youtube_id || item.youtubeId;
   const displayDescription = item.display_description
     || item.displayDescription
     || item.short_description
@@ -30,8 +31,8 @@ function apiItemToCard(item) {
     || item.description;
 
   return {
-    id: item.youtube_id,
-    youtube_id: item.youtube_id,
+    id: youtubeId || item.embed_url || item.embedUrl,
+    youtube_id: youtubeId,
     title: item.title,
     source: item.source,
     description: displayDescription,
@@ -39,7 +40,7 @@ function apiItemToCard(item) {
     short_description: item.short_description || item.shortDescription || displayDescription,
     display_description: item.display_description || item.displayDescription || displayDescription,
     thumbnail: item.thumbnail,
-    embed_url: item.embed_url,
+    embed_url: item.embed_url || item.embedUrl,
     watch_url: item.watch_url,
     ranking_reason: item.ranking_reason,
     safety_reason: item.safety_reason,
@@ -51,6 +52,13 @@ function apiItemToCard(item) {
     chrysalis_scores: item.chrysalis_scores,
     mode_fit: item.mode_fit,
   };
+}
+
+function createFeedSeed() {
+  if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function mergeRealFirst(real, synthetic) {
@@ -100,13 +108,17 @@ function cardSessionKey(mode, index, reel) {
   return `${mode}:${reel.id ?? reel.youtube_id ?? index}`;
 }
 
+function isLiveVideoCard(card) {
+  return Boolean(card.youtube_id || card.embed_url || card.embedUrl);
+}
+
 function isBreakReminder(mode, reel) {
-  if (reel.youtube_id) return false;
+  if (isLiveVideoCard(reel)) return false;
   return mode === 'metamorphosis' || ['Rest', 'Awareness', 'Pause'].includes(reel.label);
 }
 
 function feedStatus(cards) {
-  const liveCount = cards.filter((card) => card.youtube_id).length;
+  const liveCount = cards.filter(isLiveVideoCard).length;
   if (!liveCount) return 'fallback';
   return liveCount === cards.length ? 'live' : 'mixed';
 }
@@ -189,7 +201,12 @@ export function ReelsPage() {
 
     async function loadFeed() {
       try {
-        const response = await fetch(`${API_URL}/api/feed/${mode}?k=${TARGET_CARD_COUNT}`);
+        const seed = createFeedSeed();
+        const params = new URLSearchParams({
+          k: String(TARGET_CARD_COUNT),
+          seed,
+        });
+        const response = await fetch(`${API_URL}/api/feed/${mode}?${params.toString()}`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         if (cancelled) return;
@@ -431,6 +448,7 @@ export function ReelsPage() {
                     <ReelCard
                       key={reel.id}
                       reel={reel}
+                      isActive={index === activeIndex}
                       onVisible={() => markCardVisible(index, reel)}
                       onStatus={announceStatus}
                       onRegenerate={() => showNextCard(index)}

@@ -227,7 +227,7 @@ def admin_ingest_youtube(
 
 
 @app.get("/api/feed/{mode}")
-def chrysalis_feed(mode: str, k: int = 12):
+def chrysalis_feed(mode: str, k: int = 12, seed: str | None = None):
     """
     Shared real-video feed for a reels mode (daily-dew, metamorphosis,
     flutter-feed). Modes change explanation/reflection copy, not the source pool.
@@ -262,7 +262,13 @@ def chrysalis_feed(mode: str, k: int = 12):
     finally:
         conn.close()
 
-    payload = build_feed_payload(rows, mode, k=k, public_signal_context=public_signal_context)
+    payload = build_feed_payload(
+        rows,
+        mode,
+        k=k,
+        public_signal_context=public_signal_context,
+        shuffle_seed=seed,
+    )
     return {"mode": mode, **payload}
 
 

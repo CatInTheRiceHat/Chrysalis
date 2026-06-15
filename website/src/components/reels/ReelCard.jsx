@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { motion as MOTION } from 'motion/react';
 import { Play } from 'lucide-react';
 import { ReelActionRail } from './ReelActionRail';
 import { ReelCaption } from './ReelCaption';
+import { buildYouTubeEmbedUrl } from './youtubeEmbed';
 
 function scoreValue(card, key) {
   const value = Number(card.chrysalis_scores?.[key]);
@@ -31,37 +32,61 @@ function buildSignalHint(reel) {
   return 'Curated for this mode';
 }
 
-function buildEmbedSrc(baseUrl, originParam) {
-  if (!baseUrl) return null;
-  const separator = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}autoplay=1&mute=1&playsinline=1&controls=1&rel=0&modestbranding=1${originParam}`;
+function resetYouTubeIframe(iframe) {
+  const target = iframe?.contentWindow;
+  if (!target) return;
+
+  [
+    { event: 'command', func: 'pauseVideo', args: [] },
+    { event: 'command', func: 'seekTo', args: [0, true] },
+    { event: 'command', func: 'pauseVideo', args: [] },
+  ].forEach((message) => {
+    target.postMessage(JSON.stringify(message), '*');
+  });
 }
 
 /**
  * A single full-viewport Algorithm card. Two kinds of card:
- *  - real video (has `youtube_id`): thumbnail poster + tap-to-play YouTube embed,
+ *  - real video (has `youtube_id`/`embed_url`): active-card YouTube autoplay embed,
  *    with a "curated by Chrysalis" badge and ranking/safety/concern reasons.
  *  - synthetic card (has `image`): the built-in wellbeing/pause cards.
  * No video files are downloaded — playback is a standard YouTube IFrame embed.
  */
 export function ReelCard({
   reel,
+  isActive = false,
   onVisible,
   onStatus,
   onRegenerate,
 }) {
   const [loaded, setLoaded] = useState(false);
-  const [playing, setPlaying] = useState(false);
+  const iframeRef = useRef(null);
 
-  const hasVideo = Boolean(reel.youtube_id);
+  const videoSource = reel.embed_url || reel.embedUrl || reel.youtube_id || reel.youtubeId;
+  const hasVideo = Boolean(videoSource);
   const poster = reel.thumbnail || reel.image;
   const displayLabel = reel.label || (hasVideo ? 'Curated' : null);
   const signalHint = buildSignalHint(reel);
-  const embedOrigin = typeof window !== 'undefined'
-    ? `&origin=${encodeURIComponent(window.location.origin)}`
-    : '';
-  const embedUrl = reel.embed_url || (hasVideo ? `https://www.youtube-nocookie.com/embed/${reel.youtube_id}` : null);
-  const embedSrc = buildEmbedSrc(embedUrl, embedOrigin);
+  const embedOrigin = typeof window !== 'undefined' ? window.location.origin : undefined;
+  const embedSrc = buildYouTubeEmbedUrl(videoSource, {
+    autoplay: true,
+    muted: false,
+    controls: false,
+    enableJsApi: true,
+    origin: embedOrigin,
+    startSeconds: 0,
+  });
+  const shouldRenderEmbed = hasVideo && embedSrc && isActive;
+
+  useLayoutEffect(() => {
+    if (!shouldRenderEmbed) return undefined;
+    const iframe = iframeRef.current;
+    return () => resetYouTubeIframe(iframe);
+  }, [shouldRenderEmbed, embedSrc]);
+
+  const requestPlayback = () => {
+    onVisible?.();
+  };
 
   return (
     <article className="reel-card">
@@ -91,12 +116,14 @@ export function ReelCard({
             <div className="reel-media-wash" aria-hidden="true" />
 
             {hasVideo ? (
-              playing ? (
+              shouldRenderEmbed ? (
                 <iframe
+                  key={embedSrc}
+                  ref={iframeRef}
                   className="reel-media reel-embed"
                   src={embedSrc}
                   title={reel.title}
-                  loading="lazy"
+                  loading={isActive ? 'eager' : 'lazy'}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                   referrerPolicy="strict-origin-when-cross-origin"
@@ -105,7 +132,7 @@ export function ReelCard({
                 <button
                   type="button"
                   className="reel-play"
-                  onClick={() => setPlaying(true)}
+                  onClick={requestPlayback}
                   aria-label={`Play video: ${reel.title}`}
                 >
                   {poster && (

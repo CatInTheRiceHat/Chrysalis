@@ -281,6 +281,49 @@ def test_feed_payload_includes_integrity_debug_metadata():
     assert payload["production_style_counts"]
     assert payload["creator_scale_counts"]
     assert payload["integrity_flag_counts"]["unsafe_or_ragebait"] == 1
+    assert payload["shuffle_seed"]
+
+
+def test_feed_payload_uses_seeded_shuffle_and_removes_duplicates():
+    rows = []
+    categories = ["travel", "food", "gaming", "music/culture"]
+    styles = ["polished", "casual", "amateur", "low_budget"]
+    scales = ["large", "small", "mid", "small"]
+    for index in range(16):
+        rows.append({
+            "video_id": f"seeded-{index}",
+            "title": "A calm educational guide with a creative idea",
+            "description": "Learn one useful thing in a low-risk, reflective format.",
+            "source_category": categories[index % len(categories)],
+            "source_query": f"{categories[index % len(categories)]} broad query",
+            "integrity_score": 0.72,
+            "integrity_flags": {"negative": [], "positive": ["useful_context"]},
+            "production_style": styles[index % len(styles)],
+            "creator_scale": scales[index % len(scales)],
+        })
+    rows.append(dict(rows[3], title="Duplicate row should not appear twice"))
+
+    first = build_feed_payload(rows, "flutter-feed", k=12, shuffle_seed="seed-a")
+    second = build_feed_payload(rows, "flutter-feed", k=12, shuffle_seed="seed-a")
+    third = build_feed_payload(rows, "flutter-feed", k=12, shuffle_seed="seed-b")
+
+    first_ids = [item["youtube_id"] for item in first["items"]]
+    third_ids = [item["youtube_id"] for item in third["items"]]
+    assert first["shuffle_seed"] == "seed-a"
+    assert first_ids == [item["youtube_id"] for item in second["items"]]
+    assert first_ids != third_ids
+    assert len(first_ids) == len(set(first_ids))
+    assert first["template_count"] == 0
+    assert max(first["category_counts"].values()) <= 3
+
+
+def test_feed_payload_generates_new_seed_when_seed_is_omitted():
+    rows = [dict(CALM), dict(LEARN)]
+    first = build_feed_payload(rows, "flutter-feed", k=2)
+    second = build_feed_payload(rows, "flutter-feed", k=2)
+    assert first["shuffle_seed"]
+    assert second["shuffle_seed"]
+    assert first["shuffle_seed"] != second["shuffle_seed"]
 
 
 # ── Explanations ─────────────────────────────────────────────────────────────

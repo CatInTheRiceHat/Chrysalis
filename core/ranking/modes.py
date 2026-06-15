@@ -9,7 +9,6 @@ source metadata so no single ingestion query or category dominates the feed.
 
 from __future__ import annotations
 
-from datetime import date
 import hashlib
 import os
 
@@ -182,6 +181,7 @@ def rank_videos(
     k: int = 12,
     public_signal_context: PublicSignalContext | None = None,
     public_signal_override: bool = False,
+    shuffle_seed: str | None = None,
 ) -> list[dict]:
     """
     Shared gate → shared score → source balancing. Each input item must carry a
@@ -225,31 +225,33 @@ def rank_videos(
         annotated.update(public_eval.to_item_fields())
         scored.append(annotated)
 
-    return _balance_source_metadata(scored)[:k]
+    return _balance_source_metadata(scored, shuffle_seed=shuffle_seed)[:k]
 
 
-def _balance_source_metadata(items: list[dict]) -> list[dict]:
+def _balance_source_metadata(items: list[dict], *, shuffle_seed: str | None = None) -> list[dict]:
     """
     Round-robin source categories, with query/style/scale spread inside each
     category. Production style and creator scale are diversity metadata, not
     polish gates.
     """
     if len(items) <= 2:
-        return sorted(items, key=_feed_sort_key)
+        return sorted(items, key=lambda item: _feed_sort_key(item, shuffle_seed))
 
     category_buckets: dict[str, list[dict]] = {}
-    for item in sorted(items, key=_feed_sort_key):
+    for item in sorted(items, key=lambda item: _feed_sort_key(item, shuffle_seed)):
         category = _source_value(item, "source_category", "topic", "category")
         category_buckets.setdefault(category, []).append(item)
 
     for category, bucket in category_buckets.items():
-        category_buckets[category] = _spread_source_queries(bucket)
+        category_buckets[category] = _spread_source_queries(bucket, shuffle_seed=shuffle_seed)
 
     category_order = sorted(
         category_buckets,
-        key=lambda category: (
-            -max(_item_score(item) for item in category_buckets[category]),
-            _stable_random_value("category", category),
+        key=lambda category: _bucket_sort_key(
+            category,
+            category_buckets[category],
+            salt="category",
+            shuffle_seed=shuffle_seed,
         ),
     )
 
@@ -261,23 +263,25 @@ def _balance_source_metadata(items: list[dict]) -> list[dict]:
     return result
 
 
-def _spread_source_queries(items: list[dict]) -> list[dict]:
+def _spread_source_queries(items: list[dict], *, shuffle_seed: str | None = None) -> list[dict]:
     if len(items) <= 2:
-        return _spread_style_and_scale(items)
+        return _spread_style_and_scale(items, shuffle_seed=shuffle_seed)
 
     query_buckets: dict[str, list[dict]] = {}
-    for item in sorted(items, key=_feed_sort_key):
+    for item in sorted(items, key=lambda item: _feed_sort_key(item, shuffle_seed)):
         query = _source_value(item, "source_query")
         query_buckets.setdefault(query, []).append(item)
 
     for query, bucket in query_buckets.items():
-        query_buckets[query] = _spread_style_and_scale(bucket)
+        query_buckets[query] = _spread_style_and_scale(bucket, shuffle_seed=shuffle_seed)
 
     query_order = sorted(
         query_buckets,
-        key=lambda query: (
-            -max(_item_score(item) for item in query_buckets[query]),
-            _stable_random_value("query", query),
+        key=lambda query: _bucket_sort_key(
+            query,
+            query_buckets[query],
+            salt="query",
+            shuffle_seed=shuffle_seed,
         ),
     )
 
@@ -289,25 +293,43 @@ def _spread_source_queries(items: list[dict]) -> list[dict]:
     return result
 
 
-def _spread_style_and_scale(items: list[dict]) -> list[dict]:
-    balanced = _spread_metadata_field(items, "production_style", salt="production_style")
-    return _spread_metadata_field(balanced, "creator_scale", salt="creator_scale")
+def _spread_style_and_scale(items: list[dict], *, shuffle_seed: str | None = None) -> list[dict]:
+    balanced = _spread_metadata_field(
+        items,
+        "production_style",
+        salt="production_style",
+        shuffle_seed=shuffle_seed,
+    )
+    return _spread_metadata_field(
+        balanced,
+        "creator_scale",
+        salt="creator_scale",
+        shuffle_seed=shuffle_seed,
+    )
 
 
-def _spread_metadata_field(items: list[dict], field: str, *, salt: str) -> list[dict]:
+def _spread_metadata_field(
+    items: list[dict],
+    field: str,
+    *,
+    salt: str,
+    shuffle_seed: str | None = None,
+) -> list[dict]:
     if len(items) <= 2:
-        return sorted(items, key=_feed_sort_key)
+        return sorted(items, key=lambda item: _feed_sort_key(item, shuffle_seed))
 
     buckets: dict[str, list[dict]] = {}
-    for item in sorted(items, key=_feed_sort_key):
+    for item in sorted(items, key=lambda item: _feed_sort_key(item, shuffle_seed)):
         value = _source_value(item, field)
         buckets.setdefault(value, []).append(item)
 
     order = sorted(
         buckets,
-        key=lambda value: (
-            -max(_item_score(item) for item in buckets[value]),
-            _stable_random_value(salt, value),
+        key=lambda value: _bucket_sort_key(
+            value,
+            buckets[value],
+            salt=salt,
+            shuffle_seed=shuffle_seed,
         ),
     )
 
@@ -319,8 +341,27 @@ def _spread_metadata_field(items: list[dict], field: str, *, salt: str) -> list[
     return result
 
 
-def _feed_sort_key(item: dict) -> tuple[float, float]:
-    return (-round(_item_score(item), 2), _stable_random_value("item", _item_identity(item)))
+def _feed_sort_key(item: dict, shuffle_seed: str | None = None) -> tuple[float, float]:
+    if not shuffle_seed:
+        return (-round(_item_score(item), 2), _stable_random_value("item", _item_identity(item)))
+    return (
+        _stable_random_value("item", _item_identity(item), shuffle_seed=shuffle_seed),
+        -round(_item_score(item), 2),
+    )
+
+
+def _bucket_sort_key(
+    value: str,
+    items: list[dict],
+    *,
+    salt: str,
+    shuffle_seed: str | None,
+) -> tuple[float, float]:
+    random_value = _stable_random_value(salt, value, shuffle_seed=shuffle_seed)
+    score_value = -max(_item_score(item) for item in items)
+    if not shuffle_seed:
+        return (score_value, random_value)
+    return (random_value, score_value)
 
 
 def _item_score(item: dict) -> float:
@@ -349,11 +390,11 @@ def _safe_score(value) -> float | None:
 
 
 def _feed_random_seed() -> str:
-    return os.environ.get("CHRYSALIS_FEED_RANDOM_SEED") or date.today().isoformat()
+    return os.environ.get("CHRYSALIS_FEED_RANDOM_SEED") or "chrysalis-default-feed-seed"
 
 
-def _stable_random_value(*parts: str) -> float:
-    raw = "|".join((_feed_random_seed(), *parts))
+def _stable_random_value(*parts: str, shuffle_seed: str | None = None) -> float:
+    raw = "|".join((str(shuffle_seed or _feed_random_seed()), *parts))
     digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:12]
     return int(digest, 16) / float(0xFFFFFFFFFFFF)
 

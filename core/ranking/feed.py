@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections import Counter
 import json
+import secrets
 
 from ..feed_captions import build_short_description
 from ..feed_integrity import INTEGRITY_MIN_SCORE, normalize_integrity_flags, resolve_feed_integrity
@@ -30,6 +31,7 @@ _WATCH = "https://www.youtube.com/watch?v={vid}"
 
 # Cap tags surfaced to the client — enough to be useful, not a debug dump.
 _MAX_API_TAGS = 15
+_MAX_SEED_LENGTH = 96
 
 
 def _labels_for_row(row: dict) -> LabelSet:
@@ -58,6 +60,7 @@ def build_feed(
     k: int = 12,
     public_signal_context: PublicSignalContext | None = None,
     public_signal_override: bool = False,
+    shuffle_seed: str | None = None,
 ) -> list[dict]:
     """
     Returns a list of API-ready items for `mode`:
@@ -76,6 +79,7 @@ def build_feed(
         k=k,
         public_signal_context=public_signal_context,
         public_signal_override=public_signal_override,
+        shuffle_seed=shuffle_seed,
     )
     return items
 
@@ -86,17 +90,31 @@ def build_feed_payload(
     k: int = 12,
     public_signal_context: PublicSignalContext | None = None,
     public_signal_override: bool = False,
+    shuffle_seed: str | None = None,
 ) -> dict:
+    resolved_seed = normalize_shuffle_seed(shuffle_seed) or new_shuffle_seed()
     items, debug = _build_feed_result(
         rows,
         mode,
         k=k,
         public_signal_context=public_signal_context,
         public_signal_override=public_signal_override,
+        shuffle_seed=resolved_seed,
     )
     payload = {"count": len(items), "items": items, **debug}
     payload["debug"] = dict(debug)
     return payload
+
+
+def new_shuffle_seed() -> str:
+    return secrets.token_urlsafe(12)
+
+
+def normalize_shuffle_seed(seed: str | None) -> str | None:
+    value = str(seed or "").strip()
+    if not value:
+        return None
+    return value[:_MAX_SEED_LENGTH]
 
 
 def _build_feed_result(
@@ -105,12 +123,18 @@ def _build_feed_result(
     k: int = 12,
     public_signal_context: PublicSignalContext | None = None,
     public_signal_override: bool = False,
+    shuffle_seed: str | None = None,
 ) -> tuple[list[dict], dict]:
     if not is_valid_mode(mode) or not rows:
-        return [], _debug_metadata([], [], k)
+        return [], _debug_metadata([], [], k, shuffle_seed=shuffle_seed)
 
     candidates: list[dict] = []
+    seen_video_ids: set[str] = set()
     for row in rows:
+        video_id = _row_video_id(row)
+        if not video_id or video_id in seen_video_ids:
+            continue
+        seen_video_ids.add(video_id)
         labels = _labels_for_row(row)
         integrity = resolve_feed_integrity(row, labels.to_dict())
         candidates.append({
@@ -124,7 +148,7 @@ def _build_feed_result(
             "integrity_flags": integrity["integrity_flags"],
             "production_style": integrity["production_style"],
             "creator_scale": integrity["creator_scale"],
-            "video_id": row.get("video_id") or row.get("youtube_id") or "",
+            "video_id": video_id,
             "channel_id": row.get("channel_id") or "",
             "channel_title": row.get("channel_title") or row.get("channel") or "",
         })
@@ -135,6 +159,7 @@ def _build_feed_result(
         k=k,
         public_signal_context=public_signal_context,
         public_signal_override=public_signal_override,
+        shuffle_seed=shuffle_seed,
     )
 
     items: list[dict] = []
@@ -143,7 +168,7 @@ def _build_feed_result(
         labels = cand["labels"]
         # Reasons are mode-specific, so always compute for the requested mode.
         reasons = build_reasons(labels, mode)
-        vid = row.get("video_id") or row.get("youtube_id") or ""
+        vid = _row_video_id(row)
         tags = _normalize_tags(row.get("tags"))[:_MAX_API_TAGS]
         raw_description = row.get("description") or ""
         short_description = (
@@ -195,10 +220,16 @@ def _build_feed_result(
             "public_signal_effect": cand.get("public_signal_effect", "none"),
             "public_signal_reason": cand.get("public_signal_reason"),
         })
-    return items, _debug_metadata(candidates, ranked, k)
+    return items, _debug_metadata(candidates, ranked, k, shuffle_seed=shuffle_seed)
 
 
-def _debug_metadata(candidates: list[dict], ranked: list[dict], k: int) -> dict:
+def _debug_metadata(
+    candidates: list[dict],
+    ranked: list[dict],
+    k: int,
+    *,
+    shuffle_seed: str | None,
+) -> dict:
     integrity_scores = [
         float(item.get("integrity_score"))
         for item in ranked
@@ -211,6 +242,7 @@ def _debug_metadata(candidates: list[dict], ranked: list[dict], k: int) -> dict:
         flag_counts.update(flags["positive"])
 
     return {
+        "shuffle_seed": shuffle_seed,
         "real_count": len(ranked),
         "template_count": max(0, int(k) - len(ranked)),
         "average_integrity_score": (
@@ -242,3 +274,13 @@ def _counts_for(items: list[dict], *fields: str) -> Counter[str]:
                 break
         counts[value or "unknown"] += 1
     return counts
+
+
+def _row_video_id(row: dict) -> str:
+    return str(
+        row.get("video_id")
+        or row.get("youtube_id")
+        or row.get("youtube_video_id")
+        or row.get("id")
+        or ""
+    ).strip()
