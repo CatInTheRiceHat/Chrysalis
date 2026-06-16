@@ -28,7 +28,12 @@ from ..labeling.metadata_scoring import (
 )
 from ..labeling.explain import build_reasons
 from ..public_signals.ranking import PublicSignalContext
-from .modes import rank_videos, is_valid_mode
+from .modes import (
+    POPULAR_MIN_SCORE,
+    is_valid_mode,
+    popular_passes_min_score,
+    rank_videos,
+)
 
 _THUMB = "https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
 _EMBED = "https://www.youtube-nocookie.com/embed/{vid}"
@@ -135,11 +140,20 @@ def _build_feed_result(
 
     candidates: list[dict] = []
     seen_video_ids: set[str] = set()
+    popular_below_threshold = 0
     for row in rows:
         video_id = _row_video_id(row)
         if not video_id or video_id in seen_video_ids:
             continue
         seen_video_ids.add(video_id)
+        # Guard the load path: drop weak popular rows (incl. legacy rows ingested
+        # before the threshold existed) so they never reach the feed. Search-lane
+        # rows are exempt — only most_popular is gated.
+        if not popular_passes_min_score(
+            row.get("source_type"), row.get("popularity_score")
+        ):
+            popular_below_threshold += 1
+            continue
         labels = _labels_for_row(row)
         integrity = resolve_feed_integrity(row, labels.to_dict())
         candidates.append({
@@ -247,7 +261,13 @@ def _build_feed_result(
             "public_signal_effect": cand.get("public_signal_effect", "none"),
             "public_signal_reason": cand.get("public_signal_reason"),
         })
-    return items, _debug_metadata(candidates, ranked, k, shuffle_seed=shuffle_seed)
+    return items, _debug_metadata(
+        candidates,
+        ranked,
+        k,
+        shuffle_seed=shuffle_seed,
+        popular_below_threshold=popular_below_threshold,
+    )
 
 
 def _debug_metadata(
@@ -256,6 +276,7 @@ def _debug_metadata(
     k: int,
     *,
     shuffle_seed: str | None,
+    popular_below_threshold: int = 0,
 ) -> dict:
     integrity_scores = [
         float(item.get("integrity_score"))
@@ -279,6 +300,8 @@ def _debug_metadata(
         "category_counts": dict(_counts_for(ranked, "source_category", "topic", "category")),
         "source_query_counts": dict(_counts_for(ranked, "source_query")),
         "source_type_counts": dict(_counts_for(ranked, "source_type")),
+        "popular_min_score": POPULAR_MIN_SCORE,
+        "popular_below_threshold_filtered_count": popular_below_threshold,
         "production_style_counts": dict(_counts_for(ranked, "production_style")),
         "creator_scale_counts": dict(_counts_for(ranked, "creator_scale")),
         "integrity_flag_counts": dict(sorted(flag_counts.items())),

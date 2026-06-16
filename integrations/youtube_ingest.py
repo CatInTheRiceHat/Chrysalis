@@ -8,7 +8,7 @@ feed ranker expects. No videos are downloaded, proxied, converted, or rehosted.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import datetime, timedelta, timezone
 import json
 import math
@@ -33,6 +33,7 @@ from core.labeling.explain import build_reasons
 from core.labeling.metadata_scoring import parse_duration_seconds, score_metadata
 from core.labeling.schema import SCORING_VERSION
 from core.preferences import normalize_language_code, normalize_region_code
+from core.ranking.modes import POPULAR_MIN_SCORE, popular_passes_min_score
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = resolve_database_path()
@@ -179,6 +180,7 @@ class IngestResult:
     queries: list[str]
     days_back: int
     max_results_per_query: int
+    source_type_counts: dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -443,6 +445,9 @@ def ingest_youtube_videos_sqlite(
         added, updated = store_candidates_sqlite(conn, candidates)
     finally:
         conn.close()
+    counts: dict[str, int] = {}
+    for c in candidates:
+        counts[c.source_type] = counts.get(c.source_type, 0) + 1
     return IngestResult(
         ok=True,
         added=added,
@@ -452,6 +457,7 @@ def ingest_youtube_videos_sqlite(
         queries=query_list,
         days_back=days_back,
         max_results_per_query=max_results_per_query,
+        source_type_counts=counts,
     )
 
 
@@ -484,6 +490,9 @@ def ingest_youtube_videos_postgres(
         popular_ratio=popular_ratio,
     )
     added, updated = store_candidates_postgres(conn, candidates)
+    counts: dict[str, int] = {}
+    for c in candidates:
+        counts[c.source_type] = counts.get(c.source_type, 0) + 1
     return IngestResult(
         ok=True,
         added=added,
@@ -493,6 +502,7 @@ def ingest_youtube_videos_postgres(
         queries=query_list,
         days_back=days_back,
         max_results_per_query=max_results_per_query,
+        source_type_counts=counts,
     )
 
 
@@ -670,6 +680,10 @@ def _mix_search_and_popular(
     for cand in popular:
         if cand.youtube_video_id in seen_ids:
             continue
+        # Drop weak trending picks before they ever reach feed_videos. Only the
+        # popular lane is gated; search candidates are never filtered here.
+        if not popular_passes_min_score(cand.source_type, cand.popularity_score):
+            continue
         seen_ids.add(cand.youtube_video_id)
         unique_popular.append(cand)
 
@@ -728,6 +742,54 @@ def store_candidates_postgres(conn, candidates: Iterable[FeedVideoCandidate]) ->
             added += 1
     conn.commit()
     return added, updated
+
+
+def deactivate_weak_popular_rows_sqlite(
+    conn: sqlite3.Connection,
+    *,
+    min_score: float = POPULAR_MIN_SCORE,
+) -> int:
+    """One-time admin cleanup: mark already-stored weak popular rows inactive.
+
+    The feed-load path already filters these out at read time, so this is purely
+    optional housekeeping. There is no boolean ``is_active`` column in this
+    schema — rows are gated by ``status``, so we flip ``status`` away from
+    ``'active'`` (the value the feed query requires). SQL-safe / parameterized
+    and scoped strictly to ``most_popular`` rows below ``min_score``.
+    """
+    cur = conn.execute(
+        """
+        UPDATE feed_videos
+           SET status = 'inactive'
+         WHERE source_type = 'most_popular'
+           AND COALESCE(popularity_score, 0) < ?
+           AND status = 'active'
+        """,
+        (min_score,),
+    )
+    conn.commit()
+    return cur.rowcount or 0
+
+
+def deactivate_weak_popular_rows_postgres(
+    conn,
+    *,
+    min_score: float = POPULAR_MIN_SCORE,
+) -> int:
+    """Postgres counterpart of :func:`deactivate_weak_popular_rows_sqlite`."""
+    cur = conn.cursor()
+    cur.execute(
+        """
+        UPDATE feed_videos
+           SET status = 'inactive'
+         WHERE source_type = 'most_popular'
+           AND COALESCE(popularity_score, 0) < %s
+           AND status = 'active'
+        """,
+        (min_score,),
+    )
+    conn.commit()
+    return cur.rowcount or 0
 
 
 def load_active_feed_video_rows_sqlite(

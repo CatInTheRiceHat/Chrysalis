@@ -59,8 +59,40 @@ POPULAR_BUDGET_BY_MODE: dict[str, int | None] = {
 METAMORPHOSIS_POPULAR_MAX_RISK = 0.2
 
 
+def _resolve_popular_min_score() -> float:
+    """Read POPULAR_MIN_SCORE from the env, defaulting to 0.5 on absent/invalid."""
+    raw = os.environ.get("POPULAR_MIN_SCORE")
+    if raw is None or not raw.strip():
+        return 0.5
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return 0.5
+
+
+# Minimum popularity_score a "most_popular" candidate must reach to be eligible
+# for the feed. Weak trending picks below this floor are dropped both at
+# extraction and at feed-load time. Search-lane candidates are *exempt* — niche
+# / high-quality search results are allowed to be low-popularity. Configurable
+# via the POPULAR_MIN_SCORE env var; defaults to 0.5.
+POPULAR_MIN_SCORE = _resolve_popular_min_score()
+
+
 def _is_popular(item: dict) -> bool:
     return str(item.get("source_type") or "").strip().lower() == "most_popular"
+
+
+def popular_passes_min_score(source_type, popularity_score) -> bool:
+    """True if a candidate clears the popular-lane popularity floor.
+
+    Only ``most_popular`` candidates are gated; every other source type (search)
+    always passes, since search results may be legitimately low-popularity.
+    Reads ``POPULAR_MIN_SCORE`` at call time so env / test overrides take effect.
+    """
+    if str(source_type or "").strip().lower() != "most_popular":
+        return True
+    score = _safe_score(popularity_score)
+    return (score if score is not None else 0.0) >= POPULAR_MIN_SCORE
 
 
 # Each profile:
