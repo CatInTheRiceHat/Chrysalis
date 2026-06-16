@@ -595,119 +595,54 @@ def cron_extract(
     authorization: str = Header(None),
     relevance_language: str = DEFAULT_LANGUAGE,
     region_code: str = DEFAULT_REGION,
+    max_results_per_query: int = 15,
+    days_back: int = 7,
 ):
+    """Daily YouTube ingestion cron.
+
+    Delegates to the canonical ``ingest_youtube_videos_postgres`` path so the
+    cron writes into ``feed_videos`` — the exact table ``GET /api/feed/{mode}``
+    reads from via ``load_active_feed_video_rows_postgres``. The deprecated
+    standalone ``videos`` table is no longer required (and does not exist in
+    production Supabase); its absence is logged, not fatal.
+
+    Locale targeting is preserved end-to-end by the ingest path: search.list
+    uses ``relevanceLanguage`` + ``regionCode`` and videos.list uses ``hl`` +
+    ``regionCode``, defaulting to en / US.
+    """
     cron_secret = os.environ.get("CRON_SECRET", "")
     if cron_secret and authorization != f"Bearer {cron_secret}":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    sys.path.insert(0, str(ROOT / "integrations"))
-    from integrations.youtube_extractor import (
-        _fetch_ids_by_topic,
-        _fetch_stats_batch,
-        _classify_heuristic,
-        _compute_active_ratio,
-        _infer_creator_trait,
-        _best_thumbnail,
-        ALL_TOPICS,
-        CATEGORY_TO_TOPIC,
-    )
-    from core.labeling.metadata_scoring import parse_duration_seconds
-    import time
-
     conn = get_db()
-    cur = conn.cursor()
-
-    # Fetch IDs for all topics (15 per topic)
-    all_ids: list[str] = []
-    for topic in ALL_TOPICS:
-        all_ids += _fetch_ids_by_topic(
-            topic,
-            max_results=15,
+    try:
+        result = ingest_youtube_videos_postgres(
+            conn,
+            max_results_per_query=max_results_per_query,
+            days_back=days_back,
             relevance_language=relevance_language,
             region_code=region_code,
         )
+    except YouTubeIngestError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    finally:
+        # Best-effort, non-fatal diagnostic: the cron no longer depends on the
+        # legacy `videos` table, but surface whether it still exists for ops
+        # visibility into the migration. `to_regclass` returns NULL (no error)
+        # when the table is absent; the try/except guards an aborted txn state.
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT to_regclass('public.videos')")
+            if cur.fetchone()[0] is None:
+                print(
+                    "[cron_extract] legacy `videos` table absent — writing to "
+                    "feed_videos (canonical feed store)."
+                )
+        except Exception as exc:  # pragma: no cover - diagnostics only
+            conn.rollback()
+            print(f"[cron_extract] legacy `videos` table check skipped: {exc}")
+        conn.close()
 
-    # Deduplicate
-    seen: set[str] = set()
-    all_ids = [i for i in all_ids if not (i in seen or seen.add(i))]
-
-    # Skip already-stored videos
-    if all_ids:
-        cur.execute(
-            "SELECT video_id FROM videos WHERE video_id = ANY(%s)",
-            (all_ids,),
-        )
-        cached = {r[0] for r in cur.fetchall()}
-    else:
-        cached = set()
-
-    new_ids = [i for i in all_ids if i not in cached]
-    inserted = 0
-
-    BATCH_SIZE = 50
-    for i in range(0, len(new_ids), BATCH_SIZE):
-        batch = new_ids[i : i + BATCH_SIZE]
-        stats_map = _fetch_stats_batch(
-            batch,
-            relevance_language=relevance_language,
-            region_code=region_code,
-        )
-
-        for vid_id in batch:
-            info = stats_map.get(vid_id)
-            if not info:
-                continue
-            snip  = info["snippet"]
-            stats = info["statistics"]
-            details = info.get("contentDetails", {})
-
-            title         = snip.get("title", "")
-            description   = snip.get("description", "")
-            channel_id    = snip.get("channelId", "")
-            channel_title = snip.get("channelTitle", "")
-            category_id   = snip.get("categoryId", "24")
-            published_at  = snip.get("publishedAt", "")
-            topic         = CATEGORY_TO_TOPIC.get(category_id, "entertainment")
-            active_ratio  = _compute_active_ratio(stats)
-            scores        = _classify_heuristic(title, description)
-
-            tags             = snip.get("tags", []) or []
-            thumbnail_url    = _best_thumbnail(snip)
-            duration_seconds = parse_duration_seconds(details.get("duration"))
-
-            cur.execute(
-                """
-                INSERT INTO videos (
-                    video_id, title, description, channel_id, channel_title,
-                    topic, category_id, tags, duration_seconds, thumbnail_url,
-                    view_count, like_count, comment_count,
-                    published_at, active_engagement_ratio,
-                    appearance_comparison, opinion_comparison, prosocial, risk,
-                    creator_authenticity, fetched_at, classified_at
-                ) VALUES (
-                    %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
-                ) ON CONFLICT (video_id) DO NOTHING
-                """,
-                (
-                    vid_id, title, description,
-                    channel_id, channel_title,
-                    topic, category_id,
-                    json.dumps(tags), duration_seconds, thumbnail_url,
-                    int(stats.get("viewCount", 0) or 0),
-                    int(stats.get("likeCount",  0) or 0),
-                    int(stats.get("commentCount",0) or 0),
-                    published_at,
-                    active_ratio,
-                    scores["appearance_comparison"],
-                    scores["opinion_comparison"],
-                    scores["prosocial"],
-                    scores["risk"],
-                    scores["creator_authenticity"],
-                    time.time(), time.time(),
-                ),
-            )
-            inserted += 1
-
-    conn.commit()
-    conn.close()
-    return {"ok": True, "new_videos": inserted, "skipped": len(cached)}
+    payload = result.to_dict()
+    payload["table"] = "feed_videos"
+    return payload
