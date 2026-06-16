@@ -117,6 +117,8 @@ def test_cron_extract_writes_feed_videos_and_avoids_legacy_videos(monkeypatch):
             captured.append((endpoint, dict(params)))
             if endpoint == "search":
                 return {"items": [{"id": {"videoId": "calm1"}}, {"id": {"videoId": "focus2"}}]}
+            if endpoint == "videos" and params.get("chart") == "mostPopular":
+                return {"items": []}
             if endpoint == "videos":
                 ids = str(params["id"]).split(",")
                 return {"items": [_video(i, "Student focus tips for a calm reset") for i in ids]}
@@ -183,6 +185,8 @@ def test_cron_extract_defaults_to_en_us(monkeypatch):
             captured.append((endpoint, dict(params)))
             if endpoint == "search":
                 return {"items": [{"id": {"videoId": "calm1"}}]}
+            if endpoint == "videos" and params.get("chart") == "mostPopular":
+                return {"items": []}
             if endpoint == "videos":
                 ids = str(params["id"]).split(",")
                 return {"items": [_video(i, "Student focus tips reset") for i in ids]}

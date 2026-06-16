@@ -36,6 +36,32 @@ SHARED_FEED_CAPS = {
 }
 SHARED_MIN_CONFIDENCE = 0.12
 
+# --- Popular / trending lane policy -----------------------------------------
+# Maximum additive boost a video's capped popularity_score can add to its
+# mode_fit. Kept deliberately small: a healthy-signal gap (e.g. a ~0.4 higher
+# calm score) moves mode_fit more than this cap, so popularity tilts *ties*
+# toward familiar content but never lets one viral hit outrank a genuinely
+# calmer/safer/healthier video. That, plus the per-mode budget below, is what
+# keeps the feed from collapsing into a pure popularity ranking.
+POPULARITY_BOOST_CAP = 0.04
+
+# How many popular-lane picks may appear in the final feed for each mode.
+#   daily-dew     → a small taste (calm, grounding mode)
+#   metamorphosis → very few, and only when low-risk (see guard below)
+#   flutter-feed  → unlimited (closest to a normal feed)
+POPULAR_BUDGET_BY_MODE: dict[str, int | None] = {
+    "daily-dew": 2,
+    "metamorphosis": 2,
+    "flutter-feed": None,
+}
+# Metamorphosis is the strictest mode: only surface popular picks whose overall
+# risk is at/below this floor, regardless of the per-mode budget.
+METAMORPHOSIS_POPULAR_MAX_RISK = 0.2
+
+
+def _is_popular(item: dict) -> bool:
+    return str(item.get("source_type") or "").strip().lower() == "most_popular"
+
 
 # Each profile:
 #   pos:  weights over positive dims
@@ -199,6 +225,14 @@ def rank_videos(
             labels = LabelSet.from_dict(labels or {})
         if not passes_shared_feed_gate(labels):
             continue
+        # Metamorphosis only tolerates popular-lane picks when they are genuinely
+        # low-risk — popularity must never relax this mode's calm guarantee.
+        if (
+            mode == "metamorphosis"
+            and _is_popular(item)
+            and getattr(labels, "overall_risk", 0.0) > METAMORPHOSIS_POPULAR_MAX_RISK
+        ):
+            continue
         integrity_score = _safe_score(item.get("integrity_score"))
         if integrity_score is None:
             integrity_score = DEFAULT_INTEGRITY_SCORE
@@ -217,15 +251,47 @@ def rank_videos(
         annotated = dict(item)
         annotated["labels"] = labels
         annotated["integrity_score"] = round(integrity_score, 4)
-        annotated["mode_fit"] = _alg_clamp(
+        # Capped popularity boost: small additive nudge from the precomputed
+        # popularity_score (views/likes/comments/freshness), bounded by
+        # POPULARITY_BOOST_CAP so it can break ties toward familiar content but
+        # never override the core safety/relevance ranking.
+        popularity = _safe_score(item.get("popularity_score")) or 0.0
+        base_mode_fit = (
             (0.90 * score_for_shared_feed(labels, _safe_score(item.get("ingest_score"))))
             + (0.10 * integrity_score)
             + public_eval.score_delta
         )
+        annotated["mode_fit"] = _alg_clamp(base_mode_fit + POPULARITY_BOOST_CAP * popularity)
         annotated.update(public_eval.to_item_fields())
         scored.append(annotated)
 
-    return _balance_source_metadata(scored, shuffle_seed=shuffle_seed)[:k]
+    balanced = _balance_source_metadata(scored, shuffle_seed=shuffle_seed)
+    return _select_with_popular_budget(balanced, mode, k)
+
+
+def _select_with_popular_budget(ordered: list[dict], mode: str, k: int) -> list[dict]:
+    """Take the top ``k`` while capping how many popular-lane picks appear.
+
+    Preserves the balanced ordering; once a mode's popular budget is spent,
+    further popular items are skipped and their slots go to the next eligible
+    (non-popular) candidates. A mode with an unlimited budget (flutter-feed) is
+    a plain top-k.
+    """
+    budget = POPULAR_BUDGET_BY_MODE.get(mode)
+    if budget is None:
+        return ordered[:k]
+
+    result: list[dict] = []
+    popular_used = 0
+    for item in ordered:
+        if len(result) >= k:
+            break
+        if _is_popular(item):
+            if popular_used >= budget:
+                continue
+            popular_used += 1
+        result.append(item)
+    return result
 
 
 def _balance_source_metadata(items: list[dict], *, shuffle_seed: str | None = None) -> list[dict]:

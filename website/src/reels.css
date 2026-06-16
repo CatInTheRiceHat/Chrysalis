@@ -1226,6 +1226,37 @@
   white-space: nowrap;
 }
 
+/* Subtle "Popular"/"Trending" pill for mostPopular-lane videos. Sits opposite
+   the curated source badge (top-right) so the two never overlap. Deliberately
+   understated — it signals familiarity without shouting virality. */
+.reel-popular-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--button-text);
+  background: color-mix(in srgb, var(--button-bg) 88%, var(--accent, #e8a23d) 12%);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  white-space: nowrap;
+}
+.reel-popular-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #e8a23d);
+}
+
 /* Caption chips row + concern chip */
 .reel-caption__chips {
   display: flex;

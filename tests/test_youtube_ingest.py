@@ -59,6 +59,9 @@ def _fake_youtube(endpoint: str, params: dict) -> dict:
                 {"id": {"videoId": "calm1"}},  # duplicate from the same search page
             ]
         }
+    if endpoint == "videos" and params.get("chart") == "mostPopular":
+        # Popular seed lane — keep this fixture focused on the search path.
+        return {"items": []}
     if endpoint == "videos":
         ids = str(params["id"]).split(",")
         all_items = {

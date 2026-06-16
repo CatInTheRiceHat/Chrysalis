@@ -89,6 +89,30 @@ MAX_ALLOWED_SECONDS = 240
 MIN_RELEVANCE_SCORE = 0.18
 _THUMBNAIL_PREFERENCE = ("maxres", "standard", "high", "medium", "default")
 
+# --- Popular / trending "seed lane" -----------------------------------------
+# A minority of candidates come from YouTube's mostPopular chart so the feed
+# feels current and familiar. These still pass the SAME safety + relevance gate
+# as search candidates (see _candidate_from_video_item); popularity only adds a
+# small, capped ranking nudge — it never bypasses Chrysalis safety.
+#
+# mostPopular is queried per videoCategoryId. We reuse a small set of broadly
+# wholesome categories (ids from the YouTube Data API category list). Music (10)
+# and Gaming (20) are intentionally excluded here to avoid the feed tipping into
+# high-virality music/gaming clips.
+MOST_POPULAR_CATEGORIES: tuple[tuple[str, str], ...] = (
+    ("popular/entertainment", "24"),   # Entertainment
+    ("popular/news", "25"),            # News & Politics
+    ("popular/lifestyle", "26"),       # Howto & Style
+    ("popular/education", "28"),       # Science & Technology
+    ("popular/sports", "17"),          # Sports
+)
+
+# Share of the final candidate pool allowed to come from the popular lane. Keeps
+# extraction from ever becoming 100% mostPopular (requirement: ~20–30%).
+POPULAR_TARGET_RATIO = 0.25
+# Always allow at least a couple of popular picks even on a small harvest.
+POPULAR_MIN_COUNT = 2
+
 RequestJson = Callable[[str, dict], dict | None]
 
 
@@ -135,6 +159,14 @@ class FeedVideoCandidate:
     label_confidence: float
     scored_at: str
     scoring_version: str
+    # Provenance of this candidate: "search" (Chrysalis topic/search queries) or
+    # "most_popular" (YouTube mostPopular trending lane). Defaulted so older call
+    # sites and deserializers keep working.
+    source_type: str = "search"
+    # Capped 0–1 popularity signal (views/likes/comments/freshness) computed at
+    # ingest, where like/comment counts are available. Used for a small capped
+    # ranking boost so the feed feels current without becoming pure virality.
+    popularity_score: float = 0.0
 
 
 @dataclass
@@ -176,6 +208,8 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     topic               TEXT,
     source_category     TEXT,
     source_query        TEXT,
+    source_type         TEXT DEFAULT 'search',
+    popularity_score    REAL DEFAULT 0,
     integrity_score     REAL,
     integrity_flags     TEXT,
     production_style    TEXT,
@@ -218,6 +252,8 @@ CREATE TABLE IF NOT EXISTS feed_videos (
     topic               TEXT,
     source_category     TEXT,
     source_query        TEXT,
+    source_type         TEXT DEFAULT 'search',
+    popularity_score    REAL DEFAULT 0,
     integrity_score     REAL,
     integrity_flags     JSONB,
     production_style    TEXT,
@@ -321,6 +357,8 @@ def _ensure_sqlite_feed_video_columns(conn: sqlite3.Connection) -> None:
     for column, column_type in {
         "source_category": "TEXT",
         "source_query": "TEXT",
+        "source_type": "TEXT DEFAULT 'search'",
+        "popularity_score": "REAL DEFAULT 0",
         "short_description": "TEXT",
         "display_title": "TEXT",
         "display_channel": "TEXT",
@@ -339,6 +377,8 @@ def ensure_postgres_feed_videos_table(conn) -> None:
     cur.execute(_CREATE_FEED_VIDEOS_POSTGRES)
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_category TEXT")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_query TEXT")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS source_type TEXT DEFAULT 'search'")
+    cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS popularity_score REAL DEFAULT 0")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS short_description TEXT")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS display_title TEXT")
     cur.execute("ALTER TABLE feed_videos ADD COLUMN IF NOT EXISTS display_channel TEXT")
@@ -381,6 +421,8 @@ def ingest_youtube_videos_sqlite(
     region_code: str = "US",
     request_json: RequestJson | None = None,
     now: datetime | None = None,
+    include_popular: bool = True,
+    popular_ratio: float = POPULAR_TARGET_RATIO,
 ) -> IngestResult:
     source_specs = _coerce_source_query_specs(queries)
     query_list = [spec.source_query for spec in source_specs]
@@ -393,6 +435,8 @@ def ingest_youtube_videos_sqlite(
         region_code=region_code,
         request_json=request_json,
         now=now,
+        include_popular=include_popular,
+        popular_ratio=popular_ratio,
     )
     conn = sqlite3.connect(resolve_database_path(db_path))
     try:
@@ -422,6 +466,8 @@ def ingest_youtube_videos_postgres(
     region_code: str = "US",
     request_json: RequestJson | None = None,
     now: datetime | None = None,
+    include_popular: bool = True,
+    popular_ratio: float = POPULAR_TARGET_RATIO,
 ) -> IngestResult:
     source_specs = _coerce_source_query_specs(queries)
     query_list = [spec.source_query for spec in source_specs]
@@ -434,6 +480,8 @@ def ingest_youtube_videos_postgres(
         region_code=region_code,
         request_json=request_json,
         now=now,
+        include_popular=include_popular,
+        popular_ratio=popular_ratio,
     )
     added, updated = store_candidates_postgres(conn, candidates)
     return IngestResult(
@@ -458,6 +506,8 @@ def fetch_youtube_candidates(
     region_code: str = "US",
     request_json: RequestJson | None = None,
     now: datetime | None = None,
+    include_popular: bool = True,
+    popular_ratio: float = POPULAR_TARGET_RATIO,
 ) -> tuple[list[FeedVideoCandidate], int]:
     api_key = api_key or os.environ.get("YOUTUBE_API_KEY", "")
     if not api_key and request_json is None:
@@ -518,13 +568,125 @@ def fetch_youtube_candidates(
                 ),
                 now=now_utc,
                 days_back=days_back,
+                source_type="search",
             )
             if candidate is None:
                 skipped += 1
                 continue
             candidates.append(candidate)
 
+    # Popular "seed lane": add a minority of mostPopular/trending videos so the
+    # feed feels current, mixed in (never replacing) the search candidates.
+    popular_candidates: list[FeedVideoCandidate] = []
+    if include_popular:
+        popular_candidates, popular_skipped = fetch_most_popular_candidates(
+            request=request,
+            relevance_language=relevance_language,
+            region_code=region_code,
+            max_results=max_results_per_query,
+            now=now_utc,
+            days_back=days_back,
+            exclude_ids=seen,
+        )
+        skipped += popular_skipped
+
+    mixed = _mix_search_and_popular(
+        candidates, popular_candidates, popular_ratio=popular_ratio
+    )
+    return mixed, skipped
+
+
+def fetch_most_popular_candidates(
+    *,
+    request: RequestJson,
+    relevance_language: str = "en",
+    region_code: str = "US",
+    max_results: int = 10,
+    now: datetime | None = None,
+    days_back: int = 7,
+    exclude_ids: set[str] | None = None,
+    categories: Iterable[tuple[str, str]] | None = None,
+) -> tuple[list[FeedVideoCandidate], int]:
+    """Fetch YouTube mostPopular (trending) videos as additional candidates.
+
+    Uses videos.list with ``chart=mostPopular`` + ``hl`` + ``regionCode`` +
+    ``videoCategoryId`` — NOT search.list / ``relevanceLanguage`` (mostPopular is
+    a chart endpoint and does not accept relevanceLanguage). Every returned video
+    is run through the exact same safety/relevance gate as search candidates via
+    ``_candidate_from_video_item``; popularity never bypasses Chrysalis safety.
+    """
+    now_utc = now or datetime.now(timezone.utc)
+    relevance_language = normalize_language_code(relevance_language)
+    region_code = normalize_region_code(region_code)
+    max_results = max(1, min(int(max_results), 25))
+    cats = list(categories) if categories is not None else list(MOST_POPULAR_CATEGORIES)
+
+    candidates: list[FeedVideoCandidate] = []
+    skipped = 0
+    seen: set[str] = set(exclude_ids or ())
+    for source_label, category_id in cats:
+        data = request("videos", {
+            "part": "snippet,contentDetails,statistics,status",
+            "chart": "mostPopular",
+            "regionCode": region_code,
+            "hl": relevance_language,
+            "videoCategoryId": category_id,
+            "maxResults": str(max_results),
+        }) or {}
+        for item in data.get("items", []):
+            video_id = str(item.get("id") or "").strip()
+            if not video_id or video_id in seen:
+                skipped += 1
+                continue
+            seen.add(video_id)
+            candidate = _candidate_from_video_item(
+                item,
+                source_spec=SourceQuerySpec(source_label, "trending"),
+                now=now_utc,
+                days_back=days_back,
+                source_type="most_popular",
+            )
+            if candidate is None:
+                skipped += 1
+                continue
+            candidates.append(candidate)
     return candidates, skipped
+
+
+def _mix_search_and_popular(
+    search: list[FeedVideoCandidate],
+    popular: list[FeedVideoCandidate],
+    *,
+    popular_ratio: float = POPULAR_TARGET_RATIO,
+) -> list[FeedVideoCandidate]:
+    """Combine search + popular candidates, capping the popular share.
+
+    The popular lane is capped to ``popular_ratio`` of the final pool (with a
+    small minimum) so extraction can never become 100% mostPopular. The strongest
+    popular candidates (by capped popularity, then relevance) are kept.
+    """
+    seen_ids = {c.youtube_video_id for c in search}
+    unique_popular: list[FeedVideoCandidate] = []
+    for cand in popular:
+        if cand.youtube_video_id in seen_ids:
+            continue
+        seen_ids.add(cand.youtube_video_id)
+        unique_popular.append(cand)
+
+    if not unique_popular:
+        return list(search)
+
+    ratio = min(max(float(popular_ratio), 0.0), 0.9)
+    n_search = len(search)
+    if n_search == 0:
+        cap = len(unique_popular)  # nothing to mix against — keep what we have
+    else:
+        cap = int(round((ratio / (1.0 - ratio)) * n_search))
+        cap = max(cap, POPULAR_MIN_COUNT)
+    cap = min(cap, len(unique_popular))
+
+    unique_popular.sort(key=lambda c: (c.popularity_score, c.score), reverse=True)
+    return list(search) + unique_popular[:cap]
 
 
 def store_candidates_sqlite(
@@ -621,11 +783,17 @@ def _active_feed_video_rows_sql(
     include_short_description: bool,
     include_display_metadata: bool,
     include_integrity_metadata: bool,
+    include_popularity_metadata: bool = True,
 ) -> str:
     if include_source_metadata:
         source_columns = "source_category,\n            source_query,"
     else:
         source_columns = "topic AS source_category,\n            NULL AS source_query,"
+
+    if include_popularity_metadata:
+        popularity_columns = "source_type,\n            popularity_score,"
+    else:
+        popularity_columns = "'search' AS source_type,\n            0 AS popularity_score,"
 
     if include_short_description:
         short_description_column = "short_description,"
@@ -671,6 +839,7 @@ def _active_feed_video_rows_sql(
             tags,
             duration_seconds,
             {source_columns}
+            {popularity_columns}
             {short_description_column}
             {display_columns}
             {integrity_columns}
@@ -699,30 +868,45 @@ def _active_feed_video_column_attempts() -> list[dict]:
             "include_short_description": True,
             "include_display_metadata": True,
             "include_integrity_metadata": True,
+            "include_popularity_metadata": True,
+        },
+        # Popular-lane columns may not exist yet on a freshly deployed DB (before
+        # the first ingest runs the ADD COLUMN migration). Fall back gracefully
+        # while keeping every other piece of metadata.
+        {
+            "include_source_metadata": True,
+            "include_short_description": True,
+            "include_display_metadata": True,
+            "include_integrity_metadata": True,
+            "include_popularity_metadata": False,
         },
         {
             "include_source_metadata": True,
             "include_short_description": True,
             "include_display_metadata": False,
             "include_integrity_metadata": True,
+            "include_popularity_metadata": False,
         },
         {
             "include_source_metadata": True,
             "include_short_description": True,
             "include_display_metadata": False,
             "include_integrity_metadata": False,
+            "include_popularity_metadata": False,
         },
         {
             "include_source_metadata": True,
             "include_short_description": False,
             "include_display_metadata": False,
             "include_integrity_metadata": False,
+            "include_popularity_metadata": False,
         },
         {
             "include_source_metadata": False,
             "include_short_description": False,
             "include_display_metadata": False,
             "include_integrity_metadata": False,
+            "include_popularity_metadata": False,
         },
     ]
 
@@ -731,6 +915,8 @@ def _missing_optional_feed_video_column(message: str) -> bool:
     return (
         "source_category" in message
         or "source_query" in message
+        or "source_type" in message
+        or "popularity_score" in message
         or "short_description" in message
         or "display_title" in message
         or "display_channel" in message
@@ -779,6 +965,7 @@ def _candidate_from_video_item(
     source_spec: SourceQuerySpec,
     now: datetime,
     days_back: int,
+    source_type: str = "search",
 ) -> FeedVideoCandidate | None:
     video_id = str(item.get("id") or "").strip()
     if not video_id:
@@ -814,6 +1001,15 @@ def _candidate_from_video_item(
 
     published_at = str(snippet.get("publishedAt") or "")
     view_count = _safe_int(stats.get("viewCount"))
+    like_count = _safe_int(stats.get("likeCount"))
+    comment_count = _safe_int(stats.get("commentCount"))
+    popularity_score = _popularity_score(
+        view_count=view_count,
+        like_count=like_count,
+        comment_count=comment_count,
+        published_at=published_at,
+        now=now,
+    )
     source_category = source_spec.source_category or "custom"
     source_query = source_spec.source_query
     topic = source_category
@@ -904,11 +1100,13 @@ def _candidate_from_video_item(
         label_confidence=labels.confidence,
         scored_at=timestamp,
         scoring_version=SCORING_VERSION,
+        source_type=source_type,
+        popularity_score=popularity_score,
     )
 
 
 def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandidate) -> None:
-    placeholders = ",".join(["?"] * 37)
+    placeholders = ",".join(["?"] * 39)
     conn.execute(
         f"""
         INSERT INTO feed_videos (
@@ -919,11 +1117,14 @@ def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandi
             source_category, source_query, integrity_score, integrity_flags,
             production_style, creator_scale, score, created_at, updated_at, status,
             chrysalis_scores, ranking_reason, safety_reason, concern_reason,
-            label_confidence, scored_at, scoring_version
+            label_confidence, scored_at, scoring_version,
+            source_type, popularity_score
         ) VALUES (
             {placeholders}
         )
         ON CONFLICT(youtube_video_id) DO UPDATE SET
+            source_type = excluded.source_type,
+            popularity_score = excluded.popularity_score,
             title = excluded.title,
             channel_title = excluded.channel_title,
             channel_id = excluded.channel_id,
@@ -964,7 +1165,7 @@ def _upsert_sqlite_candidate(conn: sqlite3.Connection, candidate: FeedVideoCandi
 
 def _upsert_postgres_candidate(cur, candidate: FeedVideoCandidate) -> None:
     values = _candidate_postgres_values(candidate)
-    placeholders = ["%s"] * 37
+    placeholders = ["%s"] * 39
     for index in (10, 17, 23, 30):
         placeholders[index] = "%s::jsonb"
     cur.execute(
@@ -977,11 +1178,14 @@ def _upsert_postgres_candidate(cur, candidate: FeedVideoCandidate) -> None:
             source_category, source_query, integrity_score, integrity_flags,
             production_style, creator_scale, score, created_at, updated_at, status,
             chrysalis_scores, ranking_reason, safety_reason, concern_reason,
-            label_confidence, scored_at, scoring_version
+            label_confidence, scored_at, scoring_version,
+            source_type, popularity_score
         ) VALUES (
             {",".join(placeholders)}
         )
         ON CONFLICT(youtube_video_id) DO UPDATE SET
+            source_type = excluded.source_type,
+            popularity_score = excluded.popularity_score,
             title = excluded.title,
             channel_title = excluded.channel_title,
             channel_id = excluded.channel_id,
@@ -1059,6 +1263,8 @@ def _candidate_sqlite_values(candidate: FeedVideoCandidate) -> tuple:
         candidate.label_confidence,
         candidate.scored_at,
         candidate.scoring_version,
+        candidate.source_type,
+        candidate.popularity_score,
     )
 
 
@@ -1117,6 +1323,34 @@ def _relevance_score(
         + metadata_signal_score * 0.11
         + engagement_boost * 0.04
         - risk_penalty
+    )
+
+
+def _popularity_score(
+    *,
+    view_count: int,
+    like_count: int,
+    comment_count: int,
+    published_at: str,
+    now: datetime,
+) -> float:
+    """Capped 0–1 popularity signal from engagement + freshness.
+
+    Each raw count is log-compressed so a 50M-view viral clip is not orders of
+    magnitude above a solid 200k-view video — that compression, plus the small
+    weight this score carries at ranking time, is what stops one viral/music/
+    gaming hit from dominating the feed. Freshness keeps the "popular" lane
+    feeling current rather than resurfacing old evergreen virality.
+    """
+    views = _clamp01(math.log10(max(view_count, 0) + 1) / 7.0)   # ~1.0 at 10M views
+    likes = _clamp01(math.log10(max(like_count, 0) + 1) / 6.0)    # ~1.0 at 1M likes
+    comments = _clamp01(math.log10(max(comment_count, 0) + 1) / 5.0)  # ~1.0 at 100k
+    freshness = _recency_score(published_at, now, days_back=14)
+    return _clamp01(
+        0.50 * views
+        + 0.25 * likes
+        + 0.15 * comments
+        + 0.10 * freshness
     )
 
 

@@ -66,6 +66,8 @@ export function ReelCard({
   const hasVideo = Boolean(videoSource);
   const poster = reel.thumbnail || reel.image;
   const displayLabel = reel.label || (hasVideo ? 'Curated' : null);
+  const isPopular = Boolean(reel.is_popular ?? reel.isPopular) || reel.source_type === 'most_popular';
+  const popularBadgeLabel = reel.popularity_badge || reel.popularityBadge || 'Popular';
   const displayHashtags = Array.isArray(reel.display_hashtags) ? reel.display_hashtags.slice(0, 3) : [];
   const signalHint = buildSignalHint(reel);
   const embedOrigin = typeof window !== 'undefined' ? window.location.origin : undefined;
@@ -166,6 +168,12 @@ export function ReelCard({
 
             {hasVideo && (
               <span className="reel-source-badge">YouTube embed · curated by Chrysalis</span>
+            )}
+
+            {hasVideo && isPopular && (
+              <span className="reel-popular-badge" title="Currently popular on YouTube — still safety-checked by Chrysalis">
+                {popularBadgeLabel}
+              </span>
             )}
 
             <ReelCaption

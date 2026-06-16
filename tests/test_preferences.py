@@ -60,12 +60,16 @@ def test_preference_code_normalizers_fall_back_to_safe_defaults():
 
 def test_youtube_ingest_search_uses_language_and_region_preferences():
     seen_search_params = []
+    seen_popular_params = []
 
     def fake_youtube(endpoint: str, params: dict) -> dict:
         if endpoint == "search":
             seen_search_params.append(params)
             return {"items": []}
-        raise AssertionError(f"Unexpected endpoint: {endpoint}")
+        if endpoint == "videos" and params.get("chart") == "mostPopular":
+            seen_popular_params.append(params)
+            return {"items": []}
+        raise AssertionError(f"Unexpected endpoint: {endpoint} {params}")
 
     candidates, skipped = fetch_youtube_candidates(
         api_key="test-key",
@@ -77,8 +81,17 @@ def test_youtube_ingest_search_uses_language_and_region_preferences():
 
     assert candidates == []
     assert skipped == 0
+    # search.list targets locale via relevanceLanguage + regionCode
     assert seen_search_params[0]["relevanceLanguage"] == "zh-Hans"
     assert seen_search_params[0]["regionCode"] == "TW"
+    # mostPopular (chart) lane targets locale via hl + regionCode — NOT relevanceLanguage
+    assert seen_popular_params, "popular lane should issue mostPopular requests"
+    for params in seen_popular_params:
+        assert params["chart"] == "mostPopular"
+        assert params["hl"] == "zh-Hans"
+        assert params["regionCode"] == "TW"
+        assert "relevanceLanguage" not in params
+        assert "videoCategoryId" in params
 
 
 def test_youtube_service_chart_request_uses_hl_not_relevance_language(monkeypatch):

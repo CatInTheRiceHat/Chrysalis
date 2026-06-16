@@ -117,6 +117,9 @@ function apiItemToCard(item) {
     public_signal_reason: item.public_signal_reason,
     chrysalis_scores: item.chrysalis_scores,
     mode_fit: item.mode_fit,
+    source_type: item.source_type || item.sourceType || 'search',
+    is_popular: Boolean(item.is_popular ?? item.isPopular),
+    popularity_badge: item.popularity_badge || item.popularityBadge || null,
   };
 }
 

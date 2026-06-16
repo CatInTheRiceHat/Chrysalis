@@ -148,6 +148,8 @@ def _build_feed_result(
             "topic": row.get("source_category") or row.get("topic") or row.get("category"),
             "source_category": row.get("source_category") or row.get("topic") or row.get("category"),
             "source_query": row.get("source_query") or "",
+            "source_type": row.get("source_type") or "search",
+            "popularity_score": row.get("popularity_score"),
             "ingest_score": row.get("ingest_score"),
             "integrity_score": integrity["integrity_score"],
             "integrity_flags": integrity["integrity_flags"],
@@ -186,6 +188,9 @@ def _build_feed_result(
         display_title = row.get("display_title") or build_display_title(raw_title)
         display_channel = row.get("display_channel") or build_display_channel(raw_channel)
         display_hashtags = _display_hashtags_for_row(row, raw_title, raw_description)
+        source_type = str(cand.get("source_type") or row.get("source_type") or "search").strip().lower()
+        is_popular = source_type == "most_popular"
+        popularity_badge = "Popular" if is_popular else None
         items.append({
             "youtube_id": vid,
             "title": raw_title,
@@ -217,6 +222,11 @@ def _build_feed_result(
             "category_id": row.get("category_id") or row.get("category") or None,
             "source_category": row.get("source_category") or row.get("topic") or row.get("category") or None,
             "source_query": row.get("source_query") or None,
+            "source_type": source_type,
+            "is_popular": is_popular,
+            "isPopular": is_popular,
+            "popularity_badge": popularity_badge,
+            "popularityBadge": popularity_badge,
             "chrysalis_scores": labels.to_dict(),
             "ranking_reason": reasons["ranking_reason"],
             "safety_reason": reasons["safety_reason"],
@@ -268,6 +278,7 @@ def _debug_metadata(
         ),
         "category_counts": dict(_counts_for(ranked, "source_category", "topic", "category")),
         "source_query_counts": dict(_counts_for(ranked, "source_query")),
+        "source_type_counts": dict(_counts_for(ranked, "source_type")),
         "production_style_counts": dict(_counts_for(ranked, "production_style")),
         "creator_scale_counts": dict(_counts_for(ranked, "creator_scale")),
         "integrity_flag_counts": dict(sorted(flag_counts.items())),
