@@ -432,12 +432,19 @@ def _yt_request(endpoint: str, params: dict) -> Optional[dict]:
         return None
 
 
-def _fetch_stats_batch(video_ids: list[str]) -> dict[str, dict]:
+def _fetch_stats_batch(
+    video_ids: list[str],
+    relevance_language: str = "en",
+    region_code: str = "US",
+) -> dict[str, dict]:
     """
     Fetch snippet + statistics + contentDetails for up to 50 video IDs in one call.
     Returns {video_id: {"snippet": {...}, "statistics": {...}, "contentDetails": {...}}}.
     contentDetails carries the ISO 8601 `duration`; snippet carries `tags` and
     `thumbnails` (no extra quota cost — these parts ride the same request).
+
+    ``hl`` localizes returned metadata to the preferred language; ``regionCode``
+    is forwarded for parity with the rest of the pipeline's locale targeting.
     """
     if not video_ids or not YOUTUBE_API_KEY:
         return {}
@@ -445,6 +452,8 @@ def _fetch_stats_batch(video_ids: list[str]) -> dict[str, dict]:
     data = _yt_request("videos", {
         "part": "snippet,statistics,contentDetails",
         "id": ",".join(video_ids[:50]),
+        "hl": normalize_language_code(relevance_language),
+        "regionCode": normalize_region_code(region_code),
     })
 
     result: dict[str, dict] = {}

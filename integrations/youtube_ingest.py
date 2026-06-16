@@ -506,6 +506,8 @@ def fetch_youtube_candidates(
         data = request("videos", {
             "part": "snippet,contentDetails,statistics,status",
             "id": ",".join(batch),
+            "hl": relevance_language,
+            "regionCode": region_code,
         }) or {}
         for item in data.get("items", []):
             candidate = _candidate_from_video_item(

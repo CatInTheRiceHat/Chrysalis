@@ -647,7 +647,11 @@ def cron_extract(
     BATCH_SIZE = 50
     for i in range(0, len(new_ids), BATCH_SIZE):
         batch = new_ids[i : i + BATCH_SIZE]
-        stats_map = _fetch_stats_batch(batch)
+        stats_map = _fetch_stats_batch(
+            batch,
+            relevance_language=relevance_language,
+            region_code=region_code,
+        )
 
         for vid_id in batch:
             info = stats_map.get(vid_id)
