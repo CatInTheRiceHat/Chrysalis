@@ -43,6 +43,12 @@ BLOCKED_LANGUAGE_CODES: tuple[str, ...] = (
 # Fraction of letters that may be non-Latin before a field reads as non-English.
 # A small foreign snippet inside otherwise-English text stays allowed (req 9).
 _NON_LATIN_RATIO = 0.30
+# …but a large ABSOLUTE amount of non-Latin script is non-English even when English
+# brand terms / hashtags dilute the ratio (e.g. a long Hindi description that names
+# "India AI Impact Summit 2026"). A genuine English video never carries this many
+# foreign letters; one quoted foreign word (a few chars) stays well under it.
+_NON_LATIN_ABS_MIN = 15
+_NON_LATIN_ABS_RATIO = 0.12
 
 # Non-Latin script ranges that indicate non-English content.
 _NON_LATIN_SCRIPT = re.compile(
@@ -75,17 +81,35 @@ _NON_LATIN_SCRIPT = re.compile(
 
 _LATIN_LETTER = re.compile("[A-Za-z]")
 
-# Non-English language NAMES that, when they appear, signal non-English targeting.
-# Country names are deliberately NOT here (mentioning a country is fine, req 9).
-BLOCKED_LANGUAGE_NAMES: tuple[str, ...] = (
-    "hindi", "arabic", "mandarin", "cantonese", "chinese", "japanese", "korean",
-    "russian", "hebrew", "thai", "bengali", "punjabi", "gujarati", "tamil",
-    "telugu", "kannada", "malayalam", "sinhala", "urdu", "farsi", "persian",
-    "spanish", "espanol", "español", "french", "francais", "français",
-    "portuguese", "german", "italian", "vietnamese", "indonesian", "turkish",
-    "sub indo", "en espanol", "en español",
+# Non-English language NAMES. Two tiers, because some names double as English
+# culture/style adjectives ("Korean fashion", "Thai food", "Italian recipe"):
+#   STRONG — names that, in a TITLE, almost always mean the content itself is in
+#            that language (Indian-subcontinent + a few language-only terms). Safe
+#            to match in titles + our own source query/category.
+#   WEAK   — ambiguous culture adjectives. Only matched in source_query /
+#            source_category (our ingestion intent), never in a title, so an
+#            English "Korean fashion lookbook" is NOT blocked (req 9).
+_STRONG_LANGUAGE_NAMES: tuple[str, ...] = (
+    "hindi", "telugu", "tamil", "kannada", "malayalam", "bengali", "punjabi",
+    "gujarati", "marathi", "urdu", "sinhala", "nepali", "sanskrit",
+    "sub indo", "en espanol", "en español", "in hindi", "dubbed in",
 )
-_NAME_RE = re.compile(r"(?<![a-z])(" + "|".join(re.escape(n) for n in BLOCKED_LANGUAGE_NAMES) + r")(?![a-z])", re.IGNORECASE)
+_WEAK_LANGUAGE_NAMES: tuple[str, ...] = (
+    "arabic", "mandarin", "cantonese", "chinese", "japanese", "korean", "russian",
+    "hebrew", "thai", "farsi", "persian", "spanish", "espanol", "español",
+    "french", "francais", "français", "portuguese", "german", "italian",
+    "vietnamese", "indonesian", "turkish",
+)
+# Kept as a union for debug / back-compat.
+BLOCKED_LANGUAGE_NAMES: tuple[str, ...] = _STRONG_LANGUAGE_NAMES + _WEAK_LANGUAGE_NAMES
+
+
+def _name_re(names):
+    return re.compile(r"(?<![a-z])(" + "|".join(re.escape(n) for n in names) + r")(?![a-z])", re.IGNORECASE)
+
+
+_STRONG_NAME_RE = _name_re(_STRONG_LANGUAGE_NAMES)
+_INTENT_NAME_RE = _name_re(BLOCKED_LANGUAGE_NAMES)  # strong + weak, for source query/category
 
 _LANGUAGE_FIELDS = (
     "default_audio_language", "default_language", "defaultAudioLanguage",
@@ -141,6 +165,18 @@ def _non_latin_ratio(text: str) -> float:
     return foreign / total if total else 0.0
 
 
+def _script_heavy(text: str) -> bool:
+    """True if the text is substantially non-Latin (by ratio, or by a large
+    absolute amount of non-Latin script that English brand terms have diluted)."""
+    foreign = len(_NON_LATIN_SCRIPT.findall(text))
+    latin = len(_LATIN_LETTER.findall(text))
+    total = foreign + latin
+    if not total:
+        return False
+    ratio = foreign / total
+    return ratio >= _NON_LATIN_RATIO or (foreign >= _NON_LATIN_ABS_MIN and ratio >= _NON_LATIN_ABS_RATIO)
+
+
 def detect_block_reason(row: dict) -> str | None:
     """Return a non-English block reason, or None if the row reads as English."""
     # 1) explicit language field that isn't English
@@ -151,12 +187,16 @@ def detect_block_reason(row: dict) -> str | None:
     # 2) substantial non-Latin script in the title, or across the metadata
     title = str(row.get("title") or row.get("display_title") or "")
     combined = _text_of(row, _TEXT_FIELDS)
-    if _non_latin_ratio(title) >= _NON_LATIN_RATIO or _non_latin_ratio(combined) >= _NON_LATIN_RATIO:
+    if _script_heavy(title) or _script_heavy(combined):
         return "script"
 
-    # 3) source query / category / text explicitly targets a non-English language
-    query_text = _text_of(row, _QUERY_FIELDS)
-    if _NAME_RE.search(query_text) or _NAME_RE.search(combined):
+    # 3) language-name targeting. Strong names (e.g. "explained in Telugu") block
+    #    from the title; ambiguous culture adjectives (Korean/Thai/Italian…) only
+    #    block from our own source query/category, never the title — so an English
+    #    "Korean fashion lookbook" or a news clip tagged "#russian" stays (req 9).
+    title_text = " ".join([str(row.get("title") or ""), str(row.get("display_title") or "")])
+    intent_text = " ".join([str(row.get("source_query") or ""), str(row.get("source_category") or "")])
+    if _STRONG_NAME_RE.search(title_text) or _INTENT_NAME_RE.search(intent_text):
         return "language_name"
 
     return None
