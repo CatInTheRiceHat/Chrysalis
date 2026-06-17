@@ -3,6 +3,7 @@ import { motion as MOTION } from 'motion/react';
 import { Play } from 'lucide-react';
 import { ReelActionRail } from './ReelActionRail';
 import { ReelCaption } from './ReelCaption';
+import { getRecommendationInsight } from './feedTaxonomy';
 import { buildYouTubeEmbedUrl } from './youtubeEmbed';
 
 function scoreValue(card, key) {
@@ -11,6 +12,9 @@ function scoreValue(card, key) {
 }
 
 function buildSignalHint(reel) {
+  const insight = getRecommendationInsight(reel);
+  if (insight.hasTaxonomy) return insight.summary;
+
   const hints = [];
   const calm = scoreValue(reel, 'calm');
   const comparisonRisk = scoreValue(reel, 'comparison_risk');
@@ -65,7 +69,8 @@ export function ReelCard({
   const videoSource = reel.embed_url || reel.embedUrl || reel.youtube_id || reel.youtubeId;
   const hasVideo = Boolean(videoSource);
   const poster = reel.thumbnail || reel.image;
-  const displayLabel = reel.label || (hasVideo ? 'Curated' : null);
+  const recommendationInsight = getRecommendationInsight(reel);
+  const displayLabel = reel.label || recommendationInsight.label || (hasVideo ? 'Curated' : null);
   const isPopular = Boolean(reel.is_popular ?? reel.isPopular) || reel.source_type === 'most_popular';
   const popularBadgeLabel = reel.popularity_badge || reel.popularityBadge || 'Popular';
   const displayHashtags = Array.isArray(reel.display_hashtags) ? reel.display_hashtags.slice(0, 3) : [];
@@ -193,6 +198,9 @@ export function ReelCard({
           title={reel.title}
           source={reel.source}
           rankingReason={reel.ranking_reason}
+          recommendationSummary={recommendationInsight.summary}
+          categoryLabel={recommendationInsight.label}
+          categoryTone={recommendationInsight.tone}
           fallbackReason={reel.reason}
           concernReason={reel.concern_reason}
           safetyReason={reel.safety_reason}

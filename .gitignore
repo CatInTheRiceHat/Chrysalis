@@ -52,6 +52,7 @@ results/figures/*.png
 VK-LSVD/
 
 # Morphomedia Data & DB
-datasets/
+datasets/*
+!datasets/seed_videos.json
 morphomedia.db
 reports/

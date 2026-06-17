@@ -10,11 +10,13 @@ source metadata so no single ingestion query or category dominates the feed.
 from __future__ import annotations
 
 import hashlib
+import math
 import os
 
 from .. import algorithm as _alg  # reuse calculate_gini for the diversity proxy
 from ..feed_integrity import DEFAULT_INTEGRITY_SCORE, INTEGRITY_MIN_SCORE
 from ..labeling.schema import LabelSet
+from ..labeling.taxonomy import HEALTHY_CATEGORIES, classify_content, is_healthy_category
 from ..public_signals.ranking import PublicSignalContext, evaluate_public_signal
 
 MODES = ("daily-dew", "metamorphosis", "flutter-feed")
@@ -76,6 +78,25 @@ def _resolve_popular_min_score() -> float:
 # / high-quality search results are allowed to be low-popularity. Configurable
 # via the POPULAR_MIN_SCORE env var; defaults to 0.5.
 POPULAR_MIN_SCORE = _resolve_popular_min_score()
+
+
+# --- Healthier-feed mix policy ----------------------------------------------
+# The final feed should still feel like normal short-form video: a substantial
+# wellness/positive lane, but never an all-wellness lecture reel when regular
+# safe entertainment is available.
+HEALTHY_TARGET_MIN_RATIO = 0.40
+HEALTHY_TARGET_MAX_RATIO = 0.60
+PERSPECTIVE_MIN_FEED_SIZE = 6
+REGULAR_MIN_FEED_SIZE = 4
+
+TAXONOMY_SCORE_ADJUSTMENTS = {
+    "healthy": 0.06,
+    "positive": 0.05,
+    "perspective": 0.025,
+    "regular": 0.0,
+    "reduced": -0.35,
+    "blocked": -1.0,
+}
 
 
 def _is_popular(item: dict) -> bool:
@@ -257,6 +278,10 @@ def rank_videos(
             labels = LabelSet.from_dict(labels or {})
         if not passes_shared_feed_gate(labels):
             continue
+        taxonomy_fields = _taxonomy_fields(item, labels)
+        content_category = taxonomy_fields["content_category"]
+        if content_category == "blocked":
+            continue
         # Metamorphosis only tolerates popular-lane picks when they are genuinely
         # low-risk — popularity must never relax this mode's calm guarantee.
         if (
@@ -292,13 +317,17 @@ def rank_videos(
             (0.90 * score_for_shared_feed(labels, _safe_score(item.get("ingest_score"))))
             + (0.10 * integrity_score)
             + public_eval.score_delta
+            + TAXONOMY_SCORE_ADJUSTMENTS.get(content_category, 0.0)
         )
         annotated["mode_fit"] = _alg_clamp(base_mode_fit + POPULARITY_BOOST_CAP * popularity)
+        annotated.update(taxonomy_fields)
+        annotated["recommendation_lane"] = _recommendation_lane(content_category)
         annotated.update(public_eval.to_item_fields())
         scored.append(annotated)
 
     balanced = _balance_source_metadata(scored, shuffle_seed=shuffle_seed)
-    return _select_with_popular_budget(balanced, mode, k)
+    popular_budgeted = _select_with_popular_budget(balanced, mode, len(balanced))
+    return _balance_content_mix(popular_budgeted, k, shuffle_seed=shuffle_seed)
 
 
 def _select_with_popular_budget(ordered: list[dict], mode: str, k: int) -> list[dict]:
@@ -324,6 +353,191 @@ def _select_with_popular_budget(ordered: list[dict], mode: str, k: int) -> list[
             popular_used += 1
         result.append(item)
     return result
+
+
+def _balance_content_mix(
+    ordered: list[dict],
+    k: int,
+    *,
+    shuffle_seed: str | None = None,
+) -> list[dict]:
+    """Select a healthier short-form mix from already-scored safe candidates.
+
+    The selector uses taxonomy lanes instead of ML: target 40%-60% healthy
+    (healthy + positive) when inventory allows, reserve room for safe regular
+    content, include a low-conflict perspective lane occasionally, and use reduced
+    content only as a last-resort filler.
+    """
+    target = min(max(int(k), 0), len(ordered))
+    if target == 0:
+        return []
+
+    buckets = _content_buckets(ordered)
+    healthy_items = buckets["healthy"] + buckets["positive"]
+    regular_items = buckets["regular"]
+    perspective_items = buckets["perspective"]
+    other_items = buckets["other"]
+    reduced_items = buckets["reduced"]
+    safe_nonhealthy_count = len(regular_items) + len(perspective_items) + len(other_items)
+    nonhealthy_count = safe_nonhealthy_count + len(reduced_items)
+
+    healthy_min = math.ceil(target * HEALTHY_TARGET_MIN_RATIO)
+    healthy_max = max(healthy_min, math.floor(target * HEALTHY_TARGET_MAX_RATIO))
+    desired_healthy = min(len(healthy_items), max(healthy_min, round(target * 0.5)))
+
+    if nonhealthy_count < target - desired_healthy:
+        desired_healthy = min(len(healthy_items), target - nonhealthy_count)
+    desired_healthy = min(desired_healthy, healthy_max)
+    if len(healthy_items) < healthy_min:
+        desired_healthy = len(healthy_items)
+
+    nonhealthy_slots = target - desired_healthy
+    required_regular = 1 if target >= REGULAR_MIN_FEED_SIZE and regular_items else 0
+    required_perspective = 1 if target >= PERSPECTIVE_MIN_FEED_SIZE and perspective_items else 0
+    required_nonhealthy = required_regular + required_perspective
+    if nonhealthy_slots < required_nonhealthy:
+        shift = min(desired_healthy, required_nonhealthy - nonhealthy_slots)
+        desired_healthy -= shift
+        nonhealthy_slots += shift
+
+    selected: list[dict] = []
+    selected.extend(_take_round_robin(
+        {"healthy": buckets["healthy"], "positive": buckets["positive"]},
+        desired_healthy,
+        shuffle_seed=shuffle_seed,
+    ))
+
+    selected.extend(_take_first(regular_items, min(required_regular, nonhealthy_slots)))
+    nonhealthy_slots = target - len(selected)
+    selected.extend(_take_first(perspective_items, min(required_perspective, nonhealthy_slots)))
+    nonhealthy_slots = target - len(selected)
+
+    used_ids = {_item_identity(item) for item in selected}
+    remaining_regular = _without_ids(regular_items, used_ids)
+    remaining_perspective = _without_ids(perspective_items, used_ids)
+    remaining_other = _without_ids(other_items, used_ids)
+    remaining_reduced = _without_ids(reduced_items, used_ids)
+
+    selected.extend(_take_round_robin(
+        {
+            "regular": remaining_regular,
+            "perspective": remaining_perspective,
+            "other": remaining_other,
+        },
+        nonhealthy_slots,
+        shuffle_seed=shuffle_seed,
+    ))
+
+    if len(selected) < target:
+        used_ids = {_item_identity(item) for item in selected}
+        selected.extend(_take_round_robin(
+            {
+                "healthy": _without_ids(buckets["healthy"], used_ids),
+                "positive": _without_ids(buckets["positive"], used_ids),
+                "regular": _without_ids(regular_items, used_ids),
+                "perspective": _without_ids(perspective_items, used_ids),
+                "other": _without_ids(other_items, used_ids),
+            },
+            target - len(selected),
+            shuffle_seed=shuffle_seed,
+        ))
+
+    if len(selected) < target:
+        used_ids = {_item_identity(item) for item in selected}
+        selected.extend(_take_first(_without_ids(remaining_reduced, used_ids), target - len(selected)))
+
+    return _spread_content_categories(selected[:target], shuffle_seed=shuffle_seed)
+
+
+def _content_buckets(items: list[dict]) -> dict[str, list[dict]]:
+    buckets = {
+        "healthy": [],
+        "positive": [],
+        "regular": [],
+        "perspective": [],
+        "reduced": [],
+        "other": [],
+    }
+    for item in items:
+        category = _content_category(item)
+        if category in buckets:
+            buckets[category].append(item)
+        elif is_healthy_category(category):
+            buckets["healthy"].append(item)
+        else:
+            buckets["other"].append(item)
+    return buckets
+
+
+def _take_first(items: list[dict], limit: int) -> list[dict]:
+    if limit <= 0:
+        return []
+    return list(items[:limit])
+
+
+def _take_round_robin(
+    buckets: dict[str, list[dict]],
+    limit: int,
+    *,
+    shuffle_seed: str | None,
+) -> list[dict]:
+    if limit <= 0:
+        return []
+    local = {key: list(value) for key, value in buckets.items() if value}
+    order = _ordered_bucket_keys(local, salt="content_take", shuffle_seed=shuffle_seed)
+    result: list[dict] = []
+    while len(result) < limit and any(local.values()):
+        for key in order:
+            if len(result) >= limit:
+                break
+            if local.get(key):
+                result.append(local[key].pop(0))
+    return result
+
+
+def _spread_content_categories(items: list[dict], *, shuffle_seed: str | None) -> list[dict]:
+    if len(items) <= 2:
+        return sorted(items, key=lambda item: _feed_sort_key(item, shuffle_seed))
+
+    buckets: dict[str, list[dict]] = {}
+    for item in items:
+        buckets.setdefault(_content_category(item), []).append(item)
+
+    order = _ordered_bucket_keys(buckets, salt="content_category", shuffle_seed=shuffle_seed)
+    order_index = {value: index for index, value in enumerate(order)}
+    result: list[dict] = []
+    while any(buckets[value] for value in order):
+        last_category = _content_category(result[-1]) if result else None
+        choices = [
+            value for value in order
+            if buckets[value] and value != last_category
+        ]
+        if not choices:
+            choices = [value for value in order if buckets[value]]
+        pick = sorted(choices, key=lambda value: (-len(buckets[value]), order_index[value]))[0]
+        result.append(buckets[pick].pop(0))
+    return result
+
+
+def _ordered_bucket_keys(
+    buckets: dict[str, list[dict]],
+    *,
+    salt: str,
+    shuffle_seed: str | None,
+) -> list[str]:
+    return sorted(
+        buckets,
+        key=lambda value: _bucket_sort_key(
+            value,
+            buckets[value],
+            salt=salt,
+            shuffle_seed=shuffle_seed,
+        ),
+    )
+
+
+def _without_ids(items: list[dict], used_ids: set[str]) -> list[dict]:
+    return [item for item in items if _item_identity(item) not in used_ids]
 
 
 def _balance_source_metadata(items: list[dict], *, shuffle_seed: str | None = None) -> list[dict]:
@@ -472,6 +686,46 @@ def _source_value(item: dict, *fields: str) -> str:
         if value:
             return value
     return "_"
+
+
+def _taxonomy_fields(item: dict, labels: LabelSet) -> dict:
+    taxonomy = item.get("taxonomy")
+    if hasattr(taxonomy, "to_dict"):
+        fields = taxonomy.to_dict()
+    else:
+        fields = classify_content(labels, item).to_dict()
+
+    explicit_category = str(item.get("content_category") or "").strip().lower()
+    if explicit_category:
+        fields["content_category"] = explicit_category
+    for field in ("wellness_score", "positivity_score", "conflict_score", "safety_risk"):
+        explicit_score = _safe_score(item.get(field))
+        if explicit_score is not None:
+            fields[field] = round(explicit_score, 4)
+    if item.get("perspective_topic"):
+        fields["perspective_topic"] = item.get("perspective_topic")
+    return fields
+
+
+def _content_category(item: dict) -> str:
+    category = str(item.get("content_category") or "").strip().lower()
+    if not category:
+        return "regular"
+    if category in HEALTHY_CATEGORIES:
+        return category
+    if category in {"regular", "perspective", "reduced", "blocked"}:
+        return category
+    return "regular"
+
+
+def _recommendation_lane(category: str) -> str:
+    if is_healthy_category(category):
+        return "healthy_mix"
+    if category == "perspective":
+        return "perspective_mix"
+    if category == "reduced":
+        return "reduced_filler"
+    return "regular_mix"
 
 
 def _item_identity(item: dict) -> str:

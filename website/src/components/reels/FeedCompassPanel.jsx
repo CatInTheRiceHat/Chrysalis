@@ -7,6 +7,12 @@ import {
   Timer,
   X,
 } from 'lucide-react';
+import {
+  FEED_BALANCE_COPY,
+  formatCountMap,
+  formatPercent,
+  getRecommendationInsight,
+} from './feedTaxonomy';
 
 const MODE_COPY = {
   'daily-dew': {
@@ -125,11 +131,20 @@ export function FeedCompassPanel({
   onResetIntro,
   onTuneChange,
   onClose,
+  feedDebug,
 }) {
   const mode = MODE_COPY[activeMode] || MODE_COPY['flutter-feed'];
   const scores = activeCard?.chrysalis_scores || mode.fallbackScores;
-  const whyText = activeCard?.ranking_reason || activeCard?.reason
-    || 'Shown because it matches your current mode with gentle wellbeing signals.';
+  const recommendationInsight = getRecommendationInsight(activeCard);
+  const whyText = recommendationInsight.detail
+    || 'Shown because it matches your current mode with lighter feed signals.';
+  const healthyRatio = formatPercent(feedDebug?.healthyRatio);
+  const healthyTarget = feedDebug?.healthyTarget
+    ? `${formatPercent(feedDebug.healthyTarget.min) || '40%'}-${formatPercent(feedDebug.healthyTarget.max) || '60%'}`
+    : null;
+  const categoryCounts = formatCountMap(feedDebug?.contentCategoryCounts);
+  const laneCounts = formatCountMap(feedDebug?.laneCounts, 3);
+  const candidateCounts = formatCountMap(feedDebug?.candidateCategoryCounts, 3);
   const shameRage = Math.max(
     clamp01(scores.shame_or_humiliation_risk),
     clamp01(scores.ragebait),
@@ -162,6 +177,11 @@ export function FeedCompassPanel({
 
       <p className="feed-compass__mode-copy">{mode.description}</p>
 
+      <div className="feed-compass__balance-copy">
+        <Leaf size={15} aria-hidden="true" />
+        <p>{FEED_BALANCE_COPY}</p>
+      </div>
+
       <div className="feed-compass__section feed-compass__mode">
         <div>
           <span className="feed-compass__label">Algorithm mode</span>
@@ -183,6 +203,28 @@ export function FeedCompassPanel({
           <ShieldCheck size={15} aria-hidden="true" />
           <span>Feed balance</span>
         </div>
+        {feedDebug && (
+          <div className="feed-compass__mix-stats" aria-label="Feed mix stats">
+            {healthyRatio && (
+              <span>Healthy ratio <strong>{healthyRatio}</strong></span>
+            )}
+            {healthyTarget && (
+              <span>Target <strong>{healthyTarget}</strong></span>
+            )}
+            {categoryCounts && (
+              <span>Categories <strong>{categoryCounts}</strong></span>
+            )}
+            {laneCounts && (
+              <span>Lanes <strong>{laneCounts}</strong></span>
+            )}
+            {candidateCounts && (
+              <span>Candidates <strong>{candidateCounts}</strong></span>
+            )}
+            {Number.isFinite(feedDebug.filteredCount) && (
+              <span>Reduced/blocked filtered <strong>{feedDebug.filteredCount}</strong></span>
+            )}
+          </div>
+        )}
         <div className="feed-compass__bars">
           {BALANCE_ROWS.map((row) => {
             const value = displayValue(scores[row.key], row.risk);
@@ -212,8 +254,16 @@ export function FeedCompassPanel({
       </div>
 
       <div className="feed-compass__section">
-        <span className="feed-compass__label">Why this algorithm</span>
-        <p className="feed-compass__why">{whyText}</p>
+        <span className="feed-compass__label">Why this video</span>
+        <div className="feed-compass__why-card">
+          {recommendationInsight.label && (
+            <span className={`feed-compass__category feed-compass__category--${recommendationInsight.tone}`}>
+              {recommendationInsight.label}
+            </span>
+          )}
+          <p className="feed-compass__why-summary">{recommendationInsight.summary}</p>
+          <p className="feed-compass__why">{whyText}</p>
+        </div>
         {activeCard?.safety_reason && (
           <p className="feed-compass__safety">{activeCard.safety_reason}</p>
         )}

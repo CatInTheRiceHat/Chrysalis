@@ -27,8 +27,11 @@ from ..labeling.metadata_scoring import (
     _normalize_tags,
 )
 from ..labeling.explain import build_reasons
+from ..labeling.taxonomy import classify_content, is_healthy_category
 from ..public_signals.ranking import PublicSignalContext
 from .modes import (
+    HEALTHY_TARGET_MAX_RATIO,
+    HEALTHY_TARGET_MIN_RATIO,
     POPULAR_MIN_SCORE,
     is_valid_mode,
     popular_passes_min_score,
@@ -156,9 +159,12 @@ def _build_feed_result(
             continue
         labels = _labels_for_row(row)
         integrity = resolve_feed_integrity(row, labels.to_dict())
+        taxonomy = classify_content(labels, row)
         candidates.append({
             "_row": row,
             "labels": labels,
+            "taxonomy": taxonomy,
+            "content_category": taxonomy.content_category,
             "topic": row.get("source_category") or row.get("topic") or row.get("category"),
             "source_category": row.get("source_category") or row.get("topic") or row.get("category"),
             "source_query": row.get("source_query") or "",
@@ -205,6 +211,16 @@ def _build_feed_result(
         source_type = str(cand.get("source_type") or row.get("source_type") or "search").strip().lower()
         is_popular = source_type == "most_popular"
         popularity_badge = "Popular" if is_popular else None
+        taxonomy = cand.get("taxonomy") or classify_content(labels, row)
+        taxonomy_fields = taxonomy.to_dict()
+        recommendation_lane = cand.get("recommendation_lane") or _recommendation_lane_for_category(
+            taxonomy_fields["content_category"]
+        )
+        ranking_reason = _with_taxonomy_reason(
+            reasons["ranking_reason"],
+            taxonomy_fields["content_category"],
+            recommendation_lane,
+        )
         items.append({
             "youtube_id": vid,
             "title": raw_title,
@@ -241,8 +257,23 @@ def _build_feed_result(
             "isPopular": is_popular,
             "popularity_badge": popularity_badge,
             "popularityBadge": popularity_badge,
+            "content_category": taxonomy_fields["content_category"],
+            "contentCategory": taxonomy_fields["content_category"],
+            "wellness_score": taxonomy_fields["wellness_score"],
+            "wellnessScore": taxonomy_fields["wellness_score"],
+            "positivity_score": taxonomy_fields["positivity_score"],
+            "positivityScore": taxonomy_fields["positivity_score"],
+            "conflict_score": taxonomy_fields["conflict_score"],
+            "conflictScore": taxonomy_fields["conflict_score"],
+            "safety_risk": taxonomy_fields["safety_risk"],
+            "safetyRisk": taxonomy_fields["safety_risk"],
+            "perspective_topic": taxonomy_fields["perspective_topic"],
+            "perspectiveTopic": taxonomy_fields["perspective_topic"],
+            "recommendation_lane": recommendation_lane,
+            "recommendationLane": recommendation_lane,
             "chrysalis_scores": labels.to_dict(),
-            "ranking_reason": reasons["ranking_reason"],
+            "ranking_reason": ranking_reason,
+            "rankingReason": ranking_reason,
             "safety_reason": reasons["safety_reason"],
             "concern_reason": reasons["concern_reason"],
             "mode_fit": round(cand["mode_fit"], 4),
@@ -288,6 +319,21 @@ def _debug_metadata(
         flags = normalize_integrity_flags(item.get("integrity_flags"))
         flag_counts.update(flags["negative"])
         flag_counts.update(flags["positive"])
+    ranked_content_counts = _counts_for(ranked, "content_category")
+    candidate_content_counts = _counts_for(candidates, "content_category")
+    healthy_count = sum(
+        count for category, count in ranked_content_counts.items()
+        if is_healthy_category(category)
+    )
+    ranked_count = len(ranked)
+    reduced_or_blocked_candidates = sum(
+        count for category, count in candidate_content_counts.items()
+        if category in {"reduced", "blocked"}
+    )
+    reduced_or_blocked_ranked = sum(
+        count for category, count in ranked_content_counts.items()
+        if category in {"reduced", "blocked"}
+    )
 
     return {
         "shuffle_seed": shuffle_seed,
@@ -298,6 +344,18 @@ def _debug_metadata(
             if integrity_scores else 0.0
         ),
         "category_counts": dict(_counts_for(ranked, "source_category", "topic", "category")),
+        "content_category_counts": dict(ranked_content_counts),
+        "candidate_content_category_counts": dict(candidate_content_counts),
+        "recommendation_lane_counts": dict(_counts_for(ranked, "recommendation_lane")),
+        "healthy_content_ratio": round(healthy_count / ranked_count, 4) if ranked_count else 0.0,
+        "healthy_content_target": {
+            "min": HEALTHY_TARGET_MIN_RATIO,
+            "max": HEALTHY_TARGET_MAX_RATIO,
+        },
+        "reduced_or_blocked_filtered_count": max(
+            0,
+            reduced_or_blocked_candidates - reduced_or_blocked_ranked,
+        ),
         "source_query_counts": dict(_counts_for(ranked, "source_query")),
         "source_type_counts": dict(_counts_for(ranked, "source_type")),
         "popular_min_score": POPULAR_MIN_SCORE,
@@ -338,6 +396,30 @@ def _display_hashtags_for_row(row: dict, title: str, description: str) -> list[s
         tags = [str(tag).strip() for tag in raw if str(tag).strip()]
         return tags[:3]
     return build_display_hashtags(title, description)
+
+
+def _recommendation_lane_for_category(category: str) -> str:
+    if is_healthy_category(category):
+        return "healthy_mix"
+    if category == "perspective":
+        return "perspective_mix"
+    if category == "reduced":
+        return "reduced_filler"
+    return "regular_mix"
+
+
+def _with_taxonomy_reason(reason: str, category: str, lane: str) -> str:
+    if lane == "healthy_mix":
+        extra = " It also supports the feed's positive, mentally healthy mix."
+    elif lane == "regular_mix":
+        extra = " It also keeps the feed feeling fun and normal."
+    elif lane == "perspective_mix":
+        extra = " It also adds a low-conflict different perspective."
+    elif category == "reduced":
+        extra = " It was deprioritized because Chrysalis saw higher conflict signals."
+    else:
+        extra = ""
+    return f"{reason}{extra}"
 
 
 def _row_video_id(row: dict) -> str:

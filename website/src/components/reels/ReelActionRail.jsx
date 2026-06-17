@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Heart, Bookmark, Sparkles, RefreshCw, HelpCircle, Share2, X } from 'lucide-react';
+import { FEED_BALANCE_COPY } from './feedTaxonomy';
 
 const REFLECTION_OPTIONS = ['Calmer', 'Curious', 'Not for me'];
 
@@ -11,6 +12,9 @@ export function ReelActionRail({
   title,
   source,
   rankingReason,
+  recommendationSummary,
+  categoryLabel,
+  categoryTone = 'neutral',
   fallbackReason,
   concernReason,
   safetyReason,
@@ -148,7 +152,7 @@ export function ReelActionRail({
         label="Why?"
         pressed={showWhy}
         expanded={showWhy}
-        ariaLabel="Why this algorithm?"
+        ariaLabel="Why this video?"
         onClick={toggleWhy}
       >
         <HelpCircle size={20} aria-hidden="true" />
@@ -186,7 +190,7 @@ export function ReelActionRail({
       )}
 
       {showWhy && (
-        <div className="reel-why" role="dialog" aria-label="Why this algorithm?">
+        <div className="reel-why" role="dialog" aria-label="Why this video?">
           <button
             type="button"
             className="reel-why__close"
@@ -195,10 +199,19 @@ export function ReelActionRail({
           >
             <X size={15} aria-hidden="true" />
           </button>
-          <p className="reel-why__title">Why this algorithm?</p>
-          <p className="reel-why__body">
-            {rankingReason || fallbackReason || 'Curated by Chrysalis to support your wellbeing.'}
+          <p className="reel-why__title">Why this video?</p>
+          {categoryLabel && (
+            <span className={`reel-why__badge reel-why__badge--${categoryTone}`}>
+              {categoryLabel}
+            </span>
+          )}
+          <p className="reel-why__summary">
+            {recommendationSummary || 'A balanced pick chosen to keep your feed varied.'}
           </p>
+          {(rankingReason || fallbackReason) && (
+            <p className="reel-why__body">{rankingReason || fallbackReason}</p>
+          )}
+          <p className="reel-why__balance">{FEED_BALANCE_COPY}</p>
           {showPublicSignal && (
             <div className="reel-why__public">
               <p className="reel-why__public-title">Reputation context</p>

@@ -9,6 +9,7 @@ import { OnboardingStartScreen } from './OnboardingStartScreen';
 import { LanguageSetupNotice } from './LanguageSetupNotice';
 import { getSessionId, fetchPreferences, savePreferences } from './preferences';
 import { MODES, reelsByMode, DEFAULT_MODE, LEGACY_INTENTION_MODES } from './reelsData';
+import { getFeedDebugSnapshot } from './feedTaxonomy';
 import '../../reels.css';
 
 const THEME_KEY = 'chrysalis-algorithm-theme';
@@ -79,9 +80,19 @@ function displayHashtags(item, rawTitle, rawDescription) {
   return tags;
 }
 
+function isDemoPlaceholderVideoId(value) {
+  return /^csl-/i.test(String(value || '').trim());
+}
+
+function isPlayableApiVideo(item, youtubeId) {
+  const embedUrl = item.embed_url || item.embedUrl;
+  return Boolean((youtubeId || embedUrl) && !isDemoPlaceholderVideoId(youtubeId));
+}
+
 /** Map a backend /api/feed item into the card shape ReelCard expects. */
 function apiItemToCard(item) {
   const youtubeId = item.youtube_id || item.youtubeId;
+  const playableVideo = isPlayableApiVideo(item, youtubeId);
   const rawTitle = item.title || '';
   const rawDescription = item.description || '';
   const rawSource = item.channel_title || item.channelTitle || item.raw_source || item.source || '';
@@ -95,7 +106,8 @@ function apiItemToCard(item) {
 
   return {
     id: youtubeId || item.embed_url || item.embedUrl,
-    youtube_id: youtubeId,
+    youtube_id: playableVideo ? youtubeId : null,
+    raw_youtube_id: youtubeId,
     title: displayTitle,
     raw_title: rawTitle,
     source: displaySource,
@@ -106,11 +118,12 @@ function apiItemToCard(item) {
     display_description: item.display_description || item.displayDescription || displayDescription,
     display_hashtags: displayHashtags(item, rawTitle, rawDescription),
     thumbnail: item.thumbnail,
-    embed_url: item.embed_url || item.embedUrl,
-    watch_url: item.watch_url,
-    ranking_reason: item.ranking_reason,
-    safety_reason: item.safety_reason,
-    concern_reason: item.concern_reason,
+    embed_url: playableVideo ? item.embed_url || item.embedUrl : null,
+    watch_url: playableVideo ? item.watch_url : null,
+    is_playable_video: playableVideo,
+    ranking_reason: item.ranking_reason || item.rankingReason,
+    safety_reason: item.safety_reason || item.safetyReason,
+    concern_reason: item.concern_reason || item.concernReason,
     public_signal: item.public_signal,
     source_safety_status: item.source_safety_status,
     public_signal_effect: item.public_signal_effect,
@@ -120,6 +133,13 @@ function apiItemToCard(item) {
     source_type: item.source_type || item.sourceType || 'search',
     is_popular: Boolean(item.is_popular ?? item.isPopular),
     popularity_badge: item.popularity_badge || item.popularityBadge || null,
+    content_category: item.content_category || item.contentCategory || null,
+    wellness_score: item.wellness_score ?? item.wellnessScore ?? null,
+    positivity_score: item.positivity_score ?? item.positivityScore ?? null,
+    conflict_score: item.conflict_score ?? item.conflictScore ?? null,
+    safety_risk: item.safety_risk ?? item.safetyRisk ?? null,
+    perspective_topic: item.perspective_topic || item.perspectiveTopic || null,
+    recommendation_lane: item.recommendation_lane || item.recommendationLane || null,
   };
 }
 
@@ -178,6 +198,7 @@ function cardSessionKey(mode, index, reel) {
 }
 
 function isLiveVideoCard(card) {
+  if (typeof card.is_playable_video === 'boolean') return card.is_playable_video;
   return Boolean(card.youtube_id || card.embed_url || card.embedUrl);
 }
 
@@ -261,7 +282,7 @@ export function ReelsPage() {
   const [languageNoticeOpen, setLanguageNoticeOpen] = useState(false);
   // Feed for the active mode, tagged with the mode it belongs to so a stale
   // response never renders under the wrong guided mode.
-  const [feed, setFeed] = useState({ mode: null, cards: null });
+  const [feed, setFeed] = useState({ mode: null, cards: null, debug: null });
 
   // Load saved language/region preferences once. Show the setup notice only
   // when setup is not yet complete (backend flag + local mirror to avoid flash).
@@ -308,12 +329,16 @@ export function ReelsPage() {
         const real = (data.items ?? []).map(apiItemToCard);
 
         if (cancelled) return;
-        setFeed({ mode, cards: mergeForMode(real, synthetic) });
+        setFeed({
+          mode,
+          cards: mergeForMode(real, synthetic),
+          debug: getFeedDebugSnapshot(data),
+        });
       } catch (error) {
         if (import.meta.env.DEV) {
           console.warn('[Chrysalis algorithm] Falling back to sample cards:', error);
         }
-        if (!cancelled) setFeed({ mode, cards: synthetic });
+        if (!cancelled) setFeed({ mode, cards: synthetic, debug: null });
       }
     }
 
@@ -410,6 +435,7 @@ export function ReelsPage() {
   const currentMode = MODES.find((item) => item.key === mode)
     || MODES.find((item) => item.key === DEFAULT_MODE);
   const currentFeedStatus = feedStatus(tunedCards);
+  const currentFeedDebug = feed.mode === mode ? feed.debug : null;
 
   const resetIntro = () => {
     setCompassOpen(false);
@@ -471,6 +497,7 @@ export function ReelsPage() {
       selectedTunes={selectedTunes}
       onResetIntro={resetIntro}
       onTuneChange={toggleTune}
+      feedDebug={currentFeedDebug}
     />
   );
 
@@ -595,6 +622,7 @@ export function ReelsPage() {
                       selectedTunes={selectedTunes}
                       onResetIntro={resetIntro}
                       onTuneChange={toggleTune}
+                      feedDebug={currentFeedDebug}
                       onClose={() => setCompassOpen(false)}
                     />
                   </MOTION.div>
