@@ -62,6 +62,7 @@ export function ReelCard({
   onVisible,
   onStatus,
   onRegenerate,
+  onOpenComments,
 }) {
   const [loaded, setLoaded] = useState(false);
   const iframeRef = useRef(null);
@@ -209,6 +210,7 @@ export function ReelCard({
           sourceSafetyStatus={reel.source_safety_status}
           onStatus={onStatus}
           onRegenerate={onRegenerate}
+          onComment={onOpenComments}
         />
       </MOTION.div>
     </article>

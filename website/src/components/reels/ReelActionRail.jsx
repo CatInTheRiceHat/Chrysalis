@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, Bookmark, Sparkles, RefreshCw, HelpCircle, Share2, X } from 'lucide-react';
+import { Heart, Bookmark, MessageCircle, Sparkles, RefreshCw, HelpCircle, Share2, X } from 'lucide-react';
 import { FEED_BALANCE_COPY } from './feedTaxonomy';
 
 const REFLECTION_OPTIONS = ['Calmer', 'Curious', 'Not for me'];
@@ -23,6 +23,7 @@ export function ReelActionRail({
   sourceSafetyStatus,
   onStatus,
   onRegenerate,
+  onComment,
 }) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -129,6 +130,12 @@ export function ReelActionRail({
       >
         <Bookmark size={20} fill={saved ? 'currentColor' : 'none'} aria-hidden="true" />
       </Action>
+
+      {onComment && (
+        <Action label="Comments" ariaLabel="Open comments" onClick={onComment}>
+          <MessageCircle size={20} aria-hidden="true" />
+        </Action>
+      )}
 
       <Action
         label="Reflect"

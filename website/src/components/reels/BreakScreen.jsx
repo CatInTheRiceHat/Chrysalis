@@ -9,7 +9,7 @@ import { BREAK_ACTIVITIES, MINUTE_MS, formatCountdown } from './sessionBreaks';
  * hard lockout. The user picks an activity, optionally reflects / runs a gentle
  * countdown, then returns refreshed.
  */
-export function BreakScreen({ tier, elapsedMin, onComplete }) {
+export function BreakScreen({ tier, elapsedMin, onComplete, onOpenChallenges }) {
   const breakMin = tier?.breakMin ?? 10;
   const [activity, setActivity] = useState(null);
   const [reflection, setReflection] = useState('');
@@ -156,6 +156,11 @@ export function BreakScreen({ tier, elapsedMin, onComplete }) {
           <Check size={16} aria-hidden="true" />
           {activity ? "I'm refreshed — back to my feed" : 'Pick an activity to continue'}
         </button>
+        {onOpenChallenges && (
+          <button type="button" className="break-screen__challenges-link" onClick={onOpenChallenges}>
+            Want to make it count? Open IRL Challenges →
+          </button>
+        )}
         <p className="break-screen__footnote">
           No rush. Your feed will be here when you&apos;re ready.
         </p>

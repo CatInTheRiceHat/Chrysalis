@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion as MOTION } from 'motion/react';
-import { ArrowLeft, ChevronDown, Compass, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Compass, RotateCcw, Trophy, UserCircle } from 'lucide-react';
 import { ReelCard } from './ReelCard';
 import { FeedCompassPanel } from './FeedCompassPanel';
 import { ThemeToggle } from './ThemeToggle';
@@ -13,6 +13,11 @@ import { getFeedDebugSnapshot } from './feedTaxonomy';
 import { BreakScreen } from './BreakScreen';
 import { useSessionTimer } from './useSessionTimer';
 import { DEFAULT_TIME_SCALE_MS, DEMO_TIME_SCALE_MS } from './sessionBreaks';
+import { ChallengesPanel } from './ChallengesPanel';
+import { useChallenges } from './useChallenges';
+import { CommentsPanel } from './CommentsPanel';
+import { ProfilePanel } from './ProfilePanel';
+import { useProfile } from './useProfile';
 import '../../reels.css';
 
 const THEME_KEY = 'chrysalis-algorithm-theme';
@@ -314,6 +319,13 @@ export function ReelsPage() {
   } = useSessionTimer({ active: onboarded, scaleMs: breakScaleMs });
   const breakActive = onboarded && Boolean(dueTier);
 
+  // IRL challenges (points, streaks, friend competition) — local demo state.
+  const challenges = useChallenges();
+  const [challengesOpen, setChallengesOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const profile = useProfile();
+  const [profileOpen, setProfileOpen] = useState(false);
+
   // Load saved language/region preferences once. Show the setup notice only
   // when setup is not yet complete (backend flag + local mirror to avoid flash).
   useEffect(() => {
@@ -583,6 +595,37 @@ export function ReelsPage() {
               <Compass size={18} aria-hidden="true" />
             </button>
           )}
+          {onboarded && (
+            <button
+              type="button"
+              className="reels-fab reels-challenges-trigger"
+              onClick={() => setChallengesOpen(true)}
+              aria-label="Open IRL Challenges"
+              aria-haspopup="dialog"
+              aria-expanded={challengesOpen}
+              title="IRL Challenges"
+            >
+              <Trophy size={17} aria-hidden="true" />
+              {challenges.stats.streak > 0 && (
+                <span className="reels-fab__badge" aria-label={`${challenges.stats.streak} day streak`}>
+                  {challenges.stats.streak}
+                </span>
+              )}
+            </button>
+          )}
+          {onboarded && (
+            <button
+              type="button"
+              className="reels-fab reels-profile-trigger"
+              onClick={() => setProfileOpen(true)}
+              aria-label="Open your profile"
+              aria-haspopup="dialog"
+              aria-expanded={profileOpen}
+              title="Your profile"
+            >
+              <UserCircle size={18} aria-hidden="true" />
+            </button>
+          )}
           {onboarded && BREAK_DEMO && (
             <button
               type="button"
@@ -628,6 +671,7 @@ export function ReelsPage() {
                       onVisible={() => markCardVisible(index, reel)}
                       onStatus={announceStatus}
                       onRegenerate={() => showNextCard(index)}
+                      onOpenComments={() => setCommentsOpen(true)}
                     />
                   ))}
                 </div>
@@ -686,7 +730,119 @@ export function ReelsPage() {
             tier={dueTier}
             elapsedMin={elapsedMin}
             onComplete={handleBreakComplete}
+            onOpenChallenges={() => setChallengesOpen(true)}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {challengesOpen && (
+          <MOTION.div
+            className="feed-compass-sheet challenges-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="IRL Challenges"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div
+              className="feed-compass-sheet__scrim"
+              aria-hidden="true"
+              onClick={() => setChallengesOpen(false)}
+            />
+            <MOTION.div
+              className="feed-compass-sheet__panel"
+              initial={{ y: 28, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 28, opacity: 0 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <ChallengesPanel
+                stats={challenges.stats}
+                completedToday={challenges.completedToday}
+                badges={challenges.badges}
+                leaderboard={challenges.leaderboard}
+                onComplete={challenges.complete}
+                onStatus={announceStatus}
+                onClose={() => setChallengesOpen(false)}
+              />
+            </MOTION.div>
+          </MOTION.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {commentsOpen && (
+          <MOTION.div
+            className="feed-compass-sheet challenges-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Comments"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div
+              className="feed-compass-sheet__scrim"
+              aria-hidden="true"
+              onClick={() => setCommentsOpen(false)}
+            />
+            <MOTION.div
+              className="feed-compass-sheet__panel"
+              initial={{ y: 28, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 28, opacity: 0 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <CommentsPanel
+                onStatus={announceStatus}
+                onClose={() => setCommentsOpen(false)}
+              />
+            </MOTION.div>
+          </MOTION.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {profileOpen && (
+          <MOTION.div
+            className="feed-compass-sheet challenges-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Your profile"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div
+              className="feed-compass-sheet__scrim"
+              aria-hidden="true"
+              onClick={() => setProfileOpen(false)}
+            />
+            <MOTION.div
+              className="feed-compass-sheet__panel"
+              initial={{ y: 28, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 28, opacity: 0 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <ProfilePanel
+                profile={profile.profile}
+                onField={profile.setField}
+                onToggle={profile.toggleField}
+                community={profile.community}
+                onConnect={profile.toggleConnect}
+                stats={challenges.stats}
+                badges={challenges.badges}
+                onStatus={announceStatus}
+                onClose={() => setProfileOpen(false)}
+              />
+            </MOTION.div>
+          </MOTION.div>
         )}
       </AnimatePresence>
 
