@@ -92,6 +92,16 @@ _CONFLICT_PATTERNS = (
     "dogpile", "pile on", "callout drama", "public shaming",
 )
 
+# Motivation / encouragement / pep-talk signals. A motivational pep talk reads as
+# uplifting and belongs in the healthy mix, not generic "regular" entertainment, so
+# these feed positivity (strongly) and wellness (lightly).
+_UPLIFT_PATTERNS = (
+    "pep talk", "motivation", "motivational", "motivated", "motivate",
+    "encouragement", "encourage", "inspiring", "inspire", "inspirational",
+    "uplifting", "you got this", "keep going", "believe in yourself",
+    "cheer you on", "choose awesome", "be awesome", "brighter", "you matter",
+)
+
 # Low-conflict diverse-perspective signals. Each tuple is (topic, [phrases]).
 _PERSPECTIVE_TOPICS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("different perspectives", (
@@ -206,6 +216,7 @@ def classify_content(labels: LabelSet, meta: dict | None = None) -> ContentTaxon
 
     activity_score, _ = _hit_score(text, _ACTIVITY_PATTERNS, per_hit=0.34)
     connection_score, _ = _hit_score(text, _CONNECTION_PATTERNS, per_hit=0.34)
+    uplift_score, _ = _hit_score(text, _UPLIFT_PATTERNS, per_hit=0.34)
     conflict_text_score, _ = _hit_score(text, _CONFLICT_PATTERNS, per_hit=0.45)
     perspective_score, perspective_topic = _detect_perspective(text)
     harmful_score, _ = _hit_score(text, _HARMFUL_PATTERNS, per_hit=0.6, safe_aware=True)
@@ -219,6 +230,7 @@ def classify_content(labels: LabelSet, meta: dict | None = None) -> ContentTaxon
         + 0.12 * labels.educational
         + 0.55 * activity_score
         + 0.25 * connection_score
+        + 0.15 * uplift_score
     )
     positivity_score = clamp01(
         0.32 * labels.prosocial
@@ -227,6 +239,7 @@ def classify_content(labels: LabelSet, meta: dict | None = None) -> ContentTaxon
         + 0.10 * labels.novelty
         + 0.30 * connection_score
         + 0.20 * activity_score
+        + 0.30 * uplift_score
         - 0.50 * labels.overall_risk
     )
 

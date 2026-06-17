@@ -10,6 +10,9 @@ import { LanguageSetupNotice } from './LanguageSetupNotice';
 import { getSessionId, fetchPreferences, savePreferences } from './preferences';
 import { MODES, reelsByMode, DEFAULT_MODE, LEGACY_INTENTION_MODES } from './reelsData';
 import { getFeedDebugSnapshot } from './feedTaxonomy';
+import { BreakScreen } from './BreakScreen';
+import { useSessionTimer } from './useSessionTimer';
+import { DEFAULT_TIME_SCALE_MS, DEMO_TIME_SCALE_MS } from './sessionBreaks';
 import '../../reels.css';
 
 const THEME_KEY = 'chrysalis-algorithm-theme';
@@ -24,6 +27,21 @@ const LEGACY_INTENTION_KEY = 'chrysalis-reels-intention';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '';
 const TARGET_CARD_COUNT = 12;
+
+/**
+ * Demo/test mode for screen-time breaks. Enabled in dev, or via `?breaks=demo`
+ * (compresses one session minute into one real second, so a break arrives in ~60s
+ * and a dev "Trigger break" control appears). Never on in a normal prod session.
+ */
+function detectBreakDemo() {
+  if (typeof window !== 'undefined') {
+    const param = new URLSearchParams(window.location.search).get('breaks');
+    if (param === 'demo') return true;
+    if (param === 'off') return false;
+  }
+  return Boolean(import.meta.env.DEV);
+}
+const BREAK_DEMO = detectBreakDemo();
 const HASHTAG_RE = /#[\w-]+/g;
 const TRAILING_TITLE_SEPARATOR_RE = new RegExp(String.raw`[\s|/\\_:;,.=-]+$`);
 
@@ -284,6 +302,18 @@ export function ReelsPage() {
   // response never renders under the wrong guided mode.
   const [feed, setFeed] = useState({ mode: null, cards: null, debug: null });
 
+  // Progressive screen-time breaks. The timer only accrues while the feed is open
+  // and no break is showing; when a break is due the feed pauses behind the overlay.
+  const breakScaleMs = BREAK_DEMO ? DEMO_TIME_SCALE_MS : DEFAULT_TIME_SCALE_MS;
+  const {
+    elapsedMin,
+    dueTier,
+    completeBreak,
+    triggerBreakNow,
+    reset: resetSessionTimer,
+  } = useSessionTimer({ active: onboarded, scaleMs: breakScaleMs });
+  const breakActive = onboarded && Boolean(dueTier);
+
   // Load saved language/region preferences once. Show the setup notice only
   // when setup is not yet complete (backend flag + local mirror to avoid flash).
   useEffect(() => {
@@ -441,6 +471,7 @@ export function ReelsPage() {
     setCompassOpen(false);
     setModeSelectionInitial(mode);
     setOnboarded(false);
+    resetSessionTimer();
   };
 
   const markCardVisible = (index, reel) => {
@@ -472,6 +503,11 @@ export function ReelsPage() {
 
   const announceStatus = (message) => {
     setToast({ id: `${Date.now()}-${message}`, message });
+  };
+
+  const handleBreakComplete = (entry) => {
+    completeBreak(entry);
+    announceStatus('Welcome back — enjoy your refreshed feed.');
   };
 
   const showNextCard = (index) => {
@@ -547,6 +583,16 @@ export function ReelsPage() {
               <Compass size={18} aria-hidden="true" />
             </button>
           )}
+          {onboarded && BREAK_DEMO && (
+            <button
+              type="button"
+              className="reels-fab reels-fab--demo"
+              onClick={triggerBreakNow}
+              title="Demo: trigger a screen-time break now"
+            >
+              Trigger break
+            </button>
+          )}
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </div>
       </div>
@@ -578,7 +624,7 @@ export function ReelsPage() {
                     <ReelCard
                       key={reel.id}
                       reel={reel}
-                      isActive={index === activeIndex}
+                      isActive={index === activeIndex && !breakActive}
                       onVisible={() => markCardVisible(index, reel)}
                       onStatus={announceStatus}
                       onRegenerate={() => showNextCard(index)}
@@ -630,6 +676,17 @@ export function ReelsPage() {
               )}
             </AnimatePresence>
           </MOTION.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {breakActive && (
+          <BreakScreen
+            key="break"
+            tier={dueTier}
+            elapsedMin={elapsedMin}
+            onComplete={handleBreakComplete}
+          />
         )}
       </AnimatePresence>
 

@@ -42,7 +42,7 @@
     },
     {
       "youtube_video_id": "gXDMoiEkyuQ",
-      "title": "Gratitude",
+      "title": "Nature, Beauty, Gratitude",
       "channel_title": "TEDx Talks",
       "description": "A reflective short talk about gratitude, wonder, nature, and noticing what is beautiful around you.",
       "tags": ["gratitude", "reflection", "nature", "wonder"],
@@ -77,7 +77,7 @@
       "source_query": "chrysalis_seed",
       "thumbnail_url": "https://i.ytimg.com/vi/nwAYpLVyeFU/hqdefault.jpg",
       "duration_seconds": 330,
-      "expected_category": "healthy"
+      "expected_category": "positive"
     },
     {
       "youtube_video_id": "l-gQLqv9f4o",

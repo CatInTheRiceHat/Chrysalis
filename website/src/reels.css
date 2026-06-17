@@ -1699,3 +1699,186 @@
   border-color: transparent;
   color: var(--text-muted);
 }
+
+/* ── Screen-time break overlay ───────────────────────────────────────────── */
+.reels-fab--demo {
+  width: auto;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  border: 1px dashed var(--accent-soft);
+  color: var(--button-text);
+}
+
+.break-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.break-screen__scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.break-screen__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px;
+  border-radius: var(--reel-radius);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--reel-shadow);
+  text-align: center;
+}
+.break-screen__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tone-reset);
+}
+.break-screen__title {
+  margin: 0;
+  font-size: clamp(22px, 5vw, 28px);
+  color: var(--text);
+}
+.break-screen__copy {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.break-screen__activities {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+.break-activity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+.break-activity:hover { transform: translateY(-1px); }
+.break-activity.is-selected {
+  border-color: var(--tone-reset);
+  background: color-mix(in srgb, var(--tone-reset) 18%, var(--card));
+}
+.break-activity__emoji { font-size: 20px; line-height: 1; }
+.break-activity__label { font-weight: 500; }
+
+.break-screen__timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+}
+.break-screen__timer-readout {
+  font-size: 32px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.break-screen__timer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.break-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.break-ghost-btn:disabled { opacity: 0.5; cursor: default; }
+.break-screen__timer-note { font-size: 12px; color: var(--text-muted); }
+
+.break-screen__reflection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.break-screen__reflection em { font-style: normal; opacity: 0.8; }
+.break-screen__reflection textarea {
+  resize: none;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.break-screen__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+.break-screen__done {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 13px 18px;
+  border-radius: 16px;
+  border: none;
+  background: var(--accent);
+  color: var(--button-text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.break-screen__done:hover:not(:disabled) { transform: translateY(-1px); }
+.break-screen__done:disabled { opacity: 0.55; cursor: default; }
+.break-screen__footnote { margin: 0; font-size: 12px; color: var(--text-muted); }
+
+@media (max-width: 480px) {
+  .break-screen__panel { padding: 22px 18px; }
+  .break-screen__activities { grid-template-columns: 1fr; }
+}
