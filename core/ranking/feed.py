@@ -28,6 +28,13 @@ from ..labeling.metadata_scoring import (
 )
 from ..labeling.explain import build_reasons
 from ..labeling.taxonomy import classify_content, is_healthy_category
+from ..language_filter import (
+    ALLOWED_LANGUAGE_PREFIXES,
+    ALLOWED_REGION,
+    BLOCKED_LANGUAGE_CODES,
+    LANGUAGE_POLICY,
+    verdict as language_verdict,
+)
 from ..public_signals.ranking import PublicSignalContext
 from .modes import (
     HEALTHY_TARGET_MAX_RATIO,
@@ -144,11 +151,28 @@ def _build_feed_result(
     candidates: list[dict] = []
     seen_video_ids: set[str] = set()
     popular_below_threshold = 0
+    language_filtered = 0
+    region_filtered = 0
+    blocked_status_filtered = 0
     for row in rows:
         video_id = _row_video_id(row)
         if not video_id or video_id in seen_video_ids:
             continue
         seen_video_ids.add(video_id)
+        # Never serve rows an admin/cleanup already marked blocked (belt-and-suspenders;
+        # the SQL loader already filters status='active', but legacy rows may not).
+        if str(row.get("status") or "").strip().lower() == "blocked":
+            blocked_status_filtered += 1
+            continue
+        # English-only / US-focused demo policy: drop non-English + non-US rows here so
+        # old database rows can never leak into the feed, even if ingestion missed them.
+        language_decision = language_verdict(row)
+        if not language_decision["allowed"]:
+            if language_decision["language_reason"]:
+                language_filtered += 1
+            if language_decision["region_blocked"]:
+                region_filtered += 1
+            continue
         # Guard the load path: drop weak popular rows (incl. legacy rows ingested
         # before the threshold existed) so they never reach the feed. Search-lane
         # rows are exempt — only most_popular is gated.
@@ -298,6 +322,9 @@ def _build_feed_result(
         k,
         shuffle_seed=shuffle_seed,
         popular_below_threshold=popular_below_threshold,
+        language_filtered=language_filtered,
+        region_filtered=region_filtered,
+        blocked_status_filtered=blocked_status_filtered,
     )
 
 
@@ -308,6 +335,9 @@ def _debug_metadata(
     *,
     shuffle_seed: str | None,
     popular_below_threshold: int = 0,
+    language_filtered: int = 0,
+    region_filtered: int = 0,
+    blocked_status_filtered: int = 0,
 ) -> dict:
     integrity_scores = [
         float(item.get("integrity_score"))
@@ -356,6 +386,15 @@ def _debug_metadata(
             0,
             reduced_or_blocked_candidates - reduced_or_blocked_ranked,
         ),
+        "language_policy": LANGUAGE_POLICY,
+        "allowed_language_prefixes": list(ALLOWED_LANGUAGE_PREFIXES),
+        "allowed_region": ALLOWED_REGION,
+        "language_filtered_count": language_filtered,
+        "region_or_origin_filtered_count": region_filtered,
+        "blocked_or_deleted_count": blocked_status_filtered,
+        # retained for back-compat with earlier debug consumers
+        "region_filtered_count": region_filtered,
+        "blocked_language_codes": list(BLOCKED_LANGUAGE_CODES),
         "source_query_counts": dict(_counts_for(ranked, "source_query")),
         "source_type_counts": dict(_counts_for(ranked, "source_type")),
         "popular_min_score": POPULAR_MIN_SCORE,

@@ -6,8 +6,7 @@ import { ReelCard } from './ReelCard';
 import { FeedCompassPanel } from './FeedCompassPanel';
 import { ThemeToggle } from './ThemeToggle';
 import { OnboardingStartScreen } from './OnboardingStartScreen';
-import { LanguageSetupNotice } from './LanguageSetupNotice';
-import { getSessionId, fetchPreferences, savePreferences } from './preferences';
+import { getSessionId } from './preferences';
 import { MODES, reelsByMode, DEFAULT_MODE, LEGACY_INTENTION_MODES } from './reelsData';
 import { getFeedDebugSnapshot } from './feedTaxonomy';
 import { BreakScreen } from './BreakScreen';
@@ -24,7 +23,6 @@ const THEME_KEY = 'chrysalis-algorithm-theme';
 const ONBOARDED_KEY = 'chrysalis-algorithm-onboarded';
 const MODE_KEY = 'chrysalis-algorithm-mode';
 const INTENTION_KEY = 'chrysalis-algorithm-intention';
-const LANGUAGE_SETUP_KEY = 'chrysalis-algorithm-language-setup';
 const LEGACY_THEME_KEY = 'chrysalis-reels-theme';
 const LEGACY_ONBOARDED_KEY = 'chrysalis-reels-onboarded';
 const LEGACY_MODE_KEY = 'chrysalis-reels-mode';
@@ -301,8 +299,6 @@ export function ReelsPage() {
   const [selectedTunes, setSelectedTunes] = useState([]);
   const [compassOpen, setCompassOpen] = useState(false);
   const [toast, setToast] = useState(null);
-  const [contentPrefs, setContentPrefs] = useState(null);
-  const [languageNoticeOpen, setLanguageNoticeOpen] = useState(false);
   // Feed for the active mode, tagged with the mode it belongs to so a stale
   // response never renders under the wrong guided mode.
   const [feed, setFeed] = useState({ mode: null, cards: null, debug: null });
@@ -325,27 +321,6 @@ export function ReelsPage() {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const profile = useProfile();
   const [profileOpen, setProfileOpen] = useState(false);
-
-  // Load saved language/region preferences once. Show the setup notice only
-  // when setup is not yet complete (backend flag + local mirror to avoid flash).
-  useEffect(() => {
-    let cancelled = false;
-    const locallyDone = typeof window !== 'undefined'
-      && window.localStorage.getItem(LANGUAGE_SETUP_KEY) === '1';
-    (async () => {
-      const prefs = await fetchPreferences();
-      if (cancelled) return;
-      setContentPrefs(prefs);
-      if (prefs.has_completed_language_setup) {
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(LANGUAGE_SETUP_KEY, '1');
-        }
-      } else if (!locallyDone) {
-        setLanguageNoticeOpen(true);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   // Fetch the labeled/ranked feed for the active mode; fall back to synthetic
   // cards on error or when the backend has no scored videos yet.
@@ -446,15 +421,6 @@ export function ReelsPage() {
   }, [compassOpen]);
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
-
-  const handleLanguageSetupSave = async (payload) => {
-    const saved = await savePreferences(payload);
-    setContentPrefs(saved);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(LANGUAGE_SETUP_KEY, '1');
-    }
-    setLanguageNoticeOpen(false);
-  };
 
   const startFeed = (chosenMode) => {
     const nextMode = reelsByMode[chosenMode] ? chosenMode : DEFAULT_MODE;
@@ -843,16 +809,6 @@ export function ReelsPage() {
               />
             </MOTION.div>
           </MOTION.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {languageNoticeOpen && (
-          <LanguageSetupNotice
-            key="language-setup"
-            prefs={contentPrefs}
-            onSave={handleLanguageSetupSave}
-          />
         )}
       </AnimatePresence>
 

@@ -33,6 +33,7 @@ from core.labeling.explain import build_reasons
 from core.labeling.metadata_scoring import parse_duration_seconds, score_metadata
 from core.labeling.schema import SCORING_VERSION
 from core.preferences import normalize_language_code, normalize_region_code
+from core.language_filter import is_allowed as language_allowed
 from core.ranking.modes import POPULAR_MIN_SCORE, popular_passes_min_score
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -1059,6 +1060,17 @@ def _candidate_from_video_item(
 
     text = " ".join([title, description, " ".join(tags), snippet.get("channelTitle") or ""])
     if _contains_blocked_term(text):
+        return None
+
+    # Demo US/English-only policy: never ingest Hindi/Arabic (or non-US) videos.
+    if not language_allowed({
+        "title": title,
+        "description": description,
+        "tags": tags,
+        "channel_title": snippet.get("channelTitle") or "",
+        "default_language": snippet.get("defaultLanguage"),
+        "default_audio_language": snippet.get("defaultAudioLanguage"),
+    }):
         return None
 
     published_at = str(snippet.get("publishedAt") or "")

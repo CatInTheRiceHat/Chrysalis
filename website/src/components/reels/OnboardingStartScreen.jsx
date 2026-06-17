@@ -69,6 +69,10 @@ export function OnboardingStartScreen({ initialMode = null, onStart }) {
           Skip for now
         </button>
       </div>
+
+      <p className="reels-onboard__privacy">
+        Your demo feed is set to English. No location access required — Chrysalis keeps personalization simple and privacy-friendly.
+      </p>
     </MOTION.div>
   );
 }
