@@ -235,14 +235,14 @@ def test_popular_items_carry_badge_fields():
     assert search["popularity_badge"] is None
 
 
-# --- Popular minimum-score threshold (POPULAR_MIN_SCORE, default 0.5) --------
+# --- Popular minimum-score threshold (POPULAR_MIN_SCORE, default 0.75) --------
 
 def _payload(mode, rows, k=10):
     return build_feed_payload(rows, mode, k=k, shuffle_seed="fixed")
 
 
 def test_low_score_popular_excluded_from_feed():
-    # Old/weak popular rows (popularity < 0.5) must not surface, even though they
+    # Old/weak popular rows (popularity < 0.75) must not surface, even though they
     # were "inserted" into the row pool. Search rows remain.
     rows = [_row(f"s{i}", "search", popularity=0.2) for i in range(4)]
     rows += [_row(f"weakpop{i}", "most_popular", popularity=0.2) for i in range(4)]
@@ -268,10 +268,10 @@ def test_low_score_search_videos_are_not_filtered():
 
 
 def test_threshold_is_exactly_at_boundary_inclusive():
-    # popularity == POPULAR_MIN_SCORE (0.5) passes (>=), 0.49 fails.
+    # popularity == POPULAR_MIN_SCORE (0.75) passes (>=), 0.74 fails.
     rows = [_row("s0", "search", popularity=0.2)]
-    rows += [_row("at_floor", "most_popular", popularity=0.5)]
-    rows += [_row("below_floor", "most_popular", popularity=0.49)]
+    rows += [_row("at_floor", "most_popular", popularity=0.75)]
+    rows += [_row("below_floor", "most_popular", popularity=0.74)]
     ids = {it["youtube_id"] for it in _items("flutter-feed", rows)}
     assert "at_floor" in ids
     assert "below_floor" not in ids
@@ -281,13 +281,13 @@ def test_debug_reports_popular_min_score():
     rows = [_row("s0", "search", popularity=0.2)]
     rows += [_row("weakpop", "most_popular", popularity=0.1)]
     payload = _payload("flutter-feed", rows)
-    assert payload["popular_min_score"] == 0.5
+    assert payload["popular_min_score"] == 0.75
     assert payload["popular_below_threshold_filtered_count"] == 1
     assert "source_type_counts" in payload
 
 
 def test_daily_dew_still_caps_popular_at_two_with_threshold():
-    # Strong popular (>= 0.5) still capped at 2 for daily-dew.
+    # Strong popular (>= 0.75) still capped at 2 for daily-dew.
     rows = [_row(f"s{i}", "search", popularity=0.2) for i in range(6)]
     rows += [_row(f"p{i}", "most_popular", popularity=0.95) for i in range(6)]
     items = _items("daily-dew", rows)
