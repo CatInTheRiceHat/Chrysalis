@@ -3,10 +3,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import sqlite3
 
-from core.ranking.feed import build_feed
+from core.language_filter import verdict
+from core.ranking.feed import build_feed, build_feed_payload
 from integrations.youtube_ingest import (
     DEFAULT_SOURCE_BUCKETS,
+    RELEVANCE_TERMS,
     SourceQuerySpec,
+    _relevance_score,
     configured_source_queries,
     ingest_youtube_videos_sqlite,
     load_active_feed_video_rows_sqlite,
@@ -175,6 +178,9 @@ def test_default_youtube_source_buckets_match_broad_feed_brief():
         "pop culture",
         "sports",
         "wellness/mental health",
+        "positivity/self care",
+        "emotional wellness",
+        "mindfulness/calm",
         "study/productivity",
         "lifestyle/vlogs",
         "education/explainers",
@@ -184,3 +190,94 @@ def test_default_youtube_source_buckets_match_broad_feed_brief():
         "news/current events",
         "current events explained",
     )
+
+
+# ── Positive / self-care expansion (more uplifting content, still balanced) ───
+
+NEW_POSITIVE_BUCKETS = (
+    SourceQuerySpec("positivity/self care", "uplifting self care positive mindset tips"),
+    SourceQuerySpec("emotional wellness", "emotional wellness healthy habits advice"),
+    SourceQuerySpec("mindfulness/calm", "mindfulness calm reset tips"),
+)
+
+
+def test_new_positive_buckets_do_not_self_block_language_filter():
+    # Every default query — including the new positivity/self-care ones — must
+    # pass the English-only filter. A self-blocking query would ingest nothing.
+    for spec in DEFAULT_SOURCE_BUCKETS:
+        decision = verdict({"source_query": spec.source_query, "source_category": spec.source_category})
+        assert decision["allowed"], (spec, decision)
+    for spec in NEW_POSITIVE_BUCKETS:
+        assert spec in DEFAULT_SOURCE_BUCKETS
+        assert verdict({"source_query": spec.source_query, "source_category": spec.source_category})["allowed"]
+
+
+def test_configured_queries_include_positivity_buckets():
+    configured = configured_source_queries("")  # empty -> defaults, deterministic
+    for spec in NEW_POSITIVE_BUCKETS:
+        assert spec in configured
+    # The broad Gen-Z mix is preserved (not replaced by wellness).
+    categories = {spec.source_category for spec in configured}
+    for general in ("comedy", "food", "gaming", "fashion/aesthetic", "sports",
+                    "music/culture", "cute animals", "news/current events"):
+        assert general in categories
+    # Only a small number of new wellness-adjacent lanes were added (2–3).
+    wellnessish = {"wellness/mental health", "positivity/self care",
+                   "emotional wellness", "mindfulness/calm", "study/productivity"}
+    assert len(categories & wellnessish) <= 5
+    assert len(categories - wellnessish) >= 10  # general lanes still dominate the list
+
+
+def test_relevance_terms_include_positive_vocabulary():
+    for term in ("self care", "self-care", "positivity", "positive mindset",
+                 "uplifting", "encouragement", "confidence", "gratitude",
+                 "kindness", "resilience", "mindfulness", "calm", "healthy habits",
+                 "emotional wellness", "wholesome", "feel good", "reset",
+                 "reflection", "self improvement", "personal growth"):
+        assert term in RELEVANCE_TERMS, term
+
+
+def _rel(title, description="", tags=None, *, category="positivity/self care",
+         query="uplifting self care positive mindset tips"):
+    return _relevance_score(
+        title=title, description=description, tags=tags or [], query=query,
+        source_category=category, published_at="2026-06-13T12:00:00Z",
+        duration_seconds=80, view_count=12000, labels={}, now=NOW, days_back=7,
+    )
+
+
+def test_positive_terms_boost_relevance_without_overpowering():
+    uplifting = _rel(
+        "A gentle gratitude and self care reset for calm confidence",
+        "mindfulness kindness resilience healthy habits positive mindset",
+    )
+    bland = _rel("random clip", "nothing in particular here",
+                 category="custom", query="custom")
+    # Uplifting content ranks clearly above contentless content…
+    assert uplifting > bland
+    # …but the keyword score is clamped, so wellness never runs away to a 1.0
+    # that would crowd every slot.
+    assert uplifting < 1.0
+    # A regular non-wellness video still scores meaningfully — the new terms add
+    # signal, they don't zero out everything else.
+    comedy = _rel("clean comedy sketch standup bit", "funny short skit",
+                  category="comedy", query="clean comedy sketch standup")
+    assert comedy > 0.1
+
+
+def test_feed_stays_balanced_and_not_all_wellness():
+    from tests.test_balanced_feed_algorithm import _healthy, _regular
+
+    # Wellness-heavy candidate pool (as the new positive lanes would produce)
+    # plus regular Gen-Z content.
+    rows = [_healthy(i) for i in range(12)]
+    rows += [_regular(i, category=c) for i, c in
+             enumerate(["comedy", "gaming", "sports", "food", "music", "travel"])]
+
+    payload = build_feed_payload(rows, "flutter-feed", k=10, shuffle_seed="balance")
+    categories = [item["content_category"] for item in payload["items"]]
+
+    # Regular content still appears — the feed did not collapse into all-wellness.
+    assert "regular" in categories
+    # Healthy ratio holds inside the Chrysalis target band despite the heavy pool.
+    assert 0.4 <= payload["healthy_content_ratio"] <= 0.6

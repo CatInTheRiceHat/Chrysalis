@@ -76,6 +76,14 @@ DEFAULT_SOURCE_BUCKETS: tuple[SourceQuerySpec, ...] = (
     SourceQuerySpec("pop culture", "US pop culture news explained"),
     SourceQuerySpec("sports", "US sports highlights athlete story"),
     SourceQuerySpec("wellness/mental health", "mental health wellness tips"),
+    # Positive / self-care / emotional-wellness lanes. Kept to a SMALL number
+    # (3) and all US/English-context so the feed surfaces more uplifting,
+    # confidence/gratitude/kindness/resilience content without tipping the mix
+    # into all-wellness — the broad Gen-Z buckets above/below stay intact and
+    # the feed builder still caps the healthy ratio at 0.4–0.6.
+    SourceQuerySpec("positivity/self care", "uplifting self care positive mindset tips"),
+    SourceQuerySpec("emotional wellness", "emotional wellness healthy habits advice"),
+    SourceQuerySpec("mindfulness/calm", "mindfulness calm reset tips"),
     SourceQuerySpec("study/productivity", "study with me productivity tips"),
     SourceQuerySpec("lifestyle/vlogs", "day in my life lifestyle vlog"),
     SourceQuerySpec("education/explainers", "science history explained"),
@@ -91,6 +99,13 @@ RELEVANCE_TERMS: tuple[str, ...] = (
     "wellness", "mental health", "study", "productivity", "lifestyle", "vlog",
     "education", "science", "history", "music", "culture", "review",
     "guide", "tips", "story", "highlights",
+    # Positive / self-care / emotional-wellness vocabulary. These nudge uplifting
+    # content up in relevance; the keyword score is still clamped (hits / 8.0)
+    # and weighted at ~0.46, so they bias without overpowering the ranking.
+    "self care", "self-care", "positivity", "positive mindset", "uplifting",
+    "encouragement", "confidence", "gratitude", "kindness", "resilience",
+    "mindfulness", "calm", "healthy habits", "emotional wellness", "wholesome",
+    "feel good", "reset", "reflection", "self improvement", "personal growth",
 )
 
 BLOCKED_TERMS: tuple[str, ...] = (

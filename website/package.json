@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:unit": "node --test src/components/reels/*.test.js"
+    "test:unit": "node --test src/components/reels/*.test.js",
+    "qa:responsive": "node qa/responsive-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
