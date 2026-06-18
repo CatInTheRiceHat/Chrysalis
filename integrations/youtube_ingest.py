@@ -35,6 +35,14 @@ from core.labeling.schema import SCORING_VERSION
 from core.preferences import normalize_language_code, normalize_region_code
 from core.language_filter import is_allowed as language_allowed
 from core.ranking.modes import POPULAR_MIN_SCORE, popular_passes_min_score
+from core.source_reputation import reputation_tier, source_reputation_score
+from core.trust_registry import (
+    TrustedChannel,
+    load_approved_trusted_channels,
+    load_approved_trusted_channels_postgres,
+    load_blocked_channel_ids,
+    load_blocked_channel_ids_postgres,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = resolve_database_path()
@@ -146,6 +154,15 @@ MOST_POPULAR_CATEGORIES: tuple[tuple[str, str], ...] = (
 POPULAR_TARGET_RATIO = 0.25
 # Always allow at least a couple of popular picks even on a small harvest.
 POPULAR_MIN_COUNT = 2
+
+# --- Trusted-channel lane ----------------------------------------------------
+# A small, human-curated slice of the feed comes from approved trusted channels
+# (see core/trust_registry.py). Trusted content raises source quality but must
+# NOT take over the feed — it is capped just like the popular lane, and every
+# trusted video still passes the SAME _candidate_from_video_item gate (public,
+# embeddable, duration, blocked terms, language filter, relevance, integrity).
+TRUSTED_CHANNEL_TARGET_RATIO = 0.15
+TRUSTED_CHANNEL_MIN_COUNT = 1
 
 RequestJson = Callable[[str, dict], dict | None]
 
@@ -458,9 +475,22 @@ def ingest_youtube_videos_sqlite(
     now: datetime | None = None,
     include_popular: bool = True,
     popular_ratio: float = POPULAR_TARGET_RATIO,
+    include_trusted: bool = True,
+    trusted_ratio: float = TRUSTED_CHANNEL_TARGET_RATIO,
 ) -> IngestResult:
     source_specs = _coerce_source_query_specs(queries)
     query_list = [spec.source_query for spec in source_specs]
+    db_file = resolve_database_path(db_path)
+    # Load the human-curated trust registry from the SAME db. Missing/empty tables
+    # → no trusted channels and no blocklist, so the feed runs on search + popular
+    # exactly as before (Part G — backward compatibility).
+    reg_conn = sqlite3.connect(db_file)
+    reg_conn.row_factory = sqlite3.Row
+    try:
+        trusted_channels = load_approved_trusted_channels(reg_conn) if include_trusted else []
+        blocked_ids = load_blocked_channel_ids(reg_conn)
+    finally:
+        reg_conn.close()
     candidates, skipped = fetch_youtube_candidates(
         api_key=api_key,
         queries=source_specs,
@@ -472,8 +502,12 @@ def ingest_youtube_videos_sqlite(
         now=now,
         include_popular=include_popular,
         popular_ratio=popular_ratio,
+        include_trusted=include_trusted,
+        trusted_channels=trusted_channels,
+        trusted_ratio=trusted_ratio,
+        blocked_channel_ids=blocked_ids,
     )
-    conn = sqlite3.connect(resolve_database_path(db_path))
+    conn = sqlite3.connect(db_file)
     try:
         added, updated = store_candidates_sqlite(conn, candidates)
     finally:
@@ -507,9 +541,16 @@ def ingest_youtube_videos_postgres(
     now: datetime | None = None,
     include_popular: bool = True,
     popular_ratio: float = POPULAR_TARGET_RATIO,
+    include_trusted: bool = True,
+    trusted_ratio: float = TRUSTED_CHANNEL_TARGET_RATIO,
 ) -> IngestResult:
     source_specs = _coerce_source_query_specs(queries)
     query_list = [spec.source_query for spec in source_specs]
+    # Load the human-curated trust registry from Postgres. Missing tables (before
+    # migration 011 is applied) → empty registry, so ingestion runs on search +
+    # popular exactly as before (Part G — backward compatibility).
+    trusted_channels = load_approved_trusted_channels_postgres(conn) if include_trusted else []
+    blocked_ids = load_blocked_channel_ids_postgres(conn)
     candidates, skipped = fetch_youtube_candidates(
         api_key=api_key,
         queries=source_specs,
@@ -521,6 +562,10 @@ def ingest_youtube_videos_postgres(
         now=now,
         include_popular=include_popular,
         popular_ratio=popular_ratio,
+        include_trusted=include_trusted,
+        trusted_channels=trusted_channels,
+        trusted_ratio=trusted_ratio,
+        blocked_channel_ids=blocked_ids,
     )
     added, updated = store_candidates_postgres(conn, candidates)
     counts: dict[str, int] = {}
@@ -551,10 +596,15 @@ def fetch_youtube_candidates(
     now: datetime | None = None,
     include_popular: bool = True,
     popular_ratio: float = POPULAR_TARGET_RATIO,
+    include_trusted: bool = False,
+    trusted_channels: Iterable[TrustedChannel] | None = None,
+    trusted_ratio: float = TRUSTED_CHANNEL_TARGET_RATIO,
+    blocked_channel_ids: set[str] | None = None,
 ) -> tuple[list[FeedVideoCandidate], int]:
     api_key = api_key or os.environ.get("YOUTUBE_API_KEY", "")
     if not api_key and request_json is None:
         raise YouTubeIngestError("YOUTUBE_API_KEY is required for YouTube ingestion.")
+    blocked_ids = set(blocked_channel_ids or ())
 
     max_results_per_query = max(1, min(int(max_results_per_query), 25))
     days_back = max(2, min(int(days_back), 7))
@@ -612,6 +662,7 @@ def fetch_youtube_candidates(
                 now=now_utc,
                 days_back=days_back,
                 source_type="search",
+                blocked_channel_ids=blocked_ids,
             )
             if candidate is None:
                 skipped += 1
@@ -630,12 +681,31 @@ def fetch_youtube_candidates(
             now=now_utc,
             days_back=days_back,
             exclude_ids=seen,
+            blocked_channel_ids=blocked_ids,
         )
         skipped += popular_skipped
 
     mixed = _mix_search_and_popular(
         candidates, popular_candidates, popular_ratio=popular_ratio
     )
+
+    # Trusted-channel lane: a small, human-approved slice mixed in (and capped) on
+    # top of the search + popular pool. Empty/absent channels → no-op (Part G).
+    if include_trusted and trusted_channels:
+        trusted_candidates, trusted_skipped = fetch_trusted_channel_candidates(
+            request=request,
+            channels=trusted_channels,
+            relevance_language=relevance_language,
+            region_code=region_code,
+            max_results=max_results_per_query,
+            now=now_utc,
+            days_back=days_back,
+            exclude_ids=seen,
+            blocked_channel_ids=blocked_ids,
+        )
+        skipped += trusted_skipped
+        mixed = _mix_trusted_candidates(mixed, trusted_candidates, trusted_ratio=trusted_ratio)
+
     return mixed, skipped
 
 
@@ -649,6 +719,7 @@ def fetch_most_popular_candidates(
     days_back: int = 7,
     exclude_ids: set[str] | None = None,
     categories: Iterable[tuple[str, str]] | None = None,
+    blocked_channel_ids: set[str] | None = None,
 ) -> tuple[list[FeedVideoCandidate], int]:
     """Fetch YouTube mostPopular (trending) videos as additional candidates.
 
@@ -688,12 +759,154 @@ def fetch_most_popular_candidates(
                 now=now_utc,
                 days_back=days_back,
                 source_type="most_popular",
+                blocked_channel_ids=set(blocked_channel_ids or ()),
             )
             if candidate is None:
                 skipped += 1
                 continue
             candidates.append(candidate)
     return candidates, skipped
+
+
+def fetch_trusted_channel_candidates(
+    *,
+    request: RequestJson,
+    channels: Iterable[TrustedChannel] | None,
+    relevance_language: str = "en",
+    region_code: str = "US",
+    max_results: int = 10,
+    now: datetime | None = None,
+    days_back: int = 7,
+    exclude_ids: set[str] | None = None,
+    blocked_channel_ids: set[str] | None = None,
+) -> tuple[list[FeedVideoCandidate], int]:
+    """Fetch recent videos from approved trusted channels (Part E).
+
+    For each approved channel: search.list by ``channelId`` (ordered by date) →
+    videos.list for metadata → the SAME ``_candidate_from_video_item`` gate as
+    every other lane. Trusted videos are tagged ``source_type="trusted_channel"``,
+    ``source_category=<source_group>``, ``source_query="trusted channel: <title>"``.
+    Trust raises quality; it never bypasses safety, language, or relevance checks.
+    """
+    now_utc = now or datetime.now(timezone.utc)
+    relevance_language = normalize_language_code(relevance_language)
+    region_code = normalize_region_code(region_code)
+    max_results = max(1, min(int(max_results), 25))
+    days_back = max(2, min(int(days_back), 7))
+    published_after = (now_utc - timedelta(days=days_back)).replace(microsecond=0)
+    published_after_str = published_after.isoformat().replace("+00:00", "Z")
+    blocked = set(blocked_channel_ids or ())
+
+    candidates: list[FeedVideoCandidate] = []
+    skipped = 0
+    seen: set[str] = set(exclude_ids or ())
+
+    for channel in channels or ():
+        channel_id = str(getattr(channel, "channel_id", "") or "").strip()
+        # Never query a blocked channel, even if it is also marked approved.
+        if not channel_id or channel_id in blocked:
+            continue
+        source_group = getattr(channel, "source_group", "") or "trusted/culture"
+        channel_title = getattr(channel, "channel_title", "") or channel_id
+        source_spec = SourceQuerySpec(source_group, f"trusted channel: {channel_title}")
+
+        data = request("search", {
+            "part": "snippet",
+            "type": "video",
+            "channelId": channel_id,
+            "order": "date",
+            "maxResults": str(max_results),
+            "publishedAfter": published_after_str,
+            "videoDuration": "short",
+            "videoEmbeddable": "true",
+            "safeSearch": "strict",
+            "relevanceLanguage": relevance_language,
+            "regionCode": region_code,
+        }) or {}
+        hit_ids: list[str] = []
+        for item in data.get("items", []):
+            vid = ((item.get("id") or {}).get("videoId") or "").strip()
+            if not vid or vid in seen:
+                skipped += 1
+                continue
+            seen.add(vid)
+            hit_ids.append(vid)
+
+        for batch in _chunks(hit_ids, 50):
+            meta = request("videos", {
+                "part": "snippet,contentDetails,statistics,status",
+                "id": ",".join(batch),
+                "hl": relevance_language,
+                "regionCode": region_code,
+            }) or {}
+            for item in meta.get("items", []):
+                candidate = _candidate_from_video_item(
+                    item,
+                    source_spec=source_spec,
+                    now=now_utc,
+                    days_back=days_back,
+                    source_type="trusted_channel",
+                    blocked_channel_ids=blocked,
+                )
+                if candidate is None:
+                    skipped += 1
+                    continue
+                # Attach source reputation as METADATA only (Part D). The video has
+                # already passed the full safety/relevance gate above — reputation
+                # never bypasses any of it; it is an explainability/ranking signal.
+                rep = source_reputation_score(
+                    status=getattr(channel, "status", None),
+                    trust_tier=getattr(channel, "trust_tier", None),
+                    source_group_match=True,
+                    english_us=True,            # it passed the en/US filter to get here
+                    recent_activity=True,
+                    integrity_history=candidate.integrity_score,
+                )
+                candidate.integrity_flags = {
+                    **(candidate.integrity_flags or {}),
+                    "source_reputation": round(rep, 3),
+                    "reputation_tier": reputation_tier(rep),
+                    "trust_tier": getattr(channel, "trust_tier", None),
+                    "trusted_source_group": source_group,
+                }
+                candidates.append(candidate)
+    return candidates, skipped
+
+
+def _mix_trusted_candidates(
+    base: list[FeedVideoCandidate],
+    trusted: list[FeedVideoCandidate],
+    *,
+    trusted_ratio: float = TRUSTED_CHANNEL_TARGET_RATIO,
+    min_count: int = TRUSTED_CHANNEL_MIN_COUNT,
+) -> list[FeedVideoCandidate]:
+    """Mix trusted-channel candidates into the pool, capping their share (Part F).
+
+    Trusted content improves quality but must not dominate — it is capped to
+    ``trusted_ratio`` of the combined pool (with a small minimum), mirroring the
+    popular lane. The strongest trusted candidates (by relevance) are kept.
+    """
+    seen_ids = {c.youtube_video_id for c in base}
+    unique: list[FeedVideoCandidate] = []
+    for cand in trusted:
+        if cand.youtube_video_id in seen_ids:
+            continue
+        seen_ids.add(cand.youtube_video_id)
+        unique.append(cand)
+    if not unique:
+        return list(base)
+
+    ratio = min(max(float(trusted_ratio), 0.0), 0.9)
+    n_base = len(base)
+    if n_base == 0:
+        cap = len(unique)
+    else:
+        cap = int(round((ratio / (1.0 - ratio)) * n_base))
+        cap = max(cap, min_count)
+    cap = min(cap, len(unique))
+
+    unique.sort(key=lambda c: c.score, reverse=True)
+    return list(base) + unique[:cap]
 
 
 def _mix_search_and_popular(
@@ -1061,10 +1274,18 @@ def _candidate_from_video_item(
     now: datetime,
     days_back: int,
     source_type: str = "search",
+    blocked_channel_ids: set[str] | None = None,
 ) -> FeedVideoCandidate | None:
     video_id = str(item.get("id") or "").strip()
     if not video_id:
         return None
+
+    # Hard denylist: a blocked channel is never ingested or served, even if the
+    # video passes every other filter and even from the trusted lane (Part B).
+    if blocked_channel_ids:
+        channel_id = str((item.get("snippet") or {}).get("channelId") or "").strip()
+        if channel_id and channel_id in blocked_channel_ids:
+            return None
 
     status = item.get("status") or {}
     if status.get("embeddable") is not True:
