@@ -45,24 +45,41 @@ class SourceQuerySpec(NamedTuple):
     source_query: str
 
 
+# English-only / US-oriented demo queries (see core/language_filter.py).
+#
+# These are a SOFT first line of defense at the YouTube *search* stage:
+# relevanceLanguage=en + regionCode=US are only hints, so broad queries like
+# "street food", "music culture", or a bare "fashion" still surface a lot of
+# foreign-language content that then has to be thrown away by the hard filter
+# (wasting API quota and reducing yield). We bias the queries themselves toward
+# US / English-speaking creators and semi-popular, wholesome formats.
+#
+# IMPORTANT: do NOT name a foreign language/culture in a query (e.g. "Korean
+# street style", "Bollywood", "Hindi motivation"). language_filter.py blocks any
+# source_query containing those names, so such a query would ingest *nothing*.
+# Use US/English-context phrasing instead ("American outfit ideas", etc.).
+#
+# Balance is deliberate: only a few buckets are wellness/study — the rest stay
+# general Gen-Z (news, food, comedy, gaming, fashion, sports, music, …) so the
+# feed keeps its healthy/regular mix and never collapses into all-wellness.
 DEFAULT_SOURCE_BUCKETS: tuple[SourceQuerySpec, ...] = (
-    SourceQuerySpec("news/current events", "current events explained"),
-    SourceQuerySpec("opinion/commentary", "thoughtful commentary culture"),
-    SourceQuerySpec("travel", "travel vlog city guide"),
-    SourceQuerySpec("food", "food recipes street food"),
+    SourceQuerySpec("news/current events", "US news current events explained"),
+    SourceQuerySpec("opinion/commentary", "thoughtful commentary video essay"),
+    SourceQuerySpec("travel", "USA travel vlog city guide"),
+    SourceQuerySpec("food", "easy home cooking recipes"),
     SourceQuerySpec("cute animals", "cute animals funny pets"),
-    SourceQuerySpec("fashion/aesthetic", "fashion aesthetic outfit ideas"),
-    SourceQuerySpec("gaming", "gaming highlights cozy gaming"),
-    SourceQuerySpec("comedy", "clean comedy sketch"),
+    SourceQuerySpec("fashion/aesthetic", "American outfit ideas fashion lookbook"),
+    SourceQuerySpec("gaming", "cozy gaming highlights commentary"),
+    SourceQuerySpec("comedy", "clean comedy sketch standup"),
     SourceQuerySpec("internet culture", "internet culture memes explained"),
     SourceQuerySpec("AI/technology", "AI technology news explained"),
-    SourceQuerySpec("pop culture", "pop culture news explained"),
-    SourceQuerySpec("sports", "sports highlights athlete story"),
+    SourceQuerySpec("pop culture", "US pop culture news explained"),
+    SourceQuerySpec("sports", "US sports highlights athlete story"),
     SourceQuerySpec("wellness/mental health", "mental health wellness tips"),
-    SourceQuerySpec("study/productivity", "study productivity tips"),
+    SourceQuerySpec("study/productivity", "study with me productivity tips"),
     SourceQuerySpec("lifestyle/vlogs", "day in my life lifestyle vlog"),
     SourceQuerySpec("education/explainers", "science history explained"),
-    SourceQuerySpec("music/culture", "music culture new music review"),
+    SourceQuerySpec("music/culture", "new indie pop music review"),
 )
 
 DEFAULT_QUERIES: tuple[str, ...] = tuple(spec.source_query for spec in DEFAULT_SOURCE_BUCKETS)
