@@ -178,6 +178,10 @@ def test_migration_011_defines_all_three_tables_and_gating():
     assert "'new'" in sql and "'stale'" in sql
     # operator-only: RLS enabled on every table
     assert sql.count("enable row level security") == 3
+    # hardening: trust_tier CHECK + idempotent updated_at trigger on all 3 tables
+    assert "trusted_trust_tier_chk" in sql
+    assert "set_updated_at" in sql
+    assert sql.count("drop trigger if exists") == 3
 
 
 def test_recommended_constant_values_present():

@@ -17,6 +17,7 @@ from core.trust_registry import (
     upsert_trusted_channel_sqlite,
 )
 from integrations.youtube_ingest import (
+    MAX_TRUSTED_CHANNELS_PER_RUN,
     SourceQuerySpec,
     TRUSTED_CHANNEL_MIN_COUNT,
     TRUSTED_CHANNEL_TARGET_RATIO,
@@ -200,6 +201,45 @@ def test_trusted_share_is_capped():
     assert n_trusted >= TRUSTED_CHANNEL_MIN_COUNT
     assert n_trusted < n_total                       # trusted never dominates
     assert n_trusted / n_total <= TRUSTED_CHANNEL_TARGET_RATIO + 0.08
+
+
+# ── Quota guard: cap channels queried per run (Task 4) ───────────────────────
+
+def test_max_trusted_channels_constant_is_small_and_safe():
+    assert isinstance(MAX_TRUSTED_CHANNELS_PER_RUN, int)
+    assert 1 <= MAX_TRUSTED_CHANNELS_PER_RUN <= 10
+
+
+def test_trusted_lane_caps_channels_queried_per_run():
+    chans = [_approved(f"UC_{i}", f"Chan {i}") for i in range(8)]
+    cv = {f"UC_{i}": [_video(f"v{i}", "Calm focus explainer", f"UC_{i}")] for i in range(8)}
+    fake, calls = _make_fake(channel_videos=cv)
+    fetch_trusted_channel_candidates(request=fake, channels=chans, now=NOW, max_channels=3)
+    # Each queried channel costs one search.list — cap limits API spend per run.
+    assert len(calls["search_channel"]) == 3
+
+
+def test_trusted_lane_uses_env_cap_when_no_explicit_limit(monkeypatch):
+    monkeypatch.setenv("MAX_TRUSTED_CHANNELS_PER_RUN", "2")
+    chans = [_approved(f"UC_{i}", f"Chan {i}") for i in range(5)]
+    cv = {f"UC_{i}": [_video(f"v{i}", "Calm focus explainer", f"UC_{i}")] for i in range(5)}
+    fake, calls = _make_fake(channel_videos=cv)
+    fetch_trusted_channel_candidates(request=fake, channels=chans, now=NOW)
+    assert len(calls["search_channel"]) == 2
+
+
+def test_blocked_channels_do_not_consume_trusted_quota_budget():
+    # Blocked channels are skipped BEFORE the search.list call, so they cost no
+    # quota and do not eat into the per-run channel cap.
+    chans = [_approved("UC_b1", "B1"), _approved("UC_b2", "B2")]
+    chans += [_approved(f"UC_a{i}", f"A{i}") for i in range(3)]
+    cv = {c.channel_id: [_video(f"v_{c.channel_id}", "Calm focus", c.channel_id)] for c in chans}
+    fake, calls = _make_fake(channel_videos=cv)
+    fetch_trusted_channel_candidates(
+        request=fake, channels=chans, now=NOW, max_channels=3,
+        blocked_channel_ids={"UC_b1", "UC_b2"},
+    )
+    assert set(calls["search_channel"]) == {"UC_a0", "UC_a1", "UC_a2"}
 
 
 # ── Part G: empty registry / disabled trusted lane do not break ingestion ────

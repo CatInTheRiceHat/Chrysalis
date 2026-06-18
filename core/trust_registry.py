@@ -72,6 +72,37 @@ CANDIDATE_REVIEW_STATUSES: tuple[str, ...] = (
 # The single status that makes a trusted-channel row eligible for ingestion.
 TRUSTED_STATUS_APPROVED = "approved"
 
+# ── AI-assisted curation vocabulary (the import/upsert workflow) ─────────────
+# AI inserts labeled rows; a human removes/disables exceptions later. trust_status
+# is the unified curation label the import speaks; it is routed to the existing
+# trusted/blocked tables (trusted/pending/rejected → trusted_youtube_channels;
+# blocked → blocked_youtube_channels).
+AI_TRUST_STATUSES: tuple[str, ...] = ("trusted", "blocked", "pending", "rejected")
+AI_REVIEW_STATUS_DEFAULT = "unreviewed"
+AI_ADDED_BY = "ai"
+
+# trust_status → status value written on trusted_youtube_channels.
+_TRUST_STATUS_TO_TRUSTED_STATUS = {
+    "trusted": "approved",
+    "pending": "needs_review",
+    "rejected": "rejected",
+}
+
+# New columns added to BOTH trusted_youtube_channels and blocked_youtube_channels
+# so AI curation + human review live on the existing tables (no new table).
+_AI_CURATION_COLUMNS_SQLITE: dict[str, str] = {
+    "platform":      "TEXT DEFAULT 'youtube'",
+    "trust_status":  "TEXT",
+    "added_by":      "TEXT DEFAULT 'human'",
+    "ai_confidence": "REAL",
+    "ai_reason":     "TEXT",
+    "active":        "INTEGER DEFAULT 1",
+    "review_status": "TEXT DEFAULT 'unreviewed'",
+    "reviewed_by":   "TEXT",
+    "reviewed_at":   "TEXT",
+    "review_notes":  "TEXT",
+}
+
 
 @dataclass(frozen=True)
 class TrustedChannel:
@@ -147,11 +178,23 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _ensure_ai_curation_columns_sqlite(conn: sqlite3.Connection) -> None:
+    """Add the AI-curation / human-review columns to the trusted + blocked tables
+    if missing. Idempotent (checks PRAGMA before each ALTER)."""
+    for table in ("trusted_youtube_channels", "blocked_youtube_channels"):
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        for column, column_type in _AI_CURATION_COLUMNS_SQLITE.items():
+            if column not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
+
+
 def ensure_trust_tables_sqlite(conn: sqlite3.Connection) -> None:
-    """Create the three trust tables if absent. Idempotent."""
+    """Create the three trust tables if absent, and ensure AI-curation columns.
+    Idempotent."""
     conn.execute(_CREATE_TRUSTED_SQLITE)
     conn.execute(_CREATE_BLOCKED_SQLITE)
     conn.execute(_CREATE_CANDIDATES_SQLITE)
+    _ensure_ai_curation_columns_sqlite(conn)
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_trusted_channels_status "
         "ON trusted_youtube_channels (status)"
@@ -177,19 +220,25 @@ def load_approved_trusted_channels(conn: sqlite3.Connection) -> list[TrustedChan
     A missing table means "no trust registry configured" → empty list, so the
     feed keeps running on the existing lanes (backward compatibility).
     """
+    base_cols = ("SELECT channel_id, channel_title, channel_handle, channel_url, "
+                 "source_group, trust_tier, status, notes, risk_notes "
+                 "FROM trusted_youtube_channels WHERE status = ? "
+                 "AND channel_id IS NOT NULL AND channel_id <> ''")
     try:
+        # Only ACTIVE approved rows are eligible (inactive = human-disabled).
         rows = conn.execute(
-            "SELECT channel_id, channel_title, channel_handle, channel_url, "
-            "source_group, trust_tier, status, notes, risk_notes "
-            "FROM trusted_youtube_channels "
-            "WHERE status = ? AND channel_id IS NOT NULL AND channel_id <> '' "
-            "ORDER BY id",
+            base_cols + " AND (active IS NULL OR active <> 0) ORDER BY id",
             (TRUSTED_STATUS_APPROVED,),
         ).fetchall()
     except sqlite3.OperationalError as exc:
         if _table_missing(exc):
             return []
-        raise
+        if "no such column" in str(exc).lower():
+            # Pre-AI-curation schema (no `active` column) — fall back to legacy.
+            rows = conn.execute(base_cols + " ORDER BY id",
+                                (TRUSTED_STATUS_APPROVED,)).fetchall()
+        else:
+            raise
     return [
         TrustedChannel(
             channel_id=r["channel_id"],
@@ -208,15 +257,18 @@ def load_approved_trusted_channels(conn: sqlite3.Connection) -> list[TrustedChan
 
 def load_blocked_channel_ids(conn: sqlite3.Connection) -> set[str]:
     """Return the set of hard-blocked channel ids (empty if table missing)."""
+    base = ("SELECT channel_id FROM blocked_youtube_channels "
+            "WHERE channel_id IS NOT NULL AND channel_id <> ''")
     try:
-        rows = conn.execute(
-            "SELECT channel_id FROM blocked_youtube_channels "
-            "WHERE channel_id IS NOT NULL AND channel_id <> ''"
-        ).fetchall()
+        # Inactive blocked rows are ignored (human un-blocked the channel).
+        rows = conn.execute(base + " AND (active IS NULL OR active <> 0)").fetchall()
     except sqlite3.OperationalError as exc:
         if _table_missing(exc):
             return set()
-        raise
+        if "no such column" in str(exc).lower():
+            rows = conn.execute(base).fetchall()
+        else:
+            raise
     return {r["channel_id"] if isinstance(r, sqlite3.Row) else r[0] for r in rows}
 
 
@@ -260,22 +312,33 @@ def _pg_rollback(conn) -> None:
         pass
 
 
+def _pg_active_then_legacy(conn, sql_active: str, sql_legacy: str, params: tuple):
+    """Run an active-gated query; if the `active` column doesn't exist yet
+    (pre-012 schema) fall back to the legacy query; if the table is missing,
+    return None. Rolls back the aborted txn between attempts."""
+    for sql in (sql_active, sql_legacy):
+        cur = conn.cursor()
+        try:
+            cur.execute(sql, params)
+            return cur.fetchall()
+        except Exception:
+            _pg_rollback(conn)
+            continue
+    return None
+
+
 def load_approved_trusted_channels_postgres(conn) -> list[TrustedChannel]:
-    """Postgres equivalent of :func:`load_approved_trusted_channels`."""
-    cur = conn.cursor()
-    try:
-        cur.execute(
-            f"SELECT {_TRUSTED_SELECT_COLUMNS} FROM trusted_youtube_channels "
-            "WHERE status = %s AND channel_id IS NOT NULL AND channel_id <> '' "
-            "ORDER BY id",
-            (TRUSTED_STATUS_APPROVED,),
-        )
-        rows = cur.fetchall()
-    except Exception as exc:
-        _pg_rollback(conn)
-        if _pg_table_missing(exc):
-            return []
-        raise
+    """Postgres equivalent of :func:`load_approved_trusted_channels` (active-gated)."""
+    base = (f"SELECT {_TRUSTED_SELECT_COLUMNS} FROM trusted_youtube_channels "
+            "WHERE status = %s AND channel_id IS NOT NULL AND channel_id <> ''")
+    rows = _pg_active_then_legacy(
+        conn,
+        base + " AND (active IS NULL OR active = true) ORDER BY id",
+        base + " ORDER BY id",
+        (TRUSTED_STATUS_APPROVED,),
+    )
+    if rows is None:
+        return []
     return [
         TrustedChannel(
             channel_id=r[0],
@@ -293,19 +356,17 @@ def load_approved_trusted_channels_postgres(conn) -> list[TrustedChannel]:
 
 
 def load_blocked_channel_ids_postgres(conn) -> set[str]:
-    """Postgres equivalent of :func:`load_blocked_channel_ids`."""
-    cur = conn.cursor()
-    try:
-        cur.execute(
-            "SELECT channel_id FROM blocked_youtube_channels "
-            "WHERE channel_id IS NOT NULL AND channel_id <> ''"
-        )
-        rows = cur.fetchall()
-    except Exception as exc:
-        _pg_rollback(conn)
-        if _pg_table_missing(exc):
-            return set()
-        raise
+    """Postgres equivalent of :func:`load_blocked_channel_ids` (active-gated)."""
+    base = ("SELECT channel_id FROM blocked_youtube_channels "
+            "WHERE channel_id IS NOT NULL AND channel_id <> ''")
+    rows = _pg_active_then_legacy(
+        conn,
+        base + " AND (active IS NULL OR active = true)",
+        base,
+        (),
+    )
+    if rows is None:
+        return set()
     return {r[0] for r in rows if r and r[0]}
 
 
@@ -414,3 +475,281 @@ def add_channel_candidate_sqlite(
          why_suggested, possible_risks, recommended_status, review_status, now, now),
     )
     conn.commit()
+
+
+# ── AI-assisted curation import / upsert ─────────────────────────────────────
+def validate_ai_curation_row(raw: dict) -> dict:
+    """Validate + normalize one AI curation row. Raises ValueError on bad input.
+
+    `active` defaults to True, except pending/rejected which default to inactive
+    (so they are never eligible for ingestion until a human acts).
+    """
+    if not isinstance(raw, dict):
+        raise ValueError("curation row must be a JSON object")
+    channel_id = str(raw.get("channel_id") or "").strip()
+    if not channel_id:
+        raise ValueError("channel_id is required")
+    trust_status = str(raw.get("trust_status") or "").strip().lower()
+    if trust_status not in AI_TRUST_STATUSES:
+        raise ValueError(
+            f"invalid trust_status {raw.get('trust_status')!r}; "
+            f"allowed: {', '.join(AI_TRUST_STATUSES)}"
+        )
+    conf_raw = raw.get("confidence_score", raw.get("ai_confidence"))
+    try:
+        confidence = float(conf_raw)
+    except (TypeError, ValueError):
+        raise ValueError("confidence_score is required and must be a number in 0..1")
+    if not (0.0 <= confidence <= 1.0):
+        raise ValueError(f"confidence_score {confidence} is out of range 0..1")
+
+    active = raw.get("active")
+    if active is None:
+        active = trust_status not in ("pending", "rejected")
+    else:
+        active = bool(active)
+
+    return {
+        "platform": (str(raw.get("platform") or "youtube").strip().lower() or "youtube"),
+        "channel_id": channel_id,
+        "channel_title": str(raw.get("channel_title") or "").strip(),
+        "channel_url": (str(raw.get("channel_url")).strip() if raw.get("channel_url") else None),
+        "trust_status": trust_status,
+        "source_type": (str(raw.get("source_type") or raw.get("source_category") or "").strip() or None),
+        "confidence_score": confidence,
+        "reason": (str(raw.get("reason") or raw.get("ai_reason") or "").strip() or None),
+        "active": active,
+    }
+
+
+def _human_reviewed(existing) -> bool:
+    """True if a human has reviewed this row (so AI must not overwrite the
+    decision/review fields)."""
+    if existing is None:
+        return False
+    keys = existing.keys() if hasattr(existing, "keys") else ()
+    review_status = (existing["review_status"] or "").strip().lower() if "review_status" in keys else ""
+    reviewed_by = existing["reviewed_by"] if "reviewed_by" in keys else None
+    return bool(reviewed_by) or (review_status not in ("", AI_REVIEW_STATUS_DEFAULT))
+
+
+def _resolved_active(existing, requested_active: bool, force_reactivate: bool) -> int:
+    """Never reactivate a human-disabled (active=0) row unless force_reactivate."""
+    existing_active = 1
+    if existing is not None and "active" in (existing.keys() if hasattr(existing, "keys") else ()):
+        existing_active = 1 if (existing["active"] is None or existing["active"]) else 0
+    if existing is not None and existing_active == 0 and not force_reactivate:
+        return 0
+    return 1 if requested_active else 0
+
+
+def upsert_ai_channel_curation(conn, *, backend: str = "sqlite",
+                               force_reactivate: bool = False, **fields) -> dict:
+    """Idempotently upsert one AI-labeled channel row into the existing trust
+    tables. Returns {action, table, channel_id, active, trust_status}.
+
+    Routing: trusted/pending/rejected → trusted_youtube_channels;
+             blocked → blocked_youtube_channels (a hard exclude when active).
+    Safety: this only records curation. A trusted row still passes through the
+    full ingestion gate (language/safety/relevance) — it is never a bypass.
+    """
+    row = validate_ai_curation_row(fields)
+    if backend == "postgres":
+        return _upsert_ai_curation_postgres(conn, row, force_reactivate=force_reactivate)
+    return _upsert_ai_curation_sqlite(conn, row, force_reactivate=force_reactivate)
+
+
+def _upsert_ai_curation_sqlite(conn: sqlite3.Connection, row: dict, *, force_reactivate: bool) -> dict:
+    ensure_trust_tables_sqlite(conn)
+    if row["trust_status"] == "blocked":
+        return _upsert_blocked_ai_sqlite(conn, row, force_reactivate)
+    return _upsert_trusted_ai_sqlite(conn, row, force_reactivate)
+
+
+def _upsert_trusted_ai_sqlite(conn, row, force_reactivate) -> dict:
+    cid = row["channel_id"]
+    now = _now_iso()
+    mapped_status = _TRUST_STATUS_TO_TRUSTED_STATUS[row["trust_status"]]
+    existing = conn.execute(
+        "SELECT * FROM trusted_youtube_channels WHERE channel_id=?", (cid,)
+    ).fetchone()
+    if existing is None:
+        conn.execute(
+            "INSERT INTO trusted_youtube_channels "
+            "(channel_id, channel_title, channel_url, source_group, status, trust_status, "
+            " platform, added_by, ai_confidence, ai_reason, active, review_status, "
+            " created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (cid, row["channel_title"], row["channel_url"], row["source_type"], mapped_status,
+             row["trust_status"], row["platform"], AI_ADDED_BY, row["confidence_score"],
+             row["reason"], 1 if row["active"] else 0, AI_REVIEW_STATUS_DEFAULT, now, now),
+        )
+        conn.commit()
+        return {"action": "inserted", "table": "trusted_youtube_channels",
+                "channel_id": cid, "active": row["active"], "trust_status": row["trust_status"]}
+
+    new_active = _resolved_active(existing, row["active"], force_reactivate)
+    if _human_reviewed(existing):
+        # AI may only refresh its own signals — never the human's decision/review.
+        conn.execute(
+            "UPDATE trusted_youtube_channels SET ai_confidence=?, ai_reason=?, "
+            "source_group=COALESCE(?, source_group), updated_at=? WHERE channel_id=?",
+            (row["confidence_score"], row["reason"], row["source_type"], now, cid),
+        )
+    else:
+        conn.execute(
+            "UPDATE trusted_youtube_channels SET "
+            "channel_title=COALESCE(NULLIF(?,''), channel_title), "
+            "channel_url=COALESCE(?, channel_url), source_group=COALESCE(?, source_group), "
+            "status=?, trust_status=?, platform=?, added_by=?, ai_confidence=?, ai_reason=?, "
+            "active=?, updated_at=? WHERE channel_id=?",
+            (row["channel_title"], row["channel_url"], row["source_type"], mapped_status,
+             row["trust_status"], row["platform"], AI_ADDED_BY, row["confidence_score"],
+             row["reason"], new_active, now, cid),
+        )
+    conn.commit()
+    return {"action": "updated", "table": "trusted_youtube_channels",
+            "channel_id": cid, "active": bool(new_active), "trust_status": row["trust_status"]}
+
+
+def _upsert_blocked_ai_sqlite(conn, row, force_reactivate) -> dict:
+    cid = row["channel_id"]
+    now = _now_iso()
+    reason = row["reason"] or row["source_type"] or "manual_block"
+    existing = conn.execute(
+        "SELECT * FROM blocked_youtube_channels WHERE channel_id=?", (cid,)
+    ).fetchone()
+    if existing is None:
+        conn.execute(
+            "INSERT INTO blocked_youtube_channels "
+            "(channel_id, channel_title, reason, blocked_by, blocked_at, trust_status, "
+            " platform, added_by, ai_confidence, ai_reason, active, review_status, "
+            " created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (cid, row["channel_title"], reason, AI_ADDED_BY, now, "blocked", row["platform"],
+             AI_ADDED_BY, row["confidence_score"], row["reason"], 1 if row["active"] else 0,
+             AI_REVIEW_STATUS_DEFAULT, now, now),
+        )
+        conn.commit()
+        return {"action": "inserted", "table": "blocked_youtube_channels",
+                "channel_id": cid, "active": row["active"], "trust_status": "blocked"}
+
+    new_active = _resolved_active(existing, row["active"], force_reactivate)
+    if _human_reviewed(existing):
+        conn.execute(
+            "UPDATE blocked_youtube_channels SET ai_confidence=?, ai_reason=?, "
+            "reason=COALESCE(?, reason), updated_at=? WHERE channel_id=?",
+            (row["confidence_score"], row["reason"], row["source_type"], now, cid),
+        )
+    else:
+        conn.execute(
+            "UPDATE blocked_youtube_channels SET "
+            "channel_title=COALESCE(NULLIF(?,''), channel_title), reason=?, trust_status=?, "
+            "platform=?, added_by=?, ai_confidence=?, ai_reason=?, active=?, updated_at=? "
+            "WHERE channel_id=?",
+            (row["channel_title"], reason, "blocked", row["platform"], AI_ADDED_BY,
+             row["confidence_score"], row["reason"], new_active, now, cid),
+        )
+    conn.commit()
+    return {"action": "updated", "table": "blocked_youtube_channels",
+            "channel_id": cid, "active": bool(new_active), "trust_status": "blocked"}
+
+
+# ── Postgres upsert (production / Supabase path) ─────────────────────────────
+def _pg_existing(cur, table: str, channel_id: str):
+    cur.execute(
+        f"SELECT active, review_status, reviewed_by FROM {table} WHERE channel_id = %s",
+        (channel_id,),
+    )
+    t = cur.fetchone()
+    if t is None:
+        return None
+    return {"active": t[0], "review_status": t[1], "reviewed_by": t[2]}
+
+
+def _upsert_ai_curation_postgres(conn, row: dict, *, force_reactivate: bool) -> dict:
+    if row["trust_status"] == "blocked":
+        return _upsert_blocked_ai_postgres(conn, row, force_reactivate)
+    return _upsert_trusted_ai_postgres(conn, row, force_reactivate)
+
+
+def _upsert_trusted_ai_postgres(conn, row, force_reactivate) -> dict:
+    cur = conn.cursor()
+    cid = row["channel_id"]
+    mapped_status = _TRUST_STATUS_TO_TRUSTED_STATUS[row["trust_status"]]
+    existing = _pg_existing(cur, "trusted_youtube_channels", cid)
+    if existing is None:
+        cur.execute(
+            "INSERT INTO trusted_youtube_channels "
+            "(channel_id, channel_title, channel_url, source_group, status, trust_status, "
+            " platform, added_by, ai_confidence, ai_reason, active, review_status) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (cid, row["channel_title"], row["channel_url"], row["source_type"], mapped_status,
+             row["trust_status"], row["platform"], AI_ADDED_BY, row["confidence_score"],
+             row["reason"], row["active"], AI_REVIEW_STATUS_DEFAULT),
+        )
+        conn.commit()
+        return {"action": "inserted", "table": "trusted_youtube_channels",
+                "channel_id": cid, "active": row["active"], "trust_status": row["trust_status"]}
+
+    new_active = bool(_resolved_active(existing, row["active"], force_reactivate))
+    if _human_reviewed(existing):
+        cur.execute(
+            "UPDATE trusted_youtube_channels SET ai_confidence=%s, ai_reason=%s, "
+            "source_group=COALESCE(%s, source_group), updated_at=now() WHERE channel_id=%s",
+            (row["confidence_score"], row["reason"], row["source_type"], cid),
+        )
+    else:
+        cur.execute(
+            "UPDATE trusted_youtube_channels SET "
+            "channel_title=COALESCE(NULLIF(%s,''), channel_title), "
+            "channel_url=COALESCE(%s, channel_url), source_group=COALESCE(%s, source_group), "
+            "status=%s, trust_status=%s, platform=%s, added_by=%s, ai_confidence=%s, "
+            "ai_reason=%s, active=%s, updated_at=now() WHERE channel_id=%s",
+            (row["channel_title"], row["channel_url"], row["source_type"], mapped_status,
+             row["trust_status"], row["platform"], AI_ADDED_BY, row["confidence_score"],
+             row["reason"], new_active, cid),
+        )
+    conn.commit()
+    return {"action": "updated", "table": "trusted_youtube_channels",
+            "channel_id": cid, "active": new_active, "trust_status": row["trust_status"]}
+
+
+def _upsert_blocked_ai_postgres(conn, row, force_reactivate) -> dict:
+    cur = conn.cursor()
+    cid = row["channel_id"]
+    reason = row["reason"] or row["source_type"] or "manual_block"
+    existing = _pg_existing(cur, "blocked_youtube_channels", cid)
+    if existing is None:
+        cur.execute(
+            "INSERT INTO blocked_youtube_channels "
+            "(channel_id, channel_title, reason, blocked_by, trust_status, platform, "
+            " added_by, ai_confidence, ai_reason, active, review_status) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (cid, row["channel_title"], reason, AI_ADDED_BY, "blocked", row["platform"],
+             AI_ADDED_BY, row["confidence_score"], row["reason"], row["active"],
+             AI_REVIEW_STATUS_DEFAULT),
+        )
+        conn.commit()
+        return {"action": "inserted", "table": "blocked_youtube_channels",
+                "channel_id": cid, "active": row["active"], "trust_status": "blocked"}
+
+    new_active = bool(_resolved_active(existing, row["active"], force_reactivate))
+    if _human_reviewed(existing):
+        cur.execute(
+            "UPDATE blocked_youtube_channels SET ai_confidence=%s, ai_reason=%s, "
+            "reason=COALESCE(%s, reason), updated_at=now() WHERE channel_id=%s",
+            (row["confidence_score"], row["reason"], row["source_type"], cid),
+        )
+    else:
+        cur.execute(
+            "UPDATE blocked_youtube_channels SET "
+            "channel_title=COALESCE(NULLIF(%s,''), channel_title), reason=%s, trust_status=%s, "
+            "platform=%s, added_by=%s, ai_confidence=%s, ai_reason=%s, active=%s, "
+            "updated_at=now() WHERE channel_id=%s",
+            (row["channel_title"], reason, "blocked", row["platform"], AI_ADDED_BY,
+             row["confidence_score"], row["reason"], new_active, cid),
+        )
+    conn.commit()
+    return {"action": "updated", "table": "blocked_youtube_channels",
+            "channel_id": cid, "active": new_active, "trust_status": "blocked"}

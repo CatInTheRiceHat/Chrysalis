@@ -46,6 +46,11 @@ create table if not exists public.trusted_youtube_channels (
 
     constraint trusted_status_chk check (
         status in ('candidate', 'approved', 'rejected', 'needs_review', 'disabled')
+    ),
+    -- trust_tier is a closed enum the reputation scorer relies on (nullable).
+    constraint trusted_trust_tier_chk check (
+        trust_tier is null
+        or trust_tier in ('institutional', 'established_creator', 'candidate', 'experimental')
     )
 );
 
@@ -107,7 +112,38 @@ create index if not exists idx_channel_candidates_review
     on public.youtube_channel_candidates (review_status);
 
 -- ---------------------------------------------------------------------------
+-- updated_at auto-touch. Keeps updated_at honest on UPDATE without relying on
+-- the writer to set it. Idempotent (create-or-replace fn + drop-if-exists trigger).
+-- ---------------------------------------------------------------------------
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+    new.updated_at = now();
+    return new;
+end;
+$$;
+
+drop trigger if exists trg_trusted_set_updated_at on public.trusted_youtube_channels;
+create trigger trg_trusted_set_updated_at
+    before update on public.trusted_youtube_channels
+    for each row execute function public.set_updated_at();
+
+drop trigger if exists trg_blocked_set_updated_at on public.blocked_youtube_channels;
+create trigger trg_blocked_set_updated_at
+    before update on public.blocked_youtube_channels
+    for each row execute function public.set_updated_at();
+
+drop trigger if exists trg_candidates_set_updated_at on public.youtube_channel_candidates;
+create trigger trg_candidates_set_updated_at
+    before update on public.youtube_channel_candidates
+    for each row execute function public.set_updated_at();
+
+-- ---------------------------------------------------------------------------
 -- Lock down: operator-only tables. RLS on, no public policy → service role only.
+-- (Anon/authenticated clients get zero rows; the ingestion service role, which
+--  bypasses RLS, is the only reader/writer.)
 -- ---------------------------------------------------------------------------
 alter table public.trusted_youtube_channels   enable row level security;
 alter table public.blocked_youtube_channels   enable row level security;

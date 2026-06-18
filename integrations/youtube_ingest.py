@@ -164,6 +164,30 @@ POPULAR_MIN_COUNT = 2
 TRUSTED_CHANNEL_TARGET_RATIO = 0.15
 TRUSTED_CHANNEL_MIN_COUNT = 1
 
+# Quota guard. The trusted lane spends ONE search.list (≈100 YouTube quota units)
+# per approved channel PER RUN — independent of the feed-mix cap above. With 4×/day
+# extraction, N approved channels cost ≈ N × 100 × 4 units/day on top of the search
+# and popular lanes. So we cap how many approved channels are queried per run and
+# make it overridable via the MAX_TRUSTED_CHANNELS_PER_RUN env var.
+#
+#   * Start small: 3–5 approved channels.
+#   * Do NOT approve dozens at once — watch your YouTube Data API quota for a day
+#     after the first run before scaling up.
+MAX_TRUSTED_CHANNELS_PER_RUN = 5
+
+
+def _resolve_max_trusted_channels(explicit: int | None = None) -> int:
+    """Per-run trusted-channel cap: explicit arg > env var > module default."""
+    if explicit is not None:
+        return max(0, int(explicit))
+    raw = os.environ.get("MAX_TRUSTED_CHANNELS_PER_RUN")
+    if raw is not None and str(raw).strip():
+        try:
+            return max(0, int(str(raw).strip()))
+        except ValueError:
+            pass
+    return MAX_TRUSTED_CHANNELS_PER_RUN
+
 RequestJson = Callable[[str, dict], dict | None]
 
 
@@ -599,6 +623,7 @@ def fetch_youtube_candidates(
     include_trusted: bool = False,
     trusted_channels: Iterable[TrustedChannel] | None = None,
     trusted_ratio: float = TRUSTED_CHANNEL_TARGET_RATIO,
+    max_trusted_channels: int | None = None,
     blocked_channel_ids: set[str] | None = None,
 ) -> tuple[list[FeedVideoCandidate], int]:
     api_key = api_key or os.environ.get("YOUTUBE_API_KEY", "")
@@ -702,6 +727,7 @@ def fetch_youtube_candidates(
             days_back=days_back,
             exclude_ids=seen,
             blocked_channel_ids=blocked_ids,
+            max_channels=max_trusted_channels,
         )
         skipped += trusted_skipped
         mixed = _mix_trusted_candidates(mixed, trusted_candidates, trusted_ratio=trusted_ratio)
@@ -779,6 +805,7 @@ def fetch_trusted_channel_candidates(
     days_back: int = 7,
     exclude_ids: set[str] | None = None,
     blocked_channel_ids: set[str] | None = None,
+    max_channels: int | None = None,
 ) -> tuple[list[FeedVideoCandidate], int]:
     """Fetch recent videos from approved trusted channels (Part E).
 
@@ -801,11 +828,20 @@ def fetch_trusted_channel_candidates(
     skipped = 0
     seen: set[str] = set(exclude_ids or ())
 
+    # Quota guard: cap how many channels we actually query (each costs a search.list).
+    cap = _resolve_max_trusted_channels(max_channels)
+    queried = 0
+
     for channel in channels or ():
         channel_id = str(getattr(channel, "channel_id", "") or "").strip()
         # Never query a blocked channel, even if it is also marked approved.
+        # (Skipped before the search.list call, so blocked channels cost no quota
+        # and do not consume the per-run cap.)
         if not channel_id or channel_id in blocked:
             continue
+        if queried >= cap:
+            break  # per-run quota cap reached
+        queried += 1
         source_group = getattr(channel, "source_group", "") or "trusted/culture"
         channel_title = getattr(channel, "channel_title", "") or channel_id
         source_spec = SourceQuerySpec(source_group, f"trusted channel: {channel_title}")
