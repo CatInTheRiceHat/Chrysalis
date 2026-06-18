@@ -327,6 +327,7 @@ export function ReelsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const goToProfile = () => navigate(user ? '/profile' : '/login');
+  const goHome = () => navigate('/home');
 
   // Fetch the labeled/ranked feed for the active mode; fall back to synthetic
   // cards on error or when the backend has no scored videos yet.
@@ -485,10 +486,10 @@ export function ReelsPage() {
     >
       {onboarded && (
         <AppSidebar
-          active="home"
+          active="feed"
           intentionLabel={currentMode?.label ?? 'Flutter Feed'}
           intentionLogo={currentMode?.logo}
-          onHome={scrollToTop}
+          onHome={goHome}
           onFeed={scrollToTop}
           onCommunity={comingSoon('Community is coming soon ✨')}
           onSaved={comingSoon('Saved is coming soon — your kept videos will live here.')}
@@ -557,8 +558,8 @@ export function ReelsPage() {
             </div>
 
             <AppBottomNav
-              active="home"
-              onHome={scrollToTop}
+              active="feed"
+              onHome={goHome}
               onFeed={scrollToTop}
               onCommunity={comingSoon('Community is coming soon ✨')}
               onSaved={comingSoon('Saved is coming soon — your kept videos will live here.')}

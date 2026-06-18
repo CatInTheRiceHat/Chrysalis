@@ -2474,7 +2474,7 @@
   margin: 0;
   padding: 6px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
   border-radius: 22px;
   background: var(--button-bg);

@@ -10,6 +10,9 @@ import { AuthProvider } from './lib/AuthProvider';
 import { AuthPage } from './components/profile/AuthPage';
 import { ProfilePage } from './components/profile/ProfilePage';
 import { EditProfileForm } from './components/profile/EditProfileForm';
+import { HomePage } from './components/home/HomePage';
+import { SearchPage } from './components/home/SearchPage';
+import { InboxPage } from './components/home/InboxPage';
 import './App.css';
 import './auth.css';
 
@@ -23,6 +26,9 @@ function isAppPath(pathname) {
   return (
     pathname === '/algorithm'
     || pathname === '/reels'
+    || pathname === '/home'
+    || pathname === '/search'
+    || pathname === '/inbox'
     || pathname === '/login'
     || pathname === '/signup'
     || pathname === '/profile'
@@ -73,6 +79,9 @@ function AppShell({ showIntro, setShowIntro }) {
           <Route path="/" element={<MainPage />} />
           <Route path="/algorithm" element={<ReelsPage />} />
           <Route path="/reels" element={<Navigate to="/algorithm" replace />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/inbox" element={<InboxPage />} />
           <Route path="/login" element={<AuthPage mode="login" />} />
           <Route path="/signup" element={<AuthPage mode="signup" />} />
           <Route path="/profile" element={<ProfilePage mode="me" />} />

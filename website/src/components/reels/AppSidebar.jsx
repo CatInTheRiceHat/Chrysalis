@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Home, Film, Users, Bookmark, UserCircle, SlidersHorizontal, Trophy } from 'lucide-react';
+import { Home, Film, Users, Bookmark, UserCircle, SlidersHorizontal, Trophy, Search, Inbox } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from '../profile/UserMenu';
 
@@ -35,6 +35,8 @@ export function AppSidebar({
   detailsOpen,
   onOpenChallenges,
   challengesOpen,
+  onSearch,
+  onInbox,
   streak = 0,
   theme,
   onToggleTheme,
@@ -95,6 +97,30 @@ export function AppSidebar({
       <div className="app-sidebar__spacer" aria-hidden="true" />
 
       <nav className="app-sidebar__nav app-sidebar__nav--secondary">
+        {onSearch && (
+          <button
+            type="button"
+            className={`app-sidebar__item${active === 'search' ? ' is-active' : ''}`}
+            onClick={onSearch}
+            aria-current={active === 'search' ? 'page' : undefined}
+            title="Search"
+          >
+            <Search size={22} aria-hidden="true" />
+            <span className="app-sidebar__label">Search</span>
+          </button>
+        )}
+        {onInbox && (
+          <button
+            type="button"
+            className={`app-sidebar__item${active === 'inbox' ? ' is-active' : ''}`}
+            onClick={onInbox}
+            aria-current={active === 'inbox' ? 'page' : undefined}
+            title="Inbox"
+          >
+            <Inbox size={22} aria-hidden="true" />
+            <span className="app-sidebar__label">Inbox</span>
+          </button>
+        )}
         <button
           type="button"
           className="app-sidebar__item"
