@@ -3,6 +3,7 @@ import {
   DEFAULT_TIME_SCALE_MS,
   dueBreakTier,
   elapsedMsForNextBreak,
+  isBreakPending,
   minutesFromElapsed,
 } from './sessionBreaks';
 
@@ -49,6 +50,10 @@ export function useSessionTimer({ active = true, scaleMs = DEFAULT_TIME_SCALE_MS
   const [elapsedMs, setElapsedMs] = useState(0);
   const [completedMin, setCompletedMin] = useState(0);
   const lastTickRef = useRef(null);
+  // Keep the latest completed milestone available inside the interval closure
+  // without re-creating the interval every time it advances.
+  const completedMinRef = useRef(completedMin);
+  useEffect(() => { completedMinRef.current = completedMin; }, [completedMin]);
 
   useEffect(() => {
     if (!active) {
@@ -58,17 +63,27 @@ export function useSessionTimer({ active = true, scaleMs = DEFAULT_TIME_SCALE_MS
     lastTickRef.current = Date.now();
     const id = window.setInterval(() => {
       const now = Date.now();
-      // Skip accrual while the tab is hidden — no creepy background tracking.
-      if (typeof document !== 'undefined' && document.hidden) {
+      // Don't accrue while the user is away: tab hidden (switched/minimized) OR
+      // the window has lost focus (clicked off to another app). No creepy
+      // background tracking, and the away-time never counts as session time.
+      const away = typeof document !== 'undefined'
+        && (document.hidden || (typeof document.hasFocus === 'function' && !document.hasFocus()));
+      if (away) {
         lastTickRef.current = now;
         return;
       }
       const previous = lastTickRef.current ?? now;
       lastTickRef.current = now;
-      setElapsedMs((value) => value + (now - previous));
+      setElapsedMs((value) => {
+        // Freeze the clock while a break is already due — otherwise time keeps
+        // burning behind the break screen and the next milestone fires the
+        // instant the user finishes the current one.
+        if (isBreakPending(value, completedMinRef.current, scaleMs)) return value;
+        return value + (now - previous);
+      });
     }, TICK_MS);
     return () => window.clearInterval(id);
-  }, [active]);
+  }, [active, scaleMs]);
 
   const elapsedMin = minutesFromElapsed(elapsedMs, scaleMs);
   const dueTier = dueBreakTier(elapsedMin, completedMin);

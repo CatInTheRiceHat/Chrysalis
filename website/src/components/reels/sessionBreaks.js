@@ -84,6 +84,16 @@ export function dueBreakTier(elapsedMin, completedMin = 0) {
   return elapsedMin >= tier.thresholdMin ? tier : null;
 }
 
+/**
+ * Whether a break is currently due (pending) for the given elapsed time. While a
+ * break is pending the session clock should freeze — otherwise time keeps burning
+ * behind the break screen and, on demo scale especially, the *next* milestone is
+ * already passed by the time the user finishes, making breaks re-pop instantly.
+ */
+export function isBreakPending(elapsedMs, completedMin = 0, scaleMs = DEFAULT_TIME_SCALE_MS) {
+  return Boolean(dueBreakTier(minutesFromElapsed(elapsedMs, scaleMs), completedMin));
+}
+
 /** Milliseconds remaining until the next break triggers (0 if already due). */
 export function msUntilNextBreak(elapsedMs, completedMin = 0, scaleMs = DEFAULT_TIME_SCALE_MS) {
   const scale = scaleMs > 0 ? scaleMs : DEFAULT_TIME_SCALE_MS;

@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion as MOTION } from 'motion/react';
-import { ArrowLeft, ChevronDown, Compass, RotateCcw, Trophy, UserCircle } from 'lucide-react';
+import { useAuth } from '../../lib/authContext';
 import { ReelCard } from './ReelCard';
 import { FeedCompassPanel } from './FeedCompassPanel';
-import { ThemeToggle } from './ThemeToggle';
+import { FeedDetailsDrawer } from './FeedDetailsDrawer';
+import { ChrysalisTopBar } from './ChrysalisTopBar';
+import { AppBottomNav } from './AppBottomNav';
+import { AppSidebar } from './AppSidebar';
 import { OnboardingStartScreen } from './OnboardingStartScreen';
 import { getSessionId } from './preferences';
 import { MODES, reelsByMode, DEFAULT_MODE, LEGACY_INTENTION_MODES } from './reelsData';
@@ -15,8 +18,6 @@ import { DEFAULT_TIME_SCALE_MS, DEMO_TIME_SCALE_MS } from './sessionBreaks';
 import { ChallengesPanel } from './ChallengesPanel';
 import { useChallenges } from './useChallenges';
 import { CommentsPanel } from './CommentsPanel';
-import { ProfilePanel } from './ProfilePanel';
-import { useProfile } from './useProfile';
 import '../../reels.css';
 
 const THEME_KEY = 'chrysalis-algorithm-theme';
@@ -32,17 +33,17 @@ const API_URL = import.meta.env.VITE_API_URL ?? '';
 const TARGET_CARD_COUNT = 12;
 
 /**
- * Demo/test mode for screen-time breaks. Enabled in dev, or via `?breaks=demo`
- * (compresses one session minute into one real second, so a break arrives in ~60s
- * and a dev "Trigger break" control appears). Never on in a normal prod session.
+ * Demo/test mode for screen-time breaks. Opt-in via `?breaks=demo` (compresses one
+ * session minute into one real second, so a break arrives in ~60s and a dev
+ * "Trigger break" control appears). Off by default — including in dev — so normal
+ * browsing uses real minutes and breaks don't interrupt every minute.
  */
 function detectBreakDemo() {
   if (typeof window !== 'undefined') {
     const param = new URLSearchParams(window.location.search).get('breaks');
     if (param === 'demo') return true;
-    if (param === 'off') return false;
   }
-  return Boolean(import.meta.env.DEV);
+  return false;
 }
 const BREAK_DEMO = detectBreakDemo();
 const HASHTAG_RE = /#[\w-]+/g;
@@ -319,8 +320,13 @@ export function ReelsPage() {
   const challenges = useChallenges();
   const [challengesOpen, setChallengesOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const profile = useProfile();
-  const [profileOpen, setProfileOpen] = useState(false);
+
+  // Profile lives on its own route now: send signed-in users to /profile, others
+  // to /login. (The old in-feed ProfilePanel/useProfile remain in the repo but
+  // are no longer wired into the feed.)
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const goToProfile = () => navigate(user ? '/profile' : '/login');
 
   // Fetch the labeled/ranked feed for the active mode; fall back to synthetic
   // cards on error or when the backend has no scored videos yet.
@@ -382,44 +388,6 @@ export function ReelsPage() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
-  useEffect(() => {
-    if (!compassOpen) return undefined;
-    const closeAfterNativePress = () => {
-      window.setTimeout(() => setCompassOpen(false), 0);
-    };
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') setCompassOpen(false);
-    };
-    const onOutsidePress = (event) => {
-      if (!(event.target instanceof Element)) return;
-      if (!event.target.closest('.feed-compass-sheet')) return;
-      if (event.target.closest('.feed-compass-sheet__panel')) return;
-      closeAfterNativePress();
-    };
-    const onScrimPress = () => closeAfterNativePress();
-    const scrim = document.querySelector('.feed-compass-sheet__scrim');
-    window.addEventListener('keydown', onKeyDown);
-    document.addEventListener('pointerdown', onOutsidePress, true);
-    document.addEventListener('mousedown', onOutsidePress, true);
-    document.addEventListener('touchstart', onOutsidePress, true);
-    document.addEventListener('click', onOutsidePress, true);
-    scrim?.addEventListener('pointerdown', onScrimPress);
-    scrim?.addEventListener('mousedown', onScrimPress);
-    scrim?.addEventListener('touchstart', onScrimPress);
-    scrim?.addEventListener('click', onScrimPress);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('pointerdown', onOutsidePress, true);
-      document.removeEventListener('mousedown', onOutsidePress, true);
-      document.removeEventListener('touchstart', onOutsidePress, true);
-      document.removeEventListener('click', onOutsidePress, true);
-      scrim?.removeEventListener('pointerdown', onScrimPress);
-      scrim?.removeEventListener('mousedown', onScrimPress);
-      scrim?.removeEventListener('touchstart', onScrimPress);
-      scrim?.removeEventListener('click', onScrimPress);
-    };
-  }, [compassOpen]);
-
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   const startFeed = (chosenMode) => {
@@ -443,7 +411,6 @@ export function ReelsPage() {
   const currentMode = MODES.find((item) => item.key === mode)
     || MODES.find((item) => item.key === DEFAULT_MODE);
   const currentFeedStatus = feedStatus(tunedCards);
-  const currentFeedDebug = feed.mode === mode ? feed.debug : null;
 
   const resetIntro = () => {
     setCompassOpen(false);
@@ -501,110 +468,59 @@ export function ReelsPage() {
     announceStatus('Showing a different card from this mode.');
   };
 
-  const compassPanel = (
-    <FeedCompassPanel
-      activeMode={mode}
-      activeCard={activeCard}
-      feedStatus={currentFeedStatus}
-      viewedCount={viewedCards.size}
-      breakReminderCount={breakReminderCards.size}
-      selectedTunes={selectedTunes}
-      onResetIntro={resetIntro}
-      onTuneChange={toggleTune}
-      feedDebug={currentFeedDebug}
-    />
-  );
+  const scrollToTop = () => {
+    const scroller = scrollRef.current;
+    setActiveIndex(0);
+    scroller?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const comingSoon = (message) => () => announceStatus(message);
 
   return (
-    <main className="reels-shell" data-algorithm data-theme={theme}>
-      <div className={`reels-controls${onboarded ? '' : ' reels-controls--simple'}`}>
-        <Link to="/" className="reel-back" aria-label="Back to Chrysalis home">
-          <ArrowLeft size={17} aria-hidden="true" />
-          Home
-        </Link>
+    <main
+      className="reels-shell"
+      data-algorithm
+      data-theme={theme}
+      data-onboarded={onboarded ? 'true' : 'false'}
+    >
+      {onboarded && (
+        <AppSidebar
+          active="home"
+          intentionLabel={currentMode?.label ?? 'Flutter Feed'}
+          intentionLogo={currentMode?.logo}
+          onHome={scrollToTop}
+          onFeed={scrollToTop}
+          onCommunity={comingSoon('Community is coming soon ✨')}
+          onSaved={comingSoon('Saved is coming soon — your kept videos will live here.')}
+          onProfile={goToProfile}
+          onOpenDetails={() => setCompassOpen(true)}
+          detailsOpen={compassOpen}
+          onOpenChallenges={() => setChallengesOpen(true)}
+          challengesOpen={challengesOpen}
+          streak={challenges.stats.streak}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          showBreakDemo={BREAK_DEMO}
+          onTriggerBreak={triggerBreakNow}
+        />
+      )}
 
-        {onboarded ? (
-          <div className="algorithm-mode-pill">
-            <span className="algorithm-mode-pill__prefix">Current algorithm mode:</span>
-            <span className="algorithm-mode-pill__logo" aria-hidden="true">
-              <img src={currentMode?.logo ?? '/images/flutter-feed.png'} alt="" />
-            </span>
-            <span>{currentMode?.label ?? 'Flutter Feed'}</span>
-          </div>
-        ) : (
-          <span className="reels-controls__spacer" aria-hidden="true" />
-        )}
-
-        <div className="reels-topbar">
-          {onboarded && (
-            <button
-              type="button"
-              className="reels-fab reels-fab--wide"
-              onClick={resetIntro}
-              aria-label="Change mode and return to mode selection"
-              title="Change mode"
-            >
-              <RotateCcw size={16} aria-hidden="true" />
-              <span className="reels-fab__text">Change mode</span>
-            </button>
-          )}
-          {onboarded && (
-            <button
-              type="button"
-              className="reels-fab reels-compass-trigger"
-              onClick={() => setCompassOpen(true)}
-              aria-label="Open Algorithm Compass"
-              aria-haspopup="dialog"
-              aria-expanded={compassOpen}
-              title="Algorithm Compass"
-            >
-              <Compass size={18} aria-hidden="true" />
-            </button>
-          )}
-          {onboarded && (
-            <button
-              type="button"
-              className="reels-fab reels-challenges-trigger"
-              onClick={() => setChallengesOpen(true)}
-              aria-label="Open IRL Challenges"
-              aria-haspopup="dialog"
-              aria-expanded={challengesOpen}
-              title="IRL Challenges"
-            >
-              <Trophy size={17} aria-hidden="true" />
-              {challenges.stats.streak > 0 && (
-                <span className="reels-fab__badge" aria-label={`${challenges.stats.streak} day streak`}>
-                  {challenges.stats.streak}
-                </span>
-              )}
-            </button>
-          )}
-          {onboarded && (
-            <button
-              type="button"
-              className="reels-fab reels-profile-trigger"
-              onClick={() => setProfileOpen(true)}
-              aria-label="Open your profile"
-              aria-haspopup="dialog"
-              aria-expanded={profileOpen}
-              title="Your profile"
-            >
-              <UserCircle size={18} aria-hidden="true" />
-            </button>
-          )}
-          {onboarded && BREAK_DEMO && (
-            <button
-              type="button"
-              className="reels-fab reels-fab--demo"
-              onClick={triggerBreakNow}
-              title="Demo: trigger a screen-time break now"
-            >
-              Trigger break
-            </button>
-          )}
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </div>
-      </div>
+      <ChrysalisTopBar
+        showActions={onboarded}
+        intentionLabel={currentMode?.label ?? 'Flutter Feed'}
+        intentionLogo={currentMode?.logo}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onOpenDetails={() => setCompassOpen(true)}
+        detailsOpen={compassOpen}
+        onOpenChallenges={() => setChallengesOpen(true)}
+        challengesOpen={challengesOpen}
+        streak={challenges.stats.streak}
+        onOpenProfile={goToProfile}
+        profileOpen={false}
+        showBreakDemo={BREAK_DEMO}
+        onTriggerBreak={triggerBreakNow}
+      />
 
       <AnimatePresence mode="wait">
         {!onboarded ? (
@@ -623,10 +539,6 @@ export function ReelsPage() {
             transition={{ duration: 0.35 }}
           >
             <div className="reels-stage">
-              <aside className="feed-compass-desktop">
-                {compassPanel}
-              </aside>
-
               <div className="reels-feed-column">
                 <div className="reels-scroll" data-lenis-prevent key={mode} ref={scrollRef}>
                   {tunedCards.map((reel, index) => (
@@ -641,50 +553,35 @@ export function ReelsPage() {
                     />
                   ))}
                 </div>
-
-                <div className="reels-hint" aria-hidden="true">
-                  <span>Scroll</span>
-                  <ChevronDown className="reels-bob" size={16} />
-                </div>
               </div>
             </div>
 
-            <AnimatePresence>
-              {compassOpen && (
-                <MOTION.div
-                  className="feed-compass-sheet"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-label="Algorithm Compass"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="feed-compass-sheet__scrim" aria-hidden="true" />
-                  <MOTION.div
-                    className="feed-compass-sheet__panel"
-                    initial={{ y: 28, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 28, opacity: 0 }}
-                    transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                  >
-                    <FeedCompassPanel
-                      activeMode={mode}
-                      activeCard={activeCard}
-                      feedStatus={currentFeedStatus}
-                      viewedCount={viewedCards.size}
-                      breakReminderCount={breakReminderCards.size}
-                      selectedTunes={selectedTunes}
-                      onResetIntro={resetIntro}
-                      onTuneChange={toggleTune}
-                      feedDebug={currentFeedDebug}
-                      onClose={() => setCompassOpen(false)}
-                    />
-                  </MOTION.div>
-                </MOTION.div>
-              )}
-            </AnimatePresence>
+            <AppBottomNav
+              active="home"
+              onHome={scrollToTop}
+              onFeed={scrollToTop}
+              onCommunity={comingSoon('Community is coming soon ✨')}
+              onSaved={comingSoon('Saved is coming soon — your kept videos will live here.')}
+              onProfile={goToProfile}
+            />
+
+            <FeedDetailsDrawer
+              open={compassOpen}
+              onClose={() => setCompassOpen(false)}
+              label="Feed details"
+            >
+              <FeedCompassPanel
+                activeMode={mode}
+                activeCard={activeCard}
+                feedStatus={currentFeedStatus}
+                viewedCount={viewedCards.size}
+                breakReminderCount={breakReminderCards.size}
+                selectedTunes={selectedTunes}
+                onResetIntro={resetIntro}
+                onTuneChange={toggleTune}
+                onClose={() => setCompassOpen(false)}
+              />
+            </FeedDetailsDrawer>
           </MOTION.div>
         )}
       </AnimatePresence>
@@ -766,46 +663,6 @@ export function ReelsPage() {
               <CommentsPanel
                 onStatus={announceStatus}
                 onClose={() => setCommentsOpen(false)}
-              />
-            </MOTION.div>
-          </MOTION.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {profileOpen && (
-          <MOTION.div
-            className="feed-compass-sheet challenges-sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Your profile"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div
-              className="feed-compass-sheet__scrim"
-              aria-hidden="true"
-              onClick={() => setProfileOpen(false)}
-            />
-            <MOTION.div
-              className="feed-compass-sheet__panel"
-              initial={{ y: 28, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 28, opacity: 0 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <ProfilePanel
-                profile={profile.profile}
-                onField={profile.setField}
-                onToggle={profile.toggleField}
-                community={profile.community}
-                onConnect={profile.toggleConnect}
-                stats={challenges.stats}
-                badges={challenges.badges}
-                onStatus={announceStatus}
-                onClose={() => setProfileOpen(false)}
               />
             </MOTION.div>
           </MOTION.div>

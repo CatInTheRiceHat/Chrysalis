@@ -6,15 +6,34 @@ import { Navbar } from './components/Navbar';
 import { IntroScreen } from './components/IntroScreen';
 import { RebootPage } from './components/RebootPage';
 import { ReelsPage } from './components/reels/ReelsPage';
+import { AuthProvider } from './lib/AuthProvider';
+import { AuthPage } from './components/profile/AuthPage';
+import { ProfilePage } from './components/profile/ProfilePage';
+import { EditProfileForm } from './components/profile/EditProfileForm';
 import './App.css';
+import './auth.css';
 
 function MainPage() {
   return <RebootPage />;
 }
 
+// Standalone "app" routes render without the marketing Navbar / Lenis smooth
+// scroll / intro overlay (same treatment as the /algorithm feed).
+function isAppPath(pathname) {
+  return (
+    pathname === '/algorithm'
+    || pathname === '/reels'
+    || pathname === '/login'
+    || pathname === '/signup'
+    || pathname === '/profile'
+    || pathname === '/profile/edit'
+    || pathname.startsWith('/u/')
+  );
+}
+
 function AppShell({ showIntro, setShowIntro }) {
   const { pathname } = useLocation();
-  const isAlgorithmExperience = pathname === '/algorithm' || pathname === '/reels';
+  const isAlgorithmExperience = isAppPath(pathname);
 
   useEffect(() => {
     if (isAlgorithmExperience) return undefined;
@@ -54,6 +73,11 @@ function AppShell({ showIntro, setShowIntro }) {
           <Route path="/" element={<MainPage />} />
           <Route path="/algorithm" element={<ReelsPage />} />
           <Route path="/reels" element={<Navigate to="/algorithm" replace />} />
+          <Route path="/login" element={<AuthPage mode="login" />} />
+          <Route path="/signup" element={<AuthPage mode="signup" />} />
+          <Route path="/profile" element={<ProfilePage mode="me" />} />
+          <Route path="/profile/edit" element={<EditProfileForm />} />
+          <Route path="/u/:username" element={<ProfilePage mode="public" />} />
         </Routes>
       </div>
     </>
@@ -82,7 +106,9 @@ function App() {
 
   return (
     <BrowserRouter>
-      <AppShell showIntro={showIntro} setShowIntro={setShowIntro} />
+      <AuthProvider>
+        <AppShell showIntro={showIntro} setShowIntro={setShowIntro} />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

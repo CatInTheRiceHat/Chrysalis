@@ -2335,3 +2335,576 @@
   line-height: 1.5;
   color: var(--text-muted);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   App-style home shell — branded top bar, bottom nav, Feed details drawer.
+   Replaces the old dashboard-style controls row and always-on compass aside.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* The feed no longer reserves a column for the compass: center it. */
+@media (min-width: 1100px) {
+  .reels-stage {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+}
+
+/* ── Top bar ───────────────────────────────────────────────────────────── */
+.app-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) clamp(12px, 3vw, 22px) 12px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.app-topbar > * { pointer-events: auto; }
+
+.app-topbar__brand {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.app-topbar__home {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.2s ease;
+}
+.app-topbar__home:hover { transform: translateY(-2px); }
+.app-topbar__logo img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+}
+.app-topbar__wordmark {
+  font-family: "Abril Fatface", serif;
+  font-weight: 400;
+  font-size: 1.2rem;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+
+.app-topbar__intention {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  padding: 5px 14px 5px 5px;
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.app-topbar__intention:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+.app-topbar__intention-logo img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.app-topbar__intention-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  line-height: 1.1;
+  min-width: 0;
+}
+.app-topbar__intention-eyebrow {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+.app-topbar__intention-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-topbar__spacer { justify-self: center; }
+.app-topbar__actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Bottom navigation (floating pill) ─────────────────────────────────── */
+.app-bottomnav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 8;
+  width: min(440px, calc(100vw - 24px));
+  box-sizing: border-box;
+}
+.app-bottomnav__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  border-radius: 22px;
+  background: var(--button-bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 14px 40px rgba(43, 38, 49, 0.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.app-bottomnav__item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: none;
+  border-radius: 16px;
+  background: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.app-bottomnav__item:hover { color: var(--text); }
+.app-bottomnav__item.is-active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 24%, transparent);
+}
+.app-bottomnav__item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Give feed content room to clear the floating bottom nav on small screens. */
+@media (max-width: 767px) {
+  .reel-card { padding-bottom: calc(98px + env(safe-area-inset-bottom)); }
+}
+
+/* ── Feed details drawer (right on desktop, bottom sheet on mobile) ─────── */
+.feed-details-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+.feed-details-drawer__scrim {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(16, 12, 24, 0.4);
+  cursor: pointer;
+}
+.feed-details-drawer__panel { position: absolute; }
+
+/* Bottom sheet (mobile) */
+.feed-details-drawer--sheet .feed-details-drawer__panel {
+  left: 10px;
+  right: 10px;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  max-height: min(84dvh, 720px);
+}
+.feed-details-drawer--sheet .feed-compass {
+  max-height: min(84dvh, 720px);
+}
+
+/* Right drawer (desktop) */
+.feed-details-drawer--side .feed-details-drawer__panel {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(390px, 92vw);
+}
+.feed-details-drawer--side .feed-compass {
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+}
+[data-algorithm] .feed-details-drawer button:focus-visible,
+.feed-details-drawer__scrim:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.feed-compass__lede {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ── Mobile top bar — no horizontal overflow ───────────────────────────── */
+@media (max-width: 767px) {
+  .app-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .app-topbar__wordmark { display: none; }
+  .app-topbar__intention { display: none; }
+  .app-topbar__spacer { display: none; }
+  .app-topbar__actions { gap: 6px; }
+  .app-topbar__home { width: 36px; height: 36px; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Desktop left sidebar (social-app home). Hidden on mobile, where the top bar
+   + bottom tab bar take over. Width is token-driven: icon rail on mid screens,
+   expanded with labels on wide screens.
+   ───────────────────────────────────────────────────────────────────────── */
+[data-algorithm] { --app-sidebar-w: 76px; }
+@media (min-width: 1180px) {
+  [data-algorithm] { --app-sidebar-w: 236px; }
+}
+
+.app-sidebar { display: none; }
+
+@media (min-width: 768px) {
+  /* Desktop chrome takes over: hide the mobile top bar + bottom tab bar. */
+  [data-onboarded="true"] .app-topbar { display: none; }
+  .app-bottomnav { display: none; }
+
+  [data-onboarded="true"] .app-sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--app-sidebar-w);
+    padding: 20px 14px max(18px, env(safe-area-inset-bottom));
+    box-sizing: border-box;
+    border-right: 1px solid var(--border);
+    background: color-mix(in srgb, var(--card) 74%, transparent);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    z-index: 8;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  [data-onboarded="true"] .app-sidebar::-webkit-scrollbar { display: none; }
+
+  /* Center the feed in the space beside the sidebar. */
+  [data-onboarded="true"] .reels-feed {
+    padding-left: var(--app-sidebar-w);
+    box-sizing: border-box;
+  }
+}
+
+@media (min-width: 1100px) {
+  [data-onboarded="true"] .reels-stage {
+    width: auto;
+    max-width: none;
+    margin: 0;
+  }
+}
+
+/* Brand */
+.app-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 10px;
+  color: var(--text);
+  min-width: 0;
+}
+.app-sidebar__logo img { width: 32px; height: 32px; object-fit: contain; display: block; }
+.app-sidebar__wordmark {
+  font-family: "Abril Fatface", serif;
+  font-weight: 400;
+  font-size: 1.3rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Intention chip */
+.app-sidebar__intention {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent-soft) 14%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 6px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.app-sidebar__intention:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 22%, transparent);
+}
+.app-sidebar__intention-logo img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.app-sidebar__intention-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  line-height: 1.15;
+  min-width: 0;
+}
+.app-sidebar__intention-eyebrow {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+.app-sidebar__intention-label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Nav items */
+.app-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.app-sidebar__nav--secondary { margin-top: 2px; }
+.app-sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 11px 12px;
+  border: none;
+  border-radius: 14px;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.app-sidebar__item:hover { background: color-mix(in srgb, var(--accent-soft) 18%, transparent); }
+.app-sidebar__item.is-active { font-weight: 700; }
+.app-sidebar__item.is-active::before { content: ""; }
+.app-sidebar__item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.app-sidebar__item svg { flex: 0 0 auto; }
+.app-sidebar__item-icon { position: relative; display: inline-flex; }
+.app-sidebar__badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.app-sidebar__label { white-space: nowrap; }
+.app-sidebar__spacer { flex: 1 1 auto; min-height: 8px; }
+.app-sidebar__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+}
+
+/* Icon-only rail (mid-width desktop): hide labels, center icons. */
+@media (min-width: 768px) and (max-width: 1179px) {
+  .app-sidebar__wordmark,
+  .app-sidebar__label,
+  .app-sidebar__intention-text { display: none; }
+  .app-sidebar__brand { justify-content: center; padding: 6px 0 12px; }
+  .app-sidebar__intention { justify-content: center; padding: 8px 0; }
+  .app-sidebar__item { justify-content: center; padding: 11px 0; }
+  .app-sidebar__footer { justify-content: center; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Full-screen Profile page (replaces the old bottom-sheet profile).
+   Covers the feed area beside the sidebar on desktop; full-screen on mobile
+   with the bottom tab bar still floating above for navigation.
+   ───────────────────────────────────────────────────────────────────────── */
+.profile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  background:
+    radial-gradient(circle at 14% 8%, color-mix(in srgb, var(--accent-soft) 18%, transparent), transparent 28rem),
+    var(--bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Keep the bottom tab bar tappable above the profile page on mobile. */
+.app-bottomnav { z-index: 11; }
+
+@media (min-width: 768px) {
+  [data-onboarded="true"] .profile-overlay { left: var(--app-sidebar-w); }
+}
+@media (max-width: 767px) {
+  .profile-overlay { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
+
+.profile--page { gap: 0; }
+.profile__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) clamp(12px, 4vw, 22px) 12px;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+.profile__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--button-bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.profile__back:hover { transform: translateY(-1px); }
+.profile__topbar-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+}
+.profile__topbar-spacer { flex: 1 1 auto; }
+
+.profile__inner {
+  width: min(660px, 100%);
+  margin: 0 auto;
+  padding: clamp(1.1rem, 3vw, 1.9rem) clamp(1rem, 4vw, 2rem) 2.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: clamp(1.1rem, 5vw, 2.4rem);
+  padding: 6px 0 2px;
+}
+.profile-hero__avatar {
+  flex: 0 0 auto;
+  width: clamp(78px, 22vw, 108px);
+  height: clamp(78px, 22vw, 108px);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: clamp(2.2rem, 9vw, 3.1rem);
+  background: color-mix(in srgb, var(--accent-soft) 26%, var(--card));
+  border: 1px solid var(--border);
+}
+.profile-hero__meta { flex: 1 1 auto; min-width: 0; }
+.profile-hero__stats {
+  display: flex;
+  gap: clamp(1rem, 6vw, 2.4rem);
+}
+.profile-stat { display: flex; flex-direction: column; gap: 2px; }
+.profile-stat strong { font-size: 1.3rem; font-weight: 700; color: var(--text); line-height: 1; }
+.profile-stat__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.profile--page .profile__name {
+  width: 100%;
+  padding: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-bottom: 1px dashed transparent;
+}
+.profile--page .profile__name:hover { border-bottom-color: var(--border); }
+.profile--page .profile__name:focus { outline: none; border-bottom-color: var(--accent-soft); }
+
+/* Dev-only "Trigger break" control inside the sidebar (demo mode). */
+.app-sidebar__demo {
+  flex: 1 1 auto;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  background: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.app-sidebar__demo:hover { color: var(--text); border-color: var(--accent-soft); }
+@media (min-width: 768px) and (max-width: 1179px) {
+  .app-sidebar__demo { display: none; }
+}

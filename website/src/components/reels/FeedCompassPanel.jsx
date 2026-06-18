@@ -1,16 +1,14 @@
 import {
-  Compass,
   Leaf,
   RefreshCw,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   Timer,
   X,
 } from 'lucide-react';
 import {
   FEED_BALANCE_COPY,
-  formatCountMap,
-  formatPercent,
   getRecommendationInsight,
 } from './feedTaxonomy';
 
@@ -131,20 +129,12 @@ export function FeedCompassPanel({
   onResetIntro,
   onTuneChange,
   onClose,
-  feedDebug,
 }) {
   const mode = MODE_COPY[activeMode] || MODE_COPY['flutter-feed'];
   const scores = activeCard?.chrysalis_scores || mode.fallbackScores;
   const recommendationInsight = getRecommendationInsight(activeCard);
   const whyText = recommendationInsight.detail
-    || 'Shown because it matches your current mode with lighter feed signals.';
-  const healthyRatio = formatPercent(feedDebug?.healthyRatio);
-  const healthyTarget = feedDebug?.healthyTarget
-    ? `${formatPercent(feedDebug.healthyTarget.min) || '40%'}-${formatPercent(feedDebug.healthyTarget.max) || '60%'}`
-    : null;
-  const categoryCounts = formatCountMap(feedDebug?.contentCategoryCounts);
-  const laneCounts = formatCountMap(feedDebug?.laneCounts, 3);
-  const candidateCounts = formatCountMap(feedDebug?.candidateCategoryCounts, 3);
+    || 'Shown because it matches your intention with lighter, calmer feed signals.';
   const shameRage = Math.max(
     clamp01(scores.shame_or_humiliation_risk),
     clamp01(scores.ragebait),
@@ -153,12 +143,12 @@ export function FeedCompassPanel({
   const sessionTuneMessages = tuneMessages(selectedTunes, viewedCount);
 
   return (
-    <section className="feed-compass" aria-label="Algorithm Compass">
+    <section className="feed-compass" aria-label="Feed details">
       <div className="feed-compass__head">
         <div>
           <span className="feed-compass__eyebrow">
-            <Compass size={13} aria-hidden="true" />
-            Algorithm Compass
+            <Sparkles size={13} aria-hidden="true" />
+            Feed details
           </span>
           <h2>{mode.label}</h2>
         </div>
@@ -167,7 +157,7 @@ export function FeedCompassPanel({
             type="button"
             className="feed-compass__close"
             onClick={onClose}
-            aria-label="Close Algorithm Compass"
+            aria-label="Close feed details"
             autoFocus
           >
             <X size={16} aria-hidden="true" />
@@ -176,6 +166,7 @@ export function FeedCompassPanel({
       </div>
 
       <p className="feed-compass__mode-copy">{mode.description}</p>
+      <p className="feed-compass__lede">Your feed is shaped around your intention — a softer scroll, designed with you in mind.</p>
 
       <div className="feed-compass__balance-copy">
         <Leaf size={15} aria-hidden="true" />
@@ -184,12 +175,12 @@ export function FeedCompassPanel({
 
       <div className="feed-compass__section feed-compass__mode">
         <div>
-          <span className="feed-compass__label">Algorithm mode</span>
+          <span className="feed-compass__label">Your intention</span>
           <p>{mode.label}</p>
         </div>
         <button type="button" onClick={onResetIntro}>
           <RefreshCw size={13} aria-hidden="true" />
-          Change mode
+          Change intention
         </button>
       </div>
 
@@ -201,30 +192,8 @@ export function FeedCompassPanel({
       <div className="feed-compass__section">
         <div className="feed-compass__section-title">
           <ShieldCheck size={15} aria-hidden="true" />
-          <span>Feed balance</span>
+          <span>Healthy vs regular balance</span>
         </div>
-        {feedDebug && (
-          <div className="feed-compass__mix-stats" aria-label="Feed mix stats">
-            {healthyRatio && (
-              <span>Healthy ratio <strong>{healthyRatio}</strong></span>
-            )}
-            {healthyTarget && (
-              <span>Target <strong>{healthyTarget}</strong></span>
-            )}
-            {categoryCounts && (
-              <span>Categories <strong>{categoryCounts}</strong></span>
-            )}
-            {laneCounts && (
-              <span>Lanes <strong>{laneCounts}</strong></span>
-            )}
-            {candidateCounts && (
-              <span>Candidates <strong>{candidateCounts}</strong></span>
-            )}
-            {Number.isFinite(feedDebug.filteredCount) && (
-              <span>Reduced/blocked filtered <strong>{feedDebug.filteredCount}</strong></span>
-            )}
-          </div>
-        )}
         <div className="feed-compass__bars">
           {BALANCE_ROWS.map((row) => {
             const value = displayValue(scores[row.key], row.risk);
@@ -308,8 +277,8 @@ export function FeedCompassPanel({
         </div>
         <p className="feed-compass__tune-note">
           {selectedTunes.length
-            ? 'Preference saved for this session.'
-            : 'Session tuning is ready for ranking integration later.'}
+            ? 'Saved for this session.'
+            : 'Pick what you’d like more or less of this session.'}
         </p>
         {sessionTuneMessages.length > 0 && (
           <div className="feed-compass__tune-messages" aria-live="polite">

@@ -1,4 +1,4 @@
-import { Check, Flame, Sparkles, UserCircle, UserPlus, Users, X } from 'lucide-react';
+import { ArrowLeft, Award, Check, Flame, Sparkles, UserPlus, Users } from 'lucide-react';
 import {
   FAVORITE_ACTIVITIES,
   INTERESTS,
@@ -33,66 +33,77 @@ export function ProfilePanel({
   };
 
   return (
-    <section className="profile" aria-label="Your profile">
-      <div className="profile__head">
-        <div>
-          <span className="profile__eyebrow">
-            <UserCircle size={13} aria-hidden="true" />
-            Curated profile
-          </span>
-          <h2>Your wellbeing profile</h2>
-        </div>
+    <section className="profile profile--page" aria-label="Your profile">
+      <header className="profile__topbar">
         {onClose && (
-          <button type="button" className="profile__close" onClick={onClose} aria-label="Close profile">
-            <X size={16} aria-hidden="true" />
+          <button
+            type="button"
+            className="profile__back"
+            onClick={onClose}
+            aria-label="Back to your feed"
+          >
+            <ArrowLeft size={20} aria-hidden="true" />
           </button>
         )}
-      </div>
+        <span className="profile__topbar-title">{profile.handle}</span>
+        <span className="profile__topbar-spacer" aria-hidden="true" />
+      </header>
 
-      {/* identity */}
-      <div className="profile__card">
-        <span className="profile__avatar" aria-hidden="true">{profile.emoji}</span>
-        <div className="profile__id">
-          <input
-            className="profile__name"
-            value={profile.displayName}
-            onChange={(event) => onField('displayName', event.target.value)}
-            aria-label="Display name"
-            maxLength={40}
-          />
-          <span className="profile__handle">{profile.handle}</span>
-        </div>
-        <div className="profile__journey" title="Your wellbeing journey">
-          <span><Sparkles size={14} aria-hidden="true" /> {stats?.points ?? 0}</span>
-          <span><Flame size={14} aria-hidden="true" /> {stats?.streak ?? 0}</span>
-        </div>
-      </div>
-
-      <label className="profile__bio-label">
-        <span>Bio</span>
-        <textarea
-          value={profile.bio}
-          onChange={(event) => onField('bio', event.target.value)}
-          rows={2}
-          maxLength={160}
-          placeholder="Share what a healthier feed means to you…"
-        />
-      </label>
-
-      {earnedBadges.length > 0 && (
-        <div className="profile__section">
-          <span className="profile__section-title">Badges</span>
-          <div className="profile__badges">
-            {earnedBadges.map((badge) => (
-              <span key={badge.id} className="profile__badge" title={badge.blurb}>
-                <span aria-hidden="true">{badge.emoji}</span> {badge.label}
+      <div className="profile__inner">
+        {/* identity hero */}
+        <div className="profile-hero">
+          <span className="profile-hero__avatar" aria-hidden="true">{profile.emoji}</span>
+          <div className="profile-hero__meta">
+            <div className="profile-hero__stats" aria-label="Your wellbeing journey">
+              <span className="profile-stat">
+                <strong>{stats?.points ?? 0}</strong>
+                <span className="profile-stat__label"><Sparkles size={12} aria-hidden="true" /> points</span>
               </span>
-            ))}
+              <span className="profile-stat">
+                <strong>{stats?.streak ?? 0}</strong>
+                <span className="profile-stat__label"><Flame size={12} aria-hidden="true" /> day streak</span>
+              </span>
+              <span className="profile-stat">
+                <strong>{earnedBadges.length}</strong>
+                <span className="profile-stat__label"><Award size={12} aria-hidden="true" /> badges</span>
+              </span>
+            </div>
           </div>
         </div>
-      )}
 
-      <ChipGroup
+        <input
+          className="profile__name"
+          value={profile.displayName}
+          onChange={(event) => onField('displayName', event.target.value)}
+          aria-label="Display name"
+          maxLength={40}
+        />
+
+        <label className="profile__bio-label">
+          <span>Bio</span>
+          <textarea
+            value={profile.bio}
+            onChange={(event) => onField('bio', event.target.value)}
+            rows={2}
+            maxLength={160}
+            placeholder="Share what a healthier feed means to you…"
+          />
+        </label>
+
+        {earnedBadges.length > 0 && (
+          <div className="profile__section">
+            <span className="profile__section-title">Highlights</span>
+            <div className="profile__badges">
+              {earnedBadges.map((badge) => (
+                <span key={badge.id} className="profile__badge" title={badge.blurb}>
+                  <span aria-hidden="true">{badge.emoji}</span> {badge.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <ChipGroup
         title="Wellbeing goals"
         options={WELLBEING_GOALS}
         selected={profile.goals}
@@ -150,7 +161,8 @@ export function ProfilePanel({
         </ul>
       </div>
 
-      <p className="profile__footnote">No follower counts. No popularity ranking. Just meaningful connection.</p>
+        <p className="profile__footnote">No follower counts. No popularity ranking. Just meaningful connection.</p>
+      </div>
     </section>
   );
 }

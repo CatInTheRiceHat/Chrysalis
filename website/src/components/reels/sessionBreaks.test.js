@@ -19,6 +19,7 @@ import {
   elapsedMsForNextBreak,
   formatCountdown,
   activityById,
+  isBreakPending,
 } from './sessionBreaks.js';
 
 test('break tiers match the progressive spec', () => {
@@ -66,6 +67,20 @@ test('breaks escalate: 15 at 90, 20 at 120, 30 at 150', () => {
 test('completing a milestone does not immediately re-trigger', () => {
   // Completed the 60-min break; still at ~60 cumulative min -> nothing due yet.
   assert.equal(dueBreakTier(61, 60), null);
+});
+
+test('isBreakPending freezes the clock only while a break is actually due', () => {
+  // Demo scale: 1s == 1 "minute".
+  const scale = DEMO_TIME_SCALE_MS;
+  // Before the first hour, nothing pending -> clock should keep running.
+  assert.equal(isBreakPending(30 * scale, 0, scale), false);
+  // At 60 "minutes" with nothing completed, the tier-60 break is pending.
+  assert.equal(isBreakPending(60 * scale, 0, scale), true);
+  // Right after completing the 60 milestone, sitting at ~60 min, NOT pending
+  // again (this is the regression that made breaks re-pop instantly).
+  assert.equal(isBreakPending(61 * scale, 60, scale), false);
+  // Only once the clock would reach the next threshold (90) is it pending again.
+  assert.equal(isBreakPending(90 * scale, 60, scale), true);
 });
 
 test('msUntilNextBreak counts down to the next threshold (real scale)', () => {
