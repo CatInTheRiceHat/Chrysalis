@@ -1,5 +1,4 @@
 import { BRAND } from '../../brand.js';
-import { Link } from 'react-router-dom';
 import { Home, Film, Users, Bookmark, UserCircle, SlidersHorizontal, Trophy, Search, Inbox } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from '../profile/UserMenu';
@@ -50,10 +49,10 @@ export function AppSidebar({
 
   return (
     <aside className="app-sidebar" aria-label={`${BRAND} navigation`}>
-      <Link to="/" className="app-sidebar__brand" aria-label={`Back to ${BRAND} home`}>
+      <div className="app-sidebar__brand">
         <span className="app-sidebar__logo" aria-hidden="true">☀️</span>
         <span className="app-sidebar__wordmark">{BRAND}</span>
-      </Link>
+      </div>
 
       <button
         type="button"
