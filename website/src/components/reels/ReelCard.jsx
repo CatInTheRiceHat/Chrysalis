@@ -5,6 +5,7 @@ import { ReelActionRail } from './ReelActionRail';
 import { ReelCaption } from './ReelCaption';
 import { getRecommendationInsight } from './feedTaxonomy';
 import { buildYouTubeEmbedUrl } from './youtubeEmbed';
+import { useSavedVideos } from './useSavedVideos';
 
 function scoreValue(card, key) {
   const value = Number(card.chrysalis_scores?.[key]);
@@ -68,6 +69,7 @@ export function ReelCard({
 }) {
   const [loaded, setLoaded] = useState(false);
   const iframeRef = useRef(null);
+  const { isSaved, toggleSave } = useSavedVideos();
 
   const videoSource = reel.embed_url || reel.embedUrl || reel.youtube_id || reel.youtubeId;
   const hasVideo = Boolean(videoSource);
@@ -97,6 +99,16 @@ export function ReelCard({
 
   const requestPlayback = () => {
     onVisible?.();
+  };
+
+  const saved = isSaved(reel.id);
+  const handleToggleSave = () => {
+    const nowSaved = toggleSave(reel);
+    onStatus?.(
+      nowSaved
+        ? 'Saved to your collection.'
+        : 'Removed from your collection.',
+    );
   };
 
   return (
@@ -218,6 +230,8 @@ export function ReelCard({
           publicSignalReason={reel.public_signal_reason}
           publicSignalEffect={reel.public_signal_effect}
           sourceSafetyStatus={reel.source_safety_status}
+          saved={saved}
+          onToggleSave={handleToggleSave}
           onStatus={onStatus}
           onRegenerate={onRegenerate}
           onComment={onOpenComments}

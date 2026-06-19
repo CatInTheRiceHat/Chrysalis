@@ -15,6 +15,7 @@ import { HomePage } from './components/home/HomePage';
 import { SearchPage } from './components/home/SearchPage';
 import { InboxPage } from './components/home/InboxPage';
 import { CommunityPage } from './components/community/CommunityPage';
+import { SavedPage } from './components/saved/SavedPage';
 import './App.css';
 import './auth.css';
 
@@ -30,6 +31,7 @@ function isAppPath(pathname) {
     || pathname === '/reels'
     || pathname === '/home'
     || pathname === '/community'
+    || pathname === '/saved'
     || pathname === '/search'
     || pathname === '/inbox'
     || pathname === '/login'
@@ -84,6 +86,7 @@ function AppShell({ showIntro, setShowIntro }) {
           <Route path="/reels" element={<Navigate to="/algorithm" replace />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/community" element={<CommunityPage />} />
+          <Route path="/saved" element={<SavedPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/inbox" element={<InboxPage />} />
           <Route path="/login" element={<AuthPage mode="login" />} />

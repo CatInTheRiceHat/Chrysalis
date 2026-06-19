@@ -5,8 +5,8 @@ import { Home, Film, Users, Bookmark, UserCircle } from 'lucide-react';
  * App-style bottom navigation for the Chrysalis feed.
  *
  * A calm floating pill: Home, Feed, Community, Saved, Profile. Home/Feed land on
- * the live feed; Profile routes to the real profile (or sign-in). Community and
- * Saved are gentle "coming soon" placeholders, so nothing is a dead link.
+ * the live feed; Profile routes to the real profile (or sign-in); Community and
+ * Saved route to their pages. Every tab is a real destination — no dead links.
  *
  * Props:
  *   active — key of the current screen ("home")

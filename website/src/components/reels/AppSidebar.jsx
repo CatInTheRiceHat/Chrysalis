@@ -1,7 +1,6 @@
 import { BRAND } from '../../brand.js';
 import { Home, Film, Users, Bookmark, UserCircle, SlidersHorizontal, Trophy, Search, Inbox } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-import { UserMenu } from '../profile/UserMenu';
 
 /**
  * Desktop-only left navigation rail, in the spirit of a social-app home screen.
@@ -48,6 +47,7 @@ export function AppSidebar({
   };
 
   return (
+    <>
     <aside className="app-sidebar" aria-label={`${BRAND} navigation`}>
       <div className="app-sidebar__brand">
         <span className="app-sidebar__logo" aria-hidden="true">☀️</span>
@@ -150,10 +150,8 @@ export function AppSidebar({
         </button>
       </nav>
 
-      <div className="app-sidebar__footer">
-        <UserMenu />
-        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-        {showBreakDemo && (
+      {showBreakDemo && (
+        <div className="app-sidebar__footer">
           <button
             type="button"
             className="app-sidebar__demo"
@@ -162,8 +160,17 @@ export function AppSidebar({
           >
             Trigger break
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
+
+    {/* Theme toggle floats at the screen's bottom-right. Rendered as a sibling
+        of the rail (not inside it) so `position: fixed` resolves to the viewport
+        rather than the sidebar's backdrop-filter context. Hidden on mobile via
+        CSS, where the top bar carries the theme toggle instead. */}
+    <div className="app-sidebar__theme-dock">
+      <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+    </div>
+    </>
   );
 }

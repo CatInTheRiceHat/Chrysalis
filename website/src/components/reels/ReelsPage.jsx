@@ -328,6 +328,8 @@ export function ReelsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const goToProfile = () => navigate(user ? '/profile' : '/login');
+  const goToCommunity = () => navigate('/community');
+  const goToSaved = () => navigate('/saved');
   const goHome = () => {
     if (LOCK_HOME_FROM_ALGORITHM) {
       announceStatus('Home stays locked while you are in the feed.');
@@ -553,8 +555,6 @@ export function ReelsPage() {
     scroller?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const comingSoon = (message) => () => announceStatus(message);
-
   return (
     <main
       className="reels-shell"
@@ -570,8 +570,8 @@ export function ReelsPage() {
           intentionLogo={currentMode?.logo}
           onHome={goHome}
           onFeed={scrollToTop}
-          onCommunity={comingSoon('Community is coming soon ✨')}
-          onSaved={comingSoon('Saved is coming soon — your kept videos will live here.')}
+          onCommunity={goToCommunity}
+          onSaved={goToSaved}
           onProfile={goToProfile}
           onOpenDetails={() => setCompassOpen(true)}
           detailsOpen={compassOpen}
@@ -671,8 +671,8 @@ export function ReelsPage() {
               active="feed"
               onHome={goHome}
               onFeed={scrollToTop}
-              onCommunity={comingSoon('Community is coming soon ✨')}
-              onSaved={comingSoon('Saved is coming soon — your kept videos will live here.')}
+              onCommunity={goToCommunity}
+              onSaved={goToSaved}
               onProfile={goToProfile}
             />
 

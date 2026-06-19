@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Bookmark, Loader2, NotebookPen } from 'lucide-react';
+import { ArrowLeft, Bookmark, Loader2, LogOut, Moon, NotebookPen, Sun } from 'lucide-react';
 import { useAuth } from '../../lib/authContext';
+import { useAppTheme } from '../../lib/useAppTheme';
 import { getMyProfile, getProfileByUsername } from '../../lib/profileApi';
 import { CxShell } from './CxShell';
 import { ProfileCard } from './ProfileCard';
-import { UserMenu } from './UserMenu';
 
 /**
  * Profile page for both the owner (/profile) and public viewers (/u/:username).
@@ -18,7 +18,13 @@ export function ProfilePage({ mode = 'me' }) {
   const isMe = mode === 'me';
   const navigate = useNavigate();
   const { username } = useParams();
-  const { configured, user, loading: authLoading } = useAuth();
+  const { configured, user, loading: authLoading, signOut } = useAuth();
+  const { theme, toggleTheme } = useAppTheme();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState('loading'); // loading | ok | empty | private
@@ -72,13 +78,36 @@ export function ProfilePage({ mode = 'me' }) {
 
   const isOwner = isMe || Boolean(profile && user && profile.id === user.id);
 
+  // Return to wherever the user came from, so opening Profile from Home lands them
+  // back on Home (which carries the Search/Inbox chrome) rather than always on the
+  // feed. Falls back to the feed when Profile was the entry point (deep link / fresh
+  // tab) and there's no in-app history to pop. React Router tracks position in
+  // history.state.idx; idx > 0 means there's an in-session page behind us.
+  const goBack = () => {
+    if ((window.history.state?.idx ?? 0) > 0) navigate(-1);
+    else navigate('/algorithm');
+  };
+
   return (
     <CxShell wide>
       <div className="cx-profilebar">
-        <Link to="/algorithm" className="cx-shell__back" aria-label="Back to your feed">
-          <ArrowLeft size={18} aria-hidden="true" /> Feed
-        </Link>
-        {isMe && <UserMenu />}
+        <button type="button" onClick={goBack} className="cx-shell__back" aria-label="Go back">
+          <ArrowLeft size={18} aria-hidden="true" /> Back
+        </button>
+        <div className="cx-profilebar__actions">
+          <button
+            type="button"
+            className="cx-iconbtn"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-pressed={theme === 'dark'}
+            title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          >
+            {theme === 'dark'
+              ? <Sun size={18} aria-hidden="true" />
+              : <Moon size={18} aria-hidden="true" />}
+          </button>
+        </div>
       </div>
 
       {status === 'loading' && (
@@ -127,6 +156,15 @@ export function ProfilePage({ mode = 'me' }) {
             </div>
           )}
         </>
+      )}
+
+      {/* Plain log-out for the signed-in owner (the account menu that used to
+          hold this was removed from the chrome). Shows across the ok/empty
+          states so it's always reachable from your own profile. */}
+      {isMe && user && (
+        <button type="button" className="cx-logout" onClick={handleSignOut}>
+          <LogOut size={15} aria-hidden="true" /> Log out
+        </button>
       )}
     </CxShell>
   );

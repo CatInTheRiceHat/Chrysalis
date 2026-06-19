@@ -1,7 +1,6 @@
 import { BRAND } from '../../brand.js';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion as MOTION } from 'motion/react';
 import { Inbox, Search } from 'lucide-react';
 import { useAuth } from '../../lib/authContext';
 import { AppSidebar } from '../reels/AppSidebar';
@@ -42,32 +41,19 @@ export function HomeShell({ active = 'home', children }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [theme, setTheme] = useState(initialTheme);
-  const [toast, setToast] = useState(null);
-  const toastSeq = useRef(0);
   const intention = currentIntention();
 
   useEffect(() => {
     window.localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
-  useEffect(() => {
-    if (!toast) return undefined;
-    const t = window.setTimeout(() => setToast(null), 3000);
-    return () => window.clearTimeout(t);
-  }, [toast]);
-
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
-  const announce = (message) => {
-    toastSeq.current += 1;
-    setToast({ id: toastSeq.current, message });
-  };
-  const comingSoon = (message) => () => announce(message);
 
   const nav = {
     onHome: () => navigate('/home'),
     onFeed: () => navigate('/algorithm'),
     onCommunity: () => navigate('/community'),
-    onSaved: comingSoon('Saved is coming soon — your kept moments will live here.'),
+    onSaved: () => navigate('/saved'),
     onProfile: () => navigate(user ? '/profile' : '/login'),
     onSearch: () => navigate('/search'),
     onInbox: () => navigate('/inbox'),
@@ -125,23 +111,6 @@ export function HomeShell({ active = 'home', children }) {
         onSaved={nav.onSaved}
         onProfile={nav.onProfile}
       />
-
-      <AnimatePresence>
-        {toast && (
-          <MOTION.div
-            key={toast.id}
-            className="reels-toast"
-            role="status"
-            aria-live="polite"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {toast.message}
-          </MOTION.div>
-        )}
-      </AnimatePresence>
     </main>
   );
 }

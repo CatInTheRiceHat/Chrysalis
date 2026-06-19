@@ -22,12 +22,13 @@ export function ReelActionRail({
   publicSignalReason,
   publicSignalEffect,
   sourceSafetyStatus,
+  saved = false,
+  onToggleSave,
   onStatus,
   onRegenerate,
   onComment,
 }) {
   const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [showReflect, setShowReflect] = useState(false);
   const [reflection, setReflection] = useState(null);
   const [showWhy, setShowWhy] = useState(false);
@@ -45,14 +46,10 @@ export function ReelActionRail({
     );
   };
 
+  // Persistence + status copy are owned by ReelCard (via useSavedVideos); the rail
+  // just reflects the `saved` prop and forwards the tap.
   const toggleSaved = () => {
-    const nextSaved = !saved;
-    setSaved(nextSaved);
-    announce(
-      nextSaved
-        ? 'Saved to your session collection.'
-        : 'Removed from your session collection.',
-    );
+    onToggleSave?.();
   };
 
   const toggleReflect = () => {
