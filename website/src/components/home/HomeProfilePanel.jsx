@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Compass, Pencil, Sparkles, UserCircle } from 'lucide-react';
@@ -35,9 +36,9 @@ export function HomeProfilePanel() {
 
   if (!user) {
     return (
-      <section className="home-signin" aria-label="Sign in to Chrysalis">
-        <span className="home-signin__mark" aria-hidden="true">🦋</span>
-        <h2 className="home-signin__title">Sign in to shape your Chrysalis profile</h2>
+      <section className="home-signin" aria-label={`Sign in to ${BRAND}`}>
+        <span className="home-signin__mark" aria-hidden="true">☀️</span>
+        <h2 className="home-signin__title">Sign in to shape your {BRAND} profile</h2>
         <p className="home-signin__copy">
           Save your intention, share small wins, and connect a little more calmly.
         </p>
@@ -63,7 +64,7 @@ export function HomeProfilePanel() {
         <span className="cx-avatar cx-avatar--lg home-me__avatar">
           {profile?.avatar_url
             ? <img src={profile.avatar_url} alt="" aria-hidden="true" />
-            : <img src="/images/butterfly.png" alt="" aria-hidden="true" />}
+            : <span className="cx-avatar__fallback" aria-hidden="true">🌊</span>}
         </span>
         <span className="home-me__names">
           <span className="home-me__name">{name}</span>

@@ -187,7 +187,7 @@ export function CustomCursor() {
         style={{ x: smoothX, y: smoothY }}
       >
         <span className="custom-cursor__aura" />
-        <img className="custom-cursor__logo" src="/images/logo.png" alt="" draggable="false" />
+        <span className="custom-cursor__logo" aria-hidden="true">☀️</span>
         <span className="custom-cursor__dot" />
       </motion.div>
       <div className="cursor-particles" aria-hidden="true">

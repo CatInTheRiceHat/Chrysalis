@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { Home, Film, Users, Bookmark, UserCircle } from 'lucide-react';
 
 /**
@@ -29,7 +30,7 @@ export function AppBottomNav({ active = 'home', onHome, onFeed, onCommunity, onS
   };
 
   return (
-    <nav className="app-bottomnav" aria-label="Chrysalis navigation">
+    <nav className="app-bottomnav" aria-label={`${BRAND} navigation`}>
       <ul className="app-bottomnav__list">
         {ITEMS.map((item) => {
           const isActive = item.key === active;

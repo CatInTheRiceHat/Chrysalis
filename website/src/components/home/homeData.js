@@ -21,7 +21,7 @@ export const DAILY_WINGS = [
     id: 'you',
     isSelf: true,
     firstName: 'You',
-    emoji: '🦋',
+    emoji: '🌊',
     activity: 'Share a wing',
     note: 'Add a small win from today.',
     hasImage: false,
@@ -38,7 +38,7 @@ export const DAILY_WINGS = [
     id: 'liam',
     firstName: 'Liam',
     emoji: '🎧',
-    activity: 'Taking a screen break 🦋',
+    activity: 'Taking a screen break 🌊',
     note: 'Stepping away for 20. Back later.',
     hasImage: true,
   },
@@ -196,7 +196,7 @@ export const SUGGESTED_SEARCHES = [
 
 /** Activity topics that the demo search can match against. */
 export const SEARCH_ACTIVITIES = [
-  { id: 'screen-break', label: 'Screen break', emoji: '🦋' },
+  { id: 'screen-break', label: 'Screen break', emoji: '🌊' },
   { id: 'study-reset', label: 'Study reset', emoji: '📚' },
   { id: 'on-a-walk', label: 'On a walk', emoji: '🌿' },
   { id: 'journaling', label: 'Journaling', emoji: '✍️' },

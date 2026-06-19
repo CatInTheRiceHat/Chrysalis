@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
@@ -56,8 +57,8 @@ export function AuthPage({ mode = 'login' }) {
 
       <div className="cx-card cx-card--auth">
         <div className="cx-brand">
-          <img src="/images/butterfly.png" alt="" className="cx-brand__logo" aria-hidden="true" />
-          <span className="cx-brand__word">Chrysalis</span>
+          <span className="cx-brand__logo" aria-hidden="true">☀️</span>
+          <span className="cx-brand__word">{BRAND}</span>
         </div>
 
         <h1 className="cx-card__title">
@@ -117,7 +118,7 @@ export function AuthPage({ mode = 'login' }) {
           {isSignup ? (
             <>Already here? <Link to="/login">Log in</Link></>
           ) : (
-            <>New to Chrysalis? <Link to="/signup">Create your space</Link></>
+            <>New to {BRAND}? <Link to="/signup">Create your space</Link></>
           )}
         </p>
       </div>

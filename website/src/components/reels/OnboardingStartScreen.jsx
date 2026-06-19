@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { useState } from 'react';
 import { motion as MOTION } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
@@ -29,7 +30,7 @@ export function OnboardingStartScreen({ initialMode = null, onStart }) {
         </p>
       </div>
 
-      <div className="mode-grid" role="group" aria-label="Choose your Chrysalis algorithm mode">
+      <div className="mode-grid" role="group" aria-label={`Choose your ${BRAND} algorithm mode`}>
         {MODES.map((mode) => {
           const isSelected = mode.key === selectedMode;
           return (
@@ -41,7 +42,7 @@ export function OnboardingStartScreen({ initialMode = null, onStart }) {
               onClick={() => setSelectedMode(mode.key)}
             >
               <span className="mode-card__logo" aria-hidden="true">
-                <img src={mode.logo} alt="" loading="lazy" />
+                {mode.logo}
               </span>
               <span className="mode-card__title">{mode.label}</span>
               <span className="mode-card__desc">{mode.description}</span>

@@ -173,7 +173,13 @@ TRUSTED_CHANNEL_MIN_COUNT = 1
 #   * Start small: 3–5 approved channels.
 #   * Do NOT approve dozens at once — watch your YouTube Data API quota for a day
 #     after the first run before scaling up.
-MAX_TRUSTED_CHANNELS_PER_RUN = 5
+#
+# Policy: video EXTRACTION (the search lanes) takes priority over the trusted-
+# creator list for the constrained daily quota. We deliberately keep this cap low
+# so the creator lane spends ≤ 2 × 100 units/run, leaving headroom for extraction
+# rather than pushing the day toward the 10k-unit ceiling. Raising it trades
+# directly against extraction quota — see _resolve_max_trusted_channels override.
+MAX_TRUSTED_CHANNELS_PER_RUN = 2
 
 
 def _resolve_max_trusted_channels(explicit: int | None = None) -> int:

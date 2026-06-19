@@ -56,7 +56,7 @@
   font-weight: 800;
   letter-spacing: -0.01em;
 }
-.home-topbar__brand img { width: 26px; height: 26px; object-fit: contain; }
+.home-topbar__brandmark { font-size: 22px; line-height: 1; }
 .home-topbar__actions { display: flex; align-items: center; gap: 6px; }
 .home-iconbtn {
   display: inline-flex;

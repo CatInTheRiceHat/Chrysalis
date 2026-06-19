@@ -53,7 +53,7 @@ export function AvatarUploader({ currentUrl, displayName, onUploaded }) {
         <span className="cx-avatar cx-avatar--lg">
           {shownUrl
             ? <img src={shownUrl} alt={displayName ? `${displayName}'s avatar` : 'Your avatar'} />
-            : <img src="/images/butterfly.png" alt="" aria-hidden="true" />}
+            : <span className="cx-avatar__fallback" aria-hidden="true">🌊</span>}
         </span>
         <span className="cx-avataruploader__overlay" aria-hidden="true">
           {busy ? <Loader2 size={18} className="cx-spin" /> : <Camera size={18} />}

@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { Palette } from 'lucide-react';
 
 /**
@@ -20,7 +21,7 @@ export function ColorPreviewToggle({ preview, onToggle }) {
       className={isOn ? 'reels-fab is-on' : 'reels-fab'}
       onClick={onToggle}
       aria-pressed={isOn}
-      aria-label={isOn ? 'Sunshine preview on. Switch to Chrysalis purple.' : 'Switch to Sunshine preview.'}
+      aria-label={isOn ? `Sunshine preview on. Switch to ${BRAND} purple.` : 'Switch to Sunshine preview.'}
       title="Sunshine preview"
     >
       <Palette size={18} aria-hidden="true" />

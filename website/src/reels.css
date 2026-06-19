@@ -997,11 +997,7 @@
   height: 52px;
   overflow: hidden;
 }
-.mode-card__logo img {
-  width: 82%;
-  height: 82%;
-  object-fit: contain;
-}
+.mode-card__logo { font-size: 30px; line-height: 1; }
 .mode-card__title {
   font-family: var(--font-reels-heading);
   font-size: 0.98rem;
@@ -2443,11 +2439,11 @@
   transition: transform 0.2s ease;
 }
 .app-topbar__home:hover { transform: translateY(-2px); }
-.app-topbar__logo img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  display: block;
+.app-topbar__logo {
+  font-size: 24px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
 }
 .app-topbar__wordmark {
   font-family: var(--font-reels-heading);
@@ -2478,12 +2474,13 @@
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
 }
-.app-topbar__intention-logo img {
+.app-topbar__intention-logo {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  line-height: 1;
 }
 .app-topbar__intention-text {
   display: flex;
@@ -2719,7 +2716,7 @@
   color: var(--text);
   min-width: 0;
 }
-.app-sidebar__logo img { width: 32px; height: 32px; object-fit: contain; display: block; }
+.app-sidebar__logo { font-size: 28px; line-height: 1; display: inline-flex; align-items: center; }
 .app-sidebar__wordmark {
   font-family: var(--font-reels-heading);
   font-weight: 400;
@@ -2749,12 +2746,13 @@
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   background: color-mix(in srgb, var(--accent-soft) 22%, transparent);
 }
-.app-sidebar__intention-logo img {
+.app-sidebar__intention-logo {
   width: 34px;
   height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  line-height: 1;
 }
 .app-sidebar__intention-text {
   display: flex;

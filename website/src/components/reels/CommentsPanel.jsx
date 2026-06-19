@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { useEffect, useRef, useState } from 'react';
 import { Ban, Flag, MessageCircle, Send, ShieldCheck, X } from 'lucide-react';
 import { SEED_COMMENTS } from './commentsData';
@@ -35,7 +36,7 @@ export function CommentsPanel({ onClose, onStatus }) {
   const post = (body) => {
     setComments((previous) => [
       ...previous,
-      { id: `you-${Date.now()}`, authorId: 'you', author: 'You', emoji: '🦋', text: body, isYou: true },
+      { id: `you-${Date.now()}`, authorId: 'you', author: 'You', emoji: '🌊', text: body, isYou: true },
     ]);
     setText('');
     setPending(null);
@@ -82,7 +83,7 @@ export function CommentsPanel({ onClose, onStatus }) {
 
   const handleReport = (comment) => {
     setComments((previous) => previous.filter((item) => item.id !== comment.id));
-    onStatus?.('Reported. Thanks for helping keep Chrysalis kind.');
+    onStatus?.(`Reported. Thanks for helping keep ${BRAND} kind.`);
   };
 
   return (

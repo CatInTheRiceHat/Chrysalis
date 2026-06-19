@@ -2028,10 +2028,9 @@ a {
 }
 
 .ct-nav__mark {
-  width: 34px;
-  height: 34px;
+  font-size: 28px;
+  line-height: 1;
   display: block;
-  object-fit: contain;
   filter: drop-shadow(0 8px 16px rgba(43, 38, 49, 0.12));
 }
 
@@ -2088,10 +2087,9 @@ a {
 }
 
 .ct-overlay-brand__mark {
-  width: 38px;
-  height: 38px;
+  font-size: 32px;
+  line-height: 1;
   display: block;
-  object-fit: contain;
   filter: drop-shadow(0 0 18px rgba(173, 158, 184, 0.34));
 }
 
@@ -2217,9 +2215,9 @@ a {
 }
 
 .intro-logo {
-  width: 92px;
-  height: 92px;
-  object-fit: contain;
+  font-size: 92px;
+  line-height: 1;
+  display: inline-block;
   filter:
     drop-shadow(0 18px 34px rgba(0, 0, 0, 0.22))
     drop-shadow(0 0 30px rgba(173, 158, 184, 0.32));
@@ -2341,6 +2339,8 @@ a {
   top: -22px;
   width: 36px;
   height: 36px;
+  font-size: 30px;
+  line-height: 1;
   display: block;
   object-fit: contain;
   pointer-events: none;
@@ -2478,8 +2478,11 @@ a {
   width: 4rem;
   height: 4rem;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  background: url("/images/butterfly.png") center / contain no-repeat;
+  font-size: 3.2rem;
+  line-height: 1;
   filter:
     drop-shadow(0 12px 20px rgba(43, 38, 49, 0.12))
     drop-shadow(0 0 18px rgba(124, 109, 140, 0.18));
@@ -2488,12 +2491,16 @@ a {
 .algorithm-blank-mark--small {
   width: 2.25rem;
   height: 2.25rem;
+  font-size: 1.85rem;
 }
 
 .algorithm-blank-mark--tiny {
   width: 0.75rem;
   height: 0.75rem;
+  font-size: 0.7rem;
 }
+
+.algorithm-blank-mark::before { content: "☀️"; }
 
 .metric-bar {
   height: 6px;

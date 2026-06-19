@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 /**
  * Friends-only messaging rule for Chrysalis. Pure + testable (messaging.test.js).
  *
@@ -9,7 +10,7 @@
 import { DEMO_FRIENDS } from './challengesData.js';
 
 export const FRIENDS_ONLY_MESSAGE =
-  'Messaging on Chrysalis is friends-only. Add each other as friends to start a chat.';
+  `Messaging on ${BRAND} is friends-only. Add each other as friends to start a chat.`;
 
 /** Friend ids for the signed-in demo user (the leaderboard friends). */
 export function friendIds(friends = DEMO_FRIENDS) {

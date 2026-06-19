@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 /**
  * Simple, rule-based comment safety for Chrysalis. Pure and deterministic so it is
  * unit-testable (see commentSafety.test.js). No ML, no political judgement — just a
@@ -36,11 +37,11 @@ const INSULT_PATTERNS = [
 const REWRITE_PROMPTS = [
   'This might come across as harsh. Want to rewrite it?',
   'Try making your point without attacking someone.',
-  'Chrysalis keeps conversations safe and respectful.',
+  `${BRAND} keeps conversations safe and respectful.`,
 ];
 
 const BLOCK_PROMPTS = [
-  "Let's keep Chrysalis kind — this could really hurt someone. Want to rephrase?",
+  `Let's keep ${BRAND} kind — this could really hurt someone. Want to rephrase?`,
   'That reads as a personal attack. Try saying it without the harm.',
 ];
 

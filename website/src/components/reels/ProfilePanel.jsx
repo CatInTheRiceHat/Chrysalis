@@ -29,7 +29,7 @@ export function ProfilePanel({
   const connect = (person) => {
     if (person.isFriend) return;
     onConnect?.(person.id);
-    onStatus?.(person.isConnected ? `Disconnected from ${person.displayName}.` : `You and ${person.displayName} are connected 🦋`);
+    onStatus?.(person.isConnected ? `Disconnected from ${person.displayName}.` : `You and ${person.displayName} are connected 🌊`);
   };
 
   return (

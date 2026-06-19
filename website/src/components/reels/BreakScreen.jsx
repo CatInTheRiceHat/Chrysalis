@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion as MOTION } from 'motion/react';
 import { Check, Leaf, Pause, Play, RotateCcw } from 'lucide-react';
@@ -74,7 +75,7 @@ export function BreakScreen({ tier, elapsedMin, onComplete, onOpenChallenges }) 
       >
         <span className="break-screen__eyebrow">
           <Leaf size={14} aria-hidden="true" />
-          Chrysalis reset
+          {BRAND} reset
         </span>
         <h2 className="break-screen__title">{heading}</h2>
         <p className="break-screen__copy">

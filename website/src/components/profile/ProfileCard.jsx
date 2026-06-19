@@ -27,7 +27,7 @@ export function ProfileCard({ profile, isOwner = false, onEdit }) {
         <span className="cx-avatar cx-avatar--lg">
           {profile.avatar_url
             ? <img src={profile.avatar_url} alt={`${name}'s avatar`} />
-            : <img src="/images/butterfly.png" alt="" aria-hidden="true" />}
+            : <span className="cx-avatar__fallback" aria-hidden="true">🌊</span>}
         </span>
 
         <div className="cx-profilecard__meta">

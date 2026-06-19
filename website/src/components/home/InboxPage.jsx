@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { Lock } from 'lucide-react';
 import { HomeShell } from './HomeShell';
 import { INBOX_PREVIEWS } from './homeData';
@@ -18,10 +19,10 @@ export function InboxPage() {
         <h1 className="page-title">Inbox</h1>
 
         <section className="inbox-empty" aria-label="Messages coming soon">
-          <span className="inbox-empty__mark" aria-hidden="true">🦋</span>
+          <span className="inbox-empty__mark" aria-hidden="true">☀️</span>
           <h2 className="inbox-empty__title">Messages are coming soon.</h2>
           <p className="inbox-empty__copy">
-            Chrysalis messages are designed for safer, more intentional connection.
+            {BRAND} messages are designed for safer, more intentional connection.
           </p>
           <span className="inbox-empty__safe">
             <Lock size={13} aria-hidden="true" /> Friends-only, when it arrives

@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion as MOTION } from 'motion/react';
@@ -97,9 +98,9 @@ export function HomeShell({ active = 'home', children }) {
 
       {/* Mobile-only top bar: brand + Search + Inbox (kept out of the bottom nav). */}
       <header className="home-topbar">
-        <Link to="/home" className="home-topbar__brand" aria-label="Chrysalis home">
-          <img src="/images/butterfly.png" alt="" aria-hidden="true" />
-          <span>Chrysalis</span>
+        <Link to="/home" className="home-topbar__brand" aria-label={`${BRAND} home`}>
+          <span className="home-topbar__brandmark" aria-hidden="true">☀️</span>
+          <span>{BRAND}</span>
         </Link>
         <div className="home-topbar__actions">
           <button type="button" className="home-iconbtn" onClick={nav.onSearch} aria-label="Search">

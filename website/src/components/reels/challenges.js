@@ -119,7 +119,7 @@ export function badgeShelf(stats) {
  * then streak. Returns rows annotated with rank and isYou.
  */
 export function buildLeaderboard(stats, friends = DEMO_FRIENDS) {
-  const you = { id: 'you', name: 'You', emoji: '🦋', points: stats?.points || 0, streak: stats?.streak || 0, isYou: true };
+  const you = { id: 'you', name: 'You', emoji: '🌊', points: stats?.points || 0, streak: stats?.streak || 0, isYou: true };
   const rows = [...friends.map((f) => ({ ...f, isYou: false })), you]
     .sort((a, b) => (b.points - a.points) || (b.streak - a.streak) || a.name.localeCompare(b.name));
   return rows.map((row, index) => ({ ...row, rank: index + 1 }));

@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { useState } from 'react';
 import { Heart, Bookmark, MessageCircle, Sparkles, RefreshCw, HelpCircle, Share2, X } from 'lucide-react';
 import { FEED_BALANCE_COPY } from './feedTaxonomy';
@@ -89,10 +90,10 @@ export function ReelActionRail({
 
   const handleShare = async () => {
     const pageUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareTitle = title ? `${title} | Chrysalis` : 'Chrysalis algorithm card';
+    const shareTitle = title ? `${title} | ${BRAND}` : `${BRAND} algorithm card`;
     const shareText = source
-      ? `A Chrysalis algorithm card from ${source}.`
-      : 'A Chrysalis algorithm card for a calmer session.';
+      ? `A ${BRAND} algorithm card from ${source}.`
+      : `A ${BRAND} algorithm card for a calmer session.`;
 
     try {
       if (navigator.share) {

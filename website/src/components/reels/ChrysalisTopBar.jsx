@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, SlidersHorizontal, Trophy, UserCircle } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
@@ -42,13 +43,11 @@ export function ChrysalisTopBar({
   return (
     <header className="app-topbar" data-algorithm-topbar>
       <div className="app-topbar__brand">
-        <Link to="/" className="app-topbar__home" aria-label="Back to Chrysalis home">
+        <Link to="/" className="app-topbar__home" aria-label={`Back to ${BRAND} home`}>
           <ArrowLeft size={18} aria-hidden="true" />
         </Link>
-        <span className="app-topbar__logo" aria-hidden="true">
-          <img src="/images/butterfly.png" alt="" />
-        </span>
-        <span className="app-topbar__wordmark">Chrysalis</span>
+        <span className="app-topbar__logo" aria-hidden="true">☀️</span>
+        <span className="app-topbar__wordmark">{BRAND}</span>
       </div>
 
       {showActions ? (
@@ -62,7 +61,7 @@ export function ChrysalisTopBar({
           title="Your intention — tap for feed details"
         >
           <span className="app-topbar__intention-logo" aria-hidden="true">
-            <img src={intentionLogo || '/images/flutter-feed.png'} alt="" />
+            {intentionLogo || '🌊'}
           </span>
           <span className="app-topbar__intention-text">
             <span className="app-topbar__intention-eyebrow">Your intention</span>

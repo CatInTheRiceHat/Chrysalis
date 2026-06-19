@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import {
   Leaf,
   RefreshCw,
@@ -95,7 +96,7 @@ function displayValue(value, isRisk = false) {
 function statusLabel(feedStatus) {
   if (feedStatus === 'live') return 'Using live curated videos';
   if (feedStatus === 'mixed') return 'Mixed live videos + pause cards';
-  return 'Using sample Chrysalis cards for now';
+  return `Using sample ${BRAND} cards for now`;
 }
 
 function sessionPace(viewedCount) {

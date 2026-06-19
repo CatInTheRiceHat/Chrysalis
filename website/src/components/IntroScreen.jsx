@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { useEffect, useRef, useState } from 'react';
 import { motion as MOTION, useReducedMotion } from 'motion/react';
 
@@ -45,7 +46,7 @@ export function IntroScreen({ onDone }) {
         transition={{ duration: 1.45, ease: [0.22, 1, 0.36, 1] }}
         aria-hidden="true"
       >
-        <img className="intro-logo" src="/images/butterfly.png" alt="" />
+        <span className="intro-logo" role="img" aria-label={BRAND}>☀️</span>
       </MOTION.div>
       <MOTION.p
         className="intro-eyebrow"
@@ -53,7 +54,7 @@ export function IntroScreen({ onDone }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.35 }}
       >
-        Chrysalis
+        {BRAND}
       </MOTION.p>
       <MOTION.h1
         className="intro-title"

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { BRAND } from './brand.js';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Lenis from 'lenis';
 import { AnimatePresence } from 'motion/react';
@@ -112,6 +113,10 @@ function App() {
     }
     return true;
   });
+
+  useEffect(() => {
+    document.title = `${BRAND} — by Elaine Che`;
+  }, []);
 
   return (
     <BrowserRouter>

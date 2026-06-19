@@ -73,7 +73,7 @@
 
 /* Brand */
 .cx-brand { display: flex; align-items: center; gap: 9px; }
-.cx-brand__logo { width: 30px; height: 30px; object-fit: contain; }
+.cx-brand__logo { font-size: 26px; line-height: 1; }
 .cx-brand__word { font-family: 'Abril Fatface', serif; font-size: 1.35rem; }
 
 /* Cards */
@@ -174,6 +174,7 @@
 .cx-avatar--lg { width: clamp(80px, 22vw, 104px); height: clamp(80px, 22vw, 104px); }
 .cx-avatar--sm { width: 34px; height: 34px; }
 .cx-avatar__initial { font-weight: 700; color: var(--accent); }
+.cx-avatar__fallback { font-size: 2.4rem; line-height: 1; }
 
 /* Avatar uploader */
 .cx-avataruploader { display: flex; align-items: center; gap: 14px; }

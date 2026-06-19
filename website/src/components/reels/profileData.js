@@ -48,7 +48,7 @@ export const FAVORITE_ACTIVITIES = [
 export const DEFAULT_PROFILE = {
   displayName: 'You',
   handle: '@you',
-  emoji: '🦋',
+  emoji: '🌊',
   bio: 'Here for a calmer, kinder feed and more real-life moments.',
   goals: ['less-doomscroll', 'more-offline', 'better-friendships'],
   interests: ['journaling', 'walking', 'music'],

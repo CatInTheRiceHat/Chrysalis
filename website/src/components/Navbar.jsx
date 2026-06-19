@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion as MOTION } from 'motion/react';
@@ -71,8 +72,8 @@ export function Navbar() {
             className="ct-nav__brand"
             aria-label="Go to homepage"
           >
-            <img className="ct-nav__mark" src="/images/butterfly.png" alt="" aria-hidden="true" />
-            <span>Chrysalis</span>
+            <span className="ct-nav__mark" aria-hidden="true">☀️</span>
+            <span>{BRAND}</span>
           </button>
 
           <div className="ct-nav__links">
@@ -135,8 +136,8 @@ export function Navbar() {
             >
               <div className="nav-overlay__top">
                 <div className="ct-overlay-brand">
-                  <img className="ct-overlay-brand__mark" src="/images/butterfly.png" alt="" aria-hidden="true" />
-                  <span>Chrysalis</span>
+                  <span className="ct-overlay-brand__mark" aria-hidden="true">☀️</span>
+                  <span>{BRAND}</span>
                 </div>
                 <button
                   type="button"

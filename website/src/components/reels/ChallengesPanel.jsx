@@ -35,9 +35,9 @@ export function ChallengesPanel({
     const link = `${typeof window !== 'undefined' ? window.location.origin : ''}/algorithm?invite=chrysalis`;
     try {
       await navigator.clipboard?.writeText(link);
-      onStatus?.('Invite link copied — share it with a friend! 🦋');
+      onStatus?.('Invite link copied — share it with a friend! 🌊');
     } catch {
-      onStatus?.('Invite a friend to do challenges with you! 🦋');
+      onStatus?.('Invite a friend to do challenges with you! 🌊');
     }
   };
 

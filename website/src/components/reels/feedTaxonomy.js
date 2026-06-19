@@ -1,4 +1,5 @@
-export const FEED_BALANCE_COPY = 'Chrysalis mixes positive, wellness, perspective, and regular videos so your feed stays fun without becoming draining.';
+import { BRAND } from '../../brand.js';
+export const FEED_BALANCE_COPY = `${BRAND} mixes positive, wellness, perspective, and regular videos so your feed stays fun without becoming draining.`;
 
 const CATEGORY_BADGES = {
   healthy: { label: 'Healthy', tone: 'healthy' },

@@ -1,3 +1,4 @@
+import { BRAND } from '../../brand.js';
 import { Link } from 'react-router-dom';
 import { Home, Film, Users, Bookmark, UserCircle, SlidersHorizontal, Trophy, Search, Inbox } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
@@ -48,12 +49,10 @@ export function AppSidebar({
   };
 
   return (
-    <aside className="app-sidebar" aria-label="Chrysalis navigation">
-      <Link to="/" className="app-sidebar__brand" aria-label="Back to Chrysalis home">
-        <span className="app-sidebar__logo" aria-hidden="true">
-          <img src="/images/butterfly.png" alt="" />
-        </span>
-        <span className="app-sidebar__wordmark">Chrysalis</span>
+    <aside className="app-sidebar" aria-label={`${BRAND} navigation`}>
+      <Link to="/" className="app-sidebar__brand" aria-label={`Back to ${BRAND} home`}>
+        <span className="app-sidebar__logo" aria-hidden="true">☀️</span>
+        <span className="app-sidebar__wordmark">{BRAND}</span>
       </Link>
 
       <button
@@ -66,7 +65,7 @@ export function AppSidebar({
         title="Your intention — open feed details"
       >
         <span className="app-sidebar__intention-logo" aria-hidden="true">
-          <img src={intentionLogo || '/images/flutter-feed.png'} alt="" />
+          {intentionLogo || '🌊'}
         </span>
         <span className="app-sidebar__intention-text">
           <span className="app-sidebar__intention-eyebrow">Your intention</span>
