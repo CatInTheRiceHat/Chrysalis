@@ -1,31 +1,33 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   Chrysalis auth + profile pages. Self-contained calm aesthetic (purple/gray,
-   butterfly), matching the feed's palette. Light by default, dark via the OS
-   preference. The cx-* tokens are also used by UserMenu inside the feed, where
-   the feed's [data-algorithm] tokens supply the same variables.
+   SunSocial auth + profile pages. Yellow/blue "Sunshine" aesthetic matching the
+   feed (see [data-algorithm][data-color-preview="yellow"] in reels.css): blue is
+   the interactive accent (buttons, links, focus), yellow is the fill accent, and
+   borders are a soft cool blue. Light by default, dark via the OS preference.
+   The cx-* tokens are also used by UserMenu inside the feed, where the feed's
+   [data-algorithm] tokens supply the same variables.
    ───────────────────────────────────────────────────────────────────────── */
 [data-cx] {
-  --bg: #faf9f6;
-  --bg-soft: #f2eef5;
+  --bg: #fffef4;                       /* soft warm white base */
+  --bg-soft: #fff7cf;                  /* pale yellow surface (inputs/notices) */
   --text: #2b2631;
-  --text-muted: #938e97;
+  --text-muted: #8a8577;
   --card: #ffffff;
-  --border: rgba(147, 142, 151, 0.28);
-  --accent: #7c6d8c;
-  --accent-soft: #ad9eb8;
-  --button-bg: rgba(250, 249, 246, 0.72);
+  --border: rgba(162, 196, 253, 0.50); /* cool blue outline (A2C4FD) */
+  --accent: #3f86e8;                   /* sunshine blue — buttons / links / focus */
+  --accent-soft: #ffde86;              /* sunshine yellow — accent fills */
+  --button-bg: rgba(255, 250, 184, 0.55);
 }
 @media (prefers-color-scheme: dark) {
   [data-cx] {
-    --bg: #161320;
-    --bg-soft: #1f1a2b;
-    --text: #efeaf3;
-    --text-muted: #a79fb2;
-    --card: #221c30;
-    --border: rgba(173, 158, 184, 0.22);
-    --accent: #c9b8d8;
-    --accent-soft: #8d7ca0;
-    --button-bg: rgba(34, 28, 48, 0.62);
+    --bg: #141621;
+    --bg-soft: #1d2030;
+    --text: #f4f1e9;
+    --text-muted: #a9a594;
+    --card: #1f2231;
+    --border: rgba(162, 196, 253, 0.30);
+    --accent: #6ea8ff;                 /* lighter sunshine blue for dark */
+    --accent-soft: #ffe79e;
+    --button-bg: rgba(30, 34, 49, 0.62);
   }
 }
 
@@ -41,6 +43,13 @@
     radial-gradient(circle at 16% 10%, color-mix(in srgb, var(--accent-soft) 22%, transparent), transparent 30rem),
     radial-gradient(circle at 86% 88%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 28rem),
     var(--bg);
+}
+/* Vertically + horizontally center the column (used by the login/signup box). */
+.cx-shell--center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .cx-shell__inner {
   width: min(440px, 100%);
