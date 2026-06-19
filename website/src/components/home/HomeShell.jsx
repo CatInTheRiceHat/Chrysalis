@@ -74,8 +74,10 @@ export function HomeShell({ active = 'home', children }) {
     onOpenChallenges: () => navigate('/algorithm'),
   };
 
+  // TEMP — data-color-preview="yellow" applies the Sunshine default on Home to
+  // match the feed; remove that attribute to revert Home to Chrysalis purple.
   return (
-    <main className="reels-shell home-shell" data-algorithm data-theme={theme} data-onboarded="true">
+    <main className="reels-shell home-shell" data-algorithm data-theme={theme} data-color-preview="yellow" data-onboarded="true">
       <AppSidebar
         active={active}
         intentionLabel={intention?.label ?? 'Flutter Feed'}

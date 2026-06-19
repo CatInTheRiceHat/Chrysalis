@@ -25,9 +25,16 @@
   --overlay:      linear-gradient(to top, rgba(43, 38, 49, 0.62) 0%, rgba(43, 38, 49, 0.18) 38%, transparent 60%);
   --button-bg:    rgba(250, 249, 246, 0.72);
   --button-text:  #2b2631;
+  --on-accent:    #fff;
 
   --reel-shadow:  0 24px 60px rgba(43, 38, 49, 0.16);
   --reel-radius:  28px;
+
+  /* Typography — League Spartan for headings/labels, Sanchez for body.
+     Scoped here (not the global --font-heading/--font-body) so only the
+     algorithm feed + Home use them. */
+  --font-reels-heading: "League Spartan", sans-serif;
+  --font-reels-body:    "Sanchez", serif;
 }
 
 [data-algorithm][data-theme="dark"] {
@@ -50,10 +57,44 @@
   --overlay:      linear-gradient(to top, rgba(10, 8, 14, 0.74) 0%, rgba(10, 8, 14, 0.24) 38%, transparent 60%);
   --button-bg:    rgba(34, 28, 48, 0.62);
   --button-text:  #efeaf3;
+  --on-accent:    #fff;
 
   --reel-shadow:  0 24px 60px rgba(0, 0, 0, 0.45);
   --reel-radius:  28px;
 }
+
+/* ============================================================
+   TEMP — Sunshine (yellow/blue) preview theme.
+   Active when .reels-shell carries data-color-preview="yellow"
+   (the current project default; toggle in the feed top bar flips
+   it back to Chrysalis purple).
+   To remove the preview entirely: delete this whole block, delete
+   ColorPreviewToggle + its state in ReelsPage, and remove the
+   data-color-preview attributes from ReelsPage / HomeShell.
+   ============================================================ */
+
+/* Light theme + preview: yellow surfaces, yellow/blue accents. */
+[data-algorithm]:not([data-theme="dark"])[data-color-preview="yellow"] {
+  --bg:          #fffef4;                                 /* soft warm white base         */
+  --bg-soft:     #FFFAB8;                                 /* main yellow surface/highlight */
+  --accent:      #FFDE86;                                 /* accent yellow — accents/buttons/borders */
+  --accent-soft: #B7E7F6;                                 /* secondary blue accent         */
+  --border:      rgba(162, 196, 253, 0.50);              /* cool blue outline (A2C4FD)    */
+  --button-bg:   rgba(255, 250, 184, 0.72);              /* translucent main yellow       */
+  --reel-shadow: 0 24px 60px rgba(162, 196, 253, 0.50); /* blue glow / shadow            */
+  --on-accent:   #2b2631;                                /* dark text on now-pale fills   */
+}
+
+/* Dark theme + preview: keep dark surfaces, recolor accents + glow only
+   so dark mode stays dark. */
+[data-algorithm][data-theme="dark"][data-color-preview="yellow"] {
+  --accent:      #FFDE86;
+  --accent-soft: #B7E7F6;
+  --border:      rgba(162, 196, 253, 0.38);
+  --reel-shadow: 0 24px 60px rgba(162, 196, 253, 0.45);
+  --on-accent:   #2b2631;
+}
+/* ===================== end Sunshine preview ================= */
 
 /* ── Page shell ─────────────────────────────────────────────────────────── */
 .reels-shell {
@@ -64,7 +105,7 @@
     radial-gradient(circle at 84% 88%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 30rem),
     var(--bg);
   color: var(--text);
-  font-family: "Montserrat", sans-serif;
+  font-family: var(--font-reels-body);
   overflow: hidden;
 }
 
@@ -177,7 +218,7 @@
 .reel-action:active .reel-action__btn { transform: scale(0.94); }
 .reel-action__btn.is-on {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-color: transparent;
 }
 .reel-action__label {
@@ -268,7 +309,7 @@
   max-width: min(100%, 24ch);
 }
 .reel-caption__title {
-  font-family: "Abril Fatface", serif;
+  font-family: var(--font-reels-heading);
   font-weight: 400;
   font-size: clamp(1.4rem, 4.6vw, 1.8rem);
   line-height: 1.08;
@@ -394,6 +435,12 @@
   transition: transform 0.2s ease, background 0.2s ease;
 }
 .reels-fab { width: 42px; justify-content: center; padding: 0; }
+/* TEMP — active state for the Sunshine preview toggle (ColorPreviewToggle). */
+.reels-fab.is-on {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
 .reels-fab:hover,
 .reel-back:hover { transform: translateY(-2px); }
 .reel-back {
@@ -548,10 +595,11 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
+  font-family: var(--font-reels-heading);
 }
 [data-algorithm] .feed-compass h2 {
   margin: 0;
-  font-family: "Abril Fatface", serif;
+  font-family: var(--font-reels-heading);
   font-size: clamp(1.35rem, 2.5vw, 1.85rem);
   font-weight: 400;
   line-height: 1.05;
@@ -598,6 +646,7 @@
   gap: 7px;
   margin-bottom: 10px;
   color: var(--accent);
+  font-family: var(--font-reels-heading);
   font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -744,6 +793,7 @@
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  font-family: var(--font-reels-heading);
 }
 [data-algorithm] .feed-compass__category--healthy,
 .reel-why__badge--healthy { background: color-mix(in srgb, var(--tone-healthy) 24%, var(--card)); border-color: color-mix(in srgb, var(--tone-healthy) 48%, transparent); }
@@ -813,7 +863,7 @@
 [data-algorithm] .feed-compass__tunes button.is-selected {
   border-color: transparent;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 [data-algorithm][data-theme="dark"] .feed-compass__tunes button.is-selected {
@@ -899,7 +949,7 @@
 }
 .reels-onboard__title {
   margin: 0;
-  font-family: "Abril Fatface", serif;
+  font-family: var(--font-reels-heading);
   font-weight: 400;
   font-size: clamp(1.7rem, 5.5vw, 2.6rem);
   line-height: 1.08;
@@ -953,6 +1003,7 @@
   object-fit: contain;
 }
 .mode-card__title {
+  font-family: var(--font-reels-heading);
   font-size: 0.98rem;
   font-weight: 600;
   line-height: 1.25;
@@ -982,7 +1033,7 @@
   border-radius: 999px;
   border: none;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 600;
@@ -1017,6 +1068,7 @@
 
 /* ── Current mode pill (informational, not a switcher) ─────────────────── */
 .algorithm-mode-pill {
+  font-family: var(--font-reels-heading);
   justify-self: center;
   display: inline-flex;
   align-items: center;
@@ -1465,7 +1517,7 @@
 .reel-reflect__chips button.is-selected {
   border-color: transparent;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 [data-algorithm][data-theme="dark"] .reel-reflect__chips button.is-selected {
   color: var(--bg);
@@ -1695,7 +1747,7 @@
 .lang-setup__btn--primary {
   border-color: transparent;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .lang-setup__btn--ghost {
   background: transparent;
@@ -2398,7 +2450,7 @@
   display: block;
 }
 .app-topbar__wordmark {
-  font-family: "Abril Fatface", serif;
+  font-family: var(--font-reels-heading);
   font-weight: 400;
   font-size: 1.2rem;
   letter-spacing: 0.01em;
@@ -2669,7 +2721,7 @@
 }
 .app-sidebar__logo img { width: 32px; height: 32px; object-fit: contain; display: block; }
 .app-sidebar__wordmark {
-  font-family: "Abril Fatface", serif;
+  font-family: var(--font-reels-heading);
   font-weight: 400;
   font-size: 1.3rem;
   white-space: nowrap;
@@ -2767,7 +2819,7 @@
   padding: 0 4px;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.6rem;
   font-weight: 700;
   display: grid;

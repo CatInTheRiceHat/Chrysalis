@@ -291,6 +291,10 @@ function applySessionTuning(cards, mode, selectedTunes) {
 export function ReelsPage() {
   const scrollRef = useRef(null);
   const [theme, setTheme] = useState(initialTheme);
+  // TEMP — Sunshine (yellow/blue) color preview. Defaults ON (current project
+  // theme); the top-bar toggle flips the feed back to Chrysalis purple. Remove
+  // this state + the data-color-preview attr + ColorPreviewToggle to delete.
+  const [colorPreview, setColorPreview] = useState('yellow');
   const [onboarded, setOnboarded] = useState(initialOnboarded);
   const [mode, setMode] = useState(initialMode);
   const [modeSelectionInitial, setModeSelectionInitial] = useState(null);
@@ -390,6 +394,7 @@ export function ReelsPage() {
   }, [toast]);
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  const toggleColorPreview = () => setColorPreview((p) => (p === 'yellow' ? 'off' : 'yellow'));
 
   const startFeed = (chosenMode) => {
     const nextMode = reelsByMode[chosenMode] ? chosenMode : DEFAULT_MODE;
@@ -482,6 +487,7 @@ export function ReelsPage() {
       className="reels-shell"
       data-algorithm
       data-theme={theme}
+      data-color-preview={colorPreview === 'yellow' ? 'yellow' : undefined}
       data-onboarded={onboarded ? 'true' : 'false'}
     >
       {onboarded && (
@@ -512,6 +518,8 @@ export function ReelsPage() {
         intentionLogo={currentMode?.logo}
         theme={theme}
         onToggleTheme={toggleTheme}
+        colorPreview={colorPreview}
+        onToggleColorPreview={toggleColorPreview}
         onOpenDetails={() => setCompassOpen(true)}
         detailsOpen={compassOpen}
         onOpenChallenges={() => setChallengesOpen(true)}

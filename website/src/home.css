@@ -47,6 +47,7 @@
   border-bottom: 1px solid var(--border);
 }
 .home-topbar__brand {
+  font-family: var(--font-reels-heading);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -130,7 +131,7 @@
 .home-btn--primary {
   background: var(--accent);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-accent);
 }
 .home-btn--primary:hover { background: color-mix(in srgb, var(--accent) 86%, #000); }
 .home-btn--soft { background: color-mix(in srgb, var(--accent-soft) 16%, transparent); }
@@ -149,7 +150,7 @@
   -webkit-backdrop-filter: blur(14px);
 }
 .wings__head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
-.wings__title { margin: 0; font-size: 1rem; font-weight: 800; letter-spacing: -0.01em; }
+.wings__title { font-family: var(--font-reels-heading); margin: 0; font-size: 1rem; font-weight: 800; letter-spacing: -0.01em; }
 .wings__hint { font-size: 0.72rem; color: var(--text-muted); }
 .wings__row {
   list-style: none;
@@ -205,7 +206,7 @@
   height: 20px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: 2px solid var(--card);
 }
 .wing__name {
@@ -270,7 +271,7 @@
 .wing-sheet__person { display: flex; align-items: center; gap: 12px; }
 .wing-sheet__avatar { background: var(--bg-soft); display: grid; place-items: center; }
 .wing-sheet__id { display: flex; flex-direction: column; }
-.wing-sheet__name { font-weight: 800; font-size: 1.05rem; }
+.wing-sheet__name { font-family: var(--font-reels-heading); font-weight: 800; font-size: 1.05rem; }
 .wing-sheet__status { color: var(--accent); font-weight: 600; font-size: 0.9rem; }
 .wing-sheet__image {
   margin-top: 16px;
@@ -322,7 +323,7 @@
 }
 .reset-card__emoji { font-size: 1.8rem; }
 .reset-card__body { flex: 1 1 auto; min-width: 0; }
-.reset-card__title { margin: 0 0 2px; font-size: 0.95rem; font-weight: 800; }
+.reset-card__title { font-family: var(--font-reels-heading); margin: 0 0 2px; font-size: 0.95rem; font-weight: 800; }
 .reset-card__copy { margin: 0; font-size: 0.86rem; color: var(--text-muted); line-height: 1.4; }
 .reset-card__time {
   flex: 0 0 auto;
@@ -385,7 +386,7 @@
 .home-me__id { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
 .home-me__avatar { flex: 0 0 auto; width: 54px; height: 54px; }
 .home-me__names { display: flex; flex-direction: column; min-width: 0; }
-.home-me__name { font-weight: 800; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-me__name { font-family: var(--font-reels-heading); font-weight: 800; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home-me__handle { font-size: 0.82rem; color: var(--text-muted); }
 .home-me__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
 .home-me__links { display: flex; gap: 8px; }
@@ -403,13 +404,13 @@
 /* Signed-out card */
 .home-signin { text-align: center; }
 .home-signin__mark { font-size: 1.8rem; }
-.home-signin__title { margin: 8px 0 4px; font-size: 1.02rem; font-weight: 800; line-height: 1.3; }
+.home-signin__title { font-family: var(--font-reels-heading); margin: 8px 0 4px; font-size: 1.02rem; font-weight: 800; line-height: 1.3; }
 .home-signin__copy { margin: 0 0 14px; font-size: 0.86rem; color: var(--text-muted); line-height: 1.45; }
 .home-signin__actions { display: flex; gap: 8px; justify-content: center; }
 
 /* ── Right rail: suggested ───────────────────────────────────────────────── */
 .suggested__head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
-.suggested__title { margin: 0; font-size: 0.96rem; font-weight: 800; }
+.suggested__title { font-family: var(--font-reels-heading); margin: 0; font-size: 0.96rem; font-weight: 800; }
 .suggested__hint {
   font-size: 0.64rem;
   text-transform: uppercase;
@@ -429,8 +430,8 @@
 }
 
 /* ── Search + Inbox shared bits ──────────────────────────────────────────── */
-.page-title { margin: 6px 0 2px; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
-.section-title { margin: 6px 0; font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.page-title { font-family: var(--font-reels-heading); margin: 6px 0 2px; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+.section-title { font-family: var(--font-reels-heading); margin: 6px 0; font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
 .search-field {
   display: flex;
   align-items: center;

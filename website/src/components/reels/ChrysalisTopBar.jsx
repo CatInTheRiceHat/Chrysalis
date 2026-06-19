@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, SlidersHorizontal, Trophy, UserCircle } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { ColorPreviewToggle } from './ColorPreviewToggle';
 
 /**
  * App-style top header for the Chrysalis algorithm feed.
@@ -14,6 +15,7 @@ import { ThemeToggle } from './ThemeToggle';
  *   intentionLabel — human label for the active intention/mode (e.g. "Daily Dew")
  *   intentionLogo  — small image for the active intention
  *   theme, onToggleTheme — light/dark control
+ *   colorPreview, onToggleColorPreview — TEMP Sunshine (yellow/blue) preview toggle
  *   onOpenDetails, detailsOpen — Feed details drawer trigger + state
  *   onOpenChallenges, challengesOpen, streak — IRL challenges trigger
  *   onOpenProfile, profileOpen — profile trigger
@@ -25,6 +27,8 @@ export function ChrysalisTopBar({
   intentionLogo,
   theme,
   onToggleTheme,
+  colorPreview,
+  onToggleColorPreview,
   onOpenDetails,
   detailsOpen,
   onOpenChallenges,
@@ -122,6 +126,7 @@ export function ChrysalisTopBar({
         )}
         </>
         )}
+        <ColorPreviewToggle preview={colorPreview} onToggle={onToggleColorPreview} />
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       </div>
     </header>
