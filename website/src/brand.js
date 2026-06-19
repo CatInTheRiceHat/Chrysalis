@@ -28,7 +28,7 @@ export const SKIP_ALGORITHM_ONBOARDING = true;
 
 // While in the algorithm feed, disable navigating back to the Home
 // screen (the Home nav item shows a notice instead).
-export const LOCK_HOME_FROM_ALGORITHM = true;
+export const LOCK_HOME_FROM_ALGORITHM = false;
 
 // Recolor the marketing/landing site from "Chrysalis purple" to the
 // yellow/blue Sunshine palette (matches the feed/home). Applied via a

@@ -43,7 +43,7 @@ export function ChrysalisTopBar({
   return (
     <header className="app-topbar" data-algorithm-topbar>
       <div className="app-topbar__brand">
-        <Link to="/" className="app-topbar__home" aria-label={`Back to ${BRAND} home`}>
+        <Link to="/home" className="app-topbar__home" aria-label={`Back to ${BRAND} home`}>
           <ArrowLeft size={18} aria-hidden="true" />
         </Link>
         <span className="app-topbar__logo" aria-hidden="true">☀️</span>
