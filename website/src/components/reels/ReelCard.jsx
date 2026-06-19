@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { motion as MOTION } from 'motion/react';
-import { Play } from 'lucide-react';
+import { Play, Volume2, VolumeX } from 'lucide-react';
 import { ReelActionRail } from './ReelActionRail';
 import { ReelCaption } from './ReelCaption';
 import { getRecommendationInsight } from './feedTaxonomy';
@@ -59,6 +59,8 @@ function resetYouTubeIframe(iframe) {
 export function ReelCard({
   reel,
   isActive = false,
+  soundOn = true,
+  onToggleSound,
   onVisible,
   onStatus,
   onRegenerate,
@@ -79,7 +81,7 @@ export function ReelCard({
   const embedOrigin = typeof window !== 'undefined' ? window.location.origin : undefined;
   const embedSrc = buildYouTubeEmbedUrl(videoSource, {
     autoplay: true,
-    muted: false,
+    muted: !soundOn,
     controls: false,
     enableJsApi: true,
     origin: embedOrigin,
@@ -175,6 +177,19 @@ export function ReelCard({
               <span className="reel-popular-badge" title="Currently popular on YouTube — still safety-checked by Chrysalis">
                 {popularBadgeLabel}
               </span>
+            )}
+
+            {shouldRenderEmbed && onToggleSound && (
+              <button
+                type="button"
+                className={`reel-mute${soundOn ? '' : ' reel-mute--off'}`}
+                onClick={onToggleSound}
+                aria-pressed={!soundOn}
+                aria-label={soundOn ? 'Mute video' : 'Unmute video'}
+              >
+                {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                {!soundOn && <span className="reel-mute__hint">Tap for sound</span>}
+              </button>
             )}
 
             <ReelCaption

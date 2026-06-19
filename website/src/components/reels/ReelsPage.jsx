@@ -188,6 +188,14 @@ function initialTheme() {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+// Phones block autoplay-with-sound until the user taps once, so we start the
+// feed muted on touch devices and let a single tap unlock audio for the session.
+// Desktop allows sound-on autoplay, so it starts unmuted.
+function initialSoundOn() {
+  if (typeof window === 'undefined') return true;
+  return !window.matchMedia?.('(pointer: coarse)').matches;
+}
+
 function initialMode() {
   if (typeof window === 'undefined') return DEFAULT_MODE;
   const saved = storedValue(MODE_KEY, LEGACY_MODE_KEY);
@@ -287,6 +295,7 @@ export function ReelsPage() {
   const [mode, setMode] = useState(initialMode);
   const [modeSelectionInitial, setModeSelectionInitial] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [soundOn, setSoundOn] = useState(initialSoundOn);
   const [viewedCards, setViewedCards] = useState(() => new Set());
   const [breakReminderCards, setBreakReminderCards] = useState(() => new Set());
   const [selectedTunes, setSelectedTunes] = useState([]);
@@ -619,6 +628,8 @@ export function ReelsPage() {
                       key={reel.id}
                       reel={reel}
                       isActive={index === activeIndex && !breakActive}
+                      soundOn={soundOn}
+                      onToggleSound={() => setSoundOn((on) => !on)}
                       onVisible={() => markCardVisible(index, reel)}
                       onStatus={announceStatus}
                       onRegenerate={() => showNextCard(index)}
