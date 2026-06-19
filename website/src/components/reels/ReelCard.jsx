@@ -161,16 +161,11 @@ export function ReelCard({
                   <span className="reel-play__hint" aria-hidden="true">Tap to play</span>
                 </button>
               )
-            ) : poster ? (
-              <img
-                className="reel-media"
-                src={poster}
-                alt={reel.title}
-                loading="lazy"
-                onLoad={() => setLoaded(true)}
-                style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.5s ease' }}
-              />
-            ) : null}
+            ) : (
+              <div className="reel-media reel-media-loader" aria-label="Loading feed" role="img">
+                <span className="reel-loader-sun" aria-hidden="true" />
+              </div>
+            )}
 
             {hasVideo && (
               <span className="reel-source-badge">YouTube embed · curated by Chrysalis</span>

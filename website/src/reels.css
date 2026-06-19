@@ -179,6 +179,22 @@
     linear-gradient(150deg, var(--bg-soft), color-mix(in srgb, var(--accent-soft) 30%, var(--card)));
 }
 
+/* Placeholder/seed cards: spinning sun while the live feed loads */
+.reel-media-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reel-loader-sun {
+  font-size: 88px;
+  line-height: 1;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
+  animation: reelsFeedSpin 1.6s linear infinite;
+}
+.reel-loader-sun::before {
+  content: "\2600\FE0F"; /* ☀️ */
+}
+
 /* ── Side action rail ───────────────────────────────────────────────────── */
 .reel-rail {
   position: absolute;
@@ -3069,4 +3085,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .reels-feed-status__spinner { animation: none; }
+  .reel-loader-sun { animation: none; }
 }
