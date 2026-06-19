@@ -153,6 +153,9 @@
   max-height: 82dvh;
   border-radius: var(--reel-radius);
   overflow: hidden;
+  /* Establish a size container so the video embed can be scaled to *cover* the
+     frame using container units (cqw/cqh) — see .reel-embed. */
+  container-type: size;
   background: var(--card);
   border: 1px solid var(--border);
   box-shadow: var(--reel-shadow);
@@ -1321,7 +1324,16 @@
    Real-video cards — YouTube embed, play poster, reasons (v1 labeling)
    ───────────────────────────────────────────────────────────────────────── */
 
+/* The YouTube embed is an <iframe>, so object-fit can't crop it. Instead size the
+   iframe to cover the (portrait) frame as 16:9 content, centered, and let the
+   frame's overflow:hidden clip the excess — no black letterbox/pillarbox bars. */
 .reel-embed {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max(100cqw, 100cqh * 16 / 9);
+  height: max(100cqh, 100cqw * 9 / 16);
   border: 0;
 }
 

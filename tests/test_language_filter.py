@@ -51,6 +51,44 @@ def test_english_audio_code_allowed():
     assert is_allowed({"title": "Morning yoga", "default_audio_language": "en-US"})
 
 
+# ── transliterated (Latin-script) non-English content blocked ────────────────
+# These slip past code/script/region checks because the metadata is romanized,
+# but the terms themselves only ever describe non-English (Indian-subcontinent)
+# content. See the "Hindi videos still leaking" investigation.
+
+def test_transliterated_terms_in_title_blocked():
+    for title in (
+        "Hanuman Chalisa | Powerful Bhajan",
+        "Best Bhakti Songs Jukebox",
+        "Heart touching Shayari",
+        "Morning Kirtan live",
+        "New WhatsApp Status 2026",
+    ):
+        assert not is_allowed({"title": title}), title
+        assert detect_block_reason({"title": title}) == "language_name", title
+
+
+def test_long_non_latin_run_blocked_even_at_low_ratio():
+    # A mostly-English description with a full foreign-script sentence (>= the hard
+    # absolute cap) is non-English even though English text dilutes the ratio.
+    row = {
+        "title": "Amazing video you must watch today nice wow great",
+        "description": "Please subscribe for more " + ("video " * 80)
+        + " सुबह की सैर और ध्यान करें रोज सुबह जल्दी उठकर टहलें",
+    }
+    assert not is_allowed(row)
+    assert detect_block_reason(row) == "script"
+
+
+def test_new_rules_do_not_overblock_english():
+    # Wellness vocabulary and generic phrasing that merely *contains* a substring
+    # must stay allowed (no false positives from the strengthened rules).
+    assert is_allowed({"title": "Morning mantra for a calm mind"})
+    assert is_allowed({"title": "5 minute guided meditation for sleep"})
+    assert is_allowed({"title": "Weekly project status video update"})  # not "whatsapp status"
+    assert is_allowed({"title": "Aarav's productive morning routine"})  # a name, not a term
+
+
 # ── blocked non-English scripts ──────────────────────────────────────────────
 
 def test_non_english_scripts_blocked():

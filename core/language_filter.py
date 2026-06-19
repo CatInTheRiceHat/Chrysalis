@@ -49,6 +49,11 @@ _NON_LATIN_RATIO = 0.30
 # foreign letters; one quoted foreign word (a few chars) stays well under it.
 _NON_LATIN_ABS_MIN = 15
 _NON_LATIN_ABS_RATIO = 0.12
+# A long unbroken amount of non-Latin script is non-English regardless of ratio:
+# a mostly-English description that still quotes a whole foreign sentence is not an
+# English video. One romanized/quoted word stays well under this (a single
+# Devanagari word ≈ 3–6 letters), so genuine English content is unaffected.
+_NON_LATIN_HARD_MIN = 20
 
 # Non-Latin script ranges that indicate non-English content.
 _NON_LATIN_SCRIPT = re.compile(
@@ -93,6 +98,13 @@ _STRONG_LANGUAGE_NAMES: tuple[str, ...] = (
     "hindi", "telugu", "tamil", "kannada", "malayalam", "bengali", "punjabi",
     "gujarati", "marathi", "urdu", "sinhala", "nepali", "sanskrit",
     "sub indo", "en espanol", "en español", "in hindi", "dubbed in",
+    # Romanized (Latin-script) terms that only ever describe non-English,
+    # Indian-subcontinent content — they slip past the script/code/region checks
+    # because the metadata itself is in English letters. Kept high-precision:
+    # each almost never appears in genuine English titles. ("status video" is
+    # intentionally excluded as too generic; only "whatsapp status" qualifies.)
+    "bhajan", "bhajans", "bhakti", "chalisa", "kirtan", "satsang",
+    "pravachan", "qawwali", "shayari", "whatsapp status",
 )
 _WEAK_LANGUAGE_NAMES: tuple[str, ...] = (
     "arabic", "mandarin", "cantonese", "chinese", "japanese", "korean", "russian",
@@ -174,7 +186,11 @@ def _script_heavy(text: str) -> bool:
     if not total:
         return False
     ratio = foreign / total
-    return ratio >= _NON_LATIN_RATIO or (foreign >= _NON_LATIN_ABS_MIN and ratio >= _NON_LATIN_ABS_RATIO)
+    return (
+        foreign >= _NON_LATIN_HARD_MIN
+        or ratio >= _NON_LATIN_RATIO
+        or (foreign >= _NON_LATIN_ABS_MIN and ratio >= _NON_LATIN_ABS_RATIO)
+    )
 
 
 def detect_block_reason(row: dict) -> str | None:
