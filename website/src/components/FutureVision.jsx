@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { Eye, Globe, Plug } from 'lucide-react';
 import { BeveledSliderSection } from './BeveledSliderSection';
 
@@ -25,7 +26,7 @@ const SLIDES = [
     icon: Plug,
     eyebrow: 'Real Feeds',
     title: 'The next version should sit between people and real content.',
-    body: 'The goal is to reroute existing feeds through Chrysalis so users can keep the creators they follow and change the ranking logic.',
+    body: `The goal is to reroute existing feeds through ${BRAND} so users can keep the creators they follow and change the ranking logic.`,
     visual: <FutureSignal items={['YouTube', 'TikTok', 'Instagram', 'Custom APIs']} />,
   },
   {
@@ -44,7 +45,7 @@ export function FutureVision() {
       id="future"
       label="What's Next"
       heading="The algorithm is just the beginning."
-      intro="Chrysalis is a prototype today. The larger vision is a feed layer that is open, transparent, and built for the people using it."
+      intro={`${BRAND} is a prototype today. The larger vision is a feed layer that is open, transparent, and built for the people using it.`}
       slides={SLIDES}
     />
   );

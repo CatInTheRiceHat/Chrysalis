@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Play, Moon, Users, BarChart2, RefreshCw } from 'lucide-react';
@@ -105,7 +106,7 @@ export function FlutterFeed() {
       <div className="liquid-glass-strong rounded-2xl p-6 flex flex-col gap-7">
 
         <p className="font-body text-sm text-foreground/50 leading-relaxed">
-          Configure the algorithm and run it against a real dataset — see exactly what Chrysalis would recommend.
+          Configure the algorithm and run it against a real dataset — see exactly what {BRAND} would recommend.
         </p>
 
         <div className="flex flex-col gap-3">
@@ -231,7 +232,7 @@ export function FlutterFeed() {
               {result.weights && (
                 <div className="liquid-glass rounded-xl p-5 flex flex-col gap-4">
                   <p className="font-body text-xs font-medium text-foreground/45 uppercase tracking-wider flex items-center gap-1.5">
-                    <BarChart2 className="w-3 h-3" /> Here's how Chrysalis scored your feed:
+                    <BarChart2 className="w-3 h-3" /> Here's how {BRAND} scored your feed:
                   </p>
                   <WeightBar label="Relevance"   value={result.weights.e ?? 0} color="#7C6D8C" />
                   <WeightBar label="Diversity"   value={result.weights.d ?? 0} color="#AD9EB8" />

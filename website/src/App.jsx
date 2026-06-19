@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BRAND } from './brand.js';
+import { BRAND, SUNSHINE_LANDING } from './brand.js';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Lenis from 'lenis';
 import { AnimatePresence } from 'motion/react';
@@ -14,6 +14,7 @@ import { EditProfileForm } from './components/profile/EditProfileForm';
 import { HomePage } from './components/home/HomePage';
 import { SearchPage } from './components/home/SearchPage';
 import { InboxPage } from './components/home/InboxPage';
+import { CommunityPage } from './components/community/CommunityPage';
 import './App.css';
 import './auth.css';
 
@@ -28,6 +29,7 @@ function isAppPath(pathname) {
     pathname === '/algorithm'
     || pathname === '/reels'
     || pathname === '/home'
+    || pathname === '/community'
     || pathname === '/search'
     || pathname === '/inbox'
     || pathname === '/login'
@@ -74,13 +76,14 @@ function AppShell({ showIntro, setShowIntro }) {
           <IntroScreen key="intro" onDone={() => setShowIntro(false)} />
         )}
       </AnimatePresence>
-      <div className="min-h-screen overflow-x-hidden">
+      <div className="min-h-screen overflow-x-hidden" data-sunshine={SUNSHINE_LANDING ? 'on' : undefined}>
         {!isAlgorithmExperience && <Navbar />}
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/algorithm" element={<ReelsPage />} />
           <Route path="/reels" element={<Navigate to="/algorithm" replace />} />
           <Route path="/home" element={<HomePage />} />
+          <Route path="/community" element={<CommunityPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/inbox" element={<InboxPage />} />
           <Route path="/login" element={<AuthPage mode="login" />} />

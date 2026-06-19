@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion as MOTION } from 'motion/react';
 import { useAuth } from '../../lib/authContext';
@@ -10,6 +10,8 @@ import { AppBottomNav } from './AppBottomNav';
 import { AppSidebar } from './AppSidebar';
 import { OnboardingStartScreen } from './OnboardingStartScreen';
 import { getSessionId } from './preferences';
+import { selectFreshCards } from './feedPagination';
+import { SKIP_ALGORITHM_ONBOARDING, LOCK_HOME_FROM_ALGORITHM } from '../../brand.js';
 import { MODES, reelsByMode, DEFAULT_MODE, LEGACY_INTENTION_MODES } from './reelsData';
 import { getFeedDebugSnapshot } from './feedTaxonomy';
 import { BreakScreen } from './BreakScreen';
@@ -30,7 +32,8 @@ const LEGACY_MODE_KEY = 'chrysalis-reels-mode';
 const LEGACY_INTENTION_KEY = 'chrysalis-reels-intention';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '';
-const TARGET_CARD_COUNT = 12;
+// Videos requested per infinite-scroll page.
+const PAGE_SIZE = 12;
 
 /**
  * Demo/test mode for screen-time breaks. Opt-in via `?breaks=demo` (compresses one
@@ -172,22 +175,6 @@ function createFeedSeed() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function mergeRealFirst(real, synthetic) {
-  if (!real.length) return synthetic;
-  const realIds = new Set(real.map((card) => card.id));
-  const filler = synthetic.filter((card) => !realIds.has(card.id));
-  return [...real, ...filler].slice(0, Math.max(real.length, Math.min(TARGET_CARD_COUNT, real.length + filler.length)));
-}
-
-/**
- * Combine real (labeled) videos with the built-in synthetic cards.
- * Every mode uses the same real video pool first; templates only fill when the
- * backend returns fewer than the target count.
- */
-function mergeForMode(real, synthetic) {
-  return mergeRealFirst(real, synthetic);
-}
-
 function storedValue(key, legacyKey) {
   if (typeof window === 'undefined') return null;
   const current = window.localStorage.getItem(key);
@@ -211,6 +198,7 @@ function initialMode() {
 }
 
 function initialOnboarded() {
+  if (SKIP_ALGORITHM_ONBOARDING) return true;
   if (typeof window === 'undefined') return false;
   return storedValue(ONBOARDED_KEY, LEGACY_ONBOARDED_KEY) === '1';
 }
@@ -331,55 +319,131 @@ export function ReelsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const goToProfile = () => navigate(user ? '/profile' : '/login');
-  const goHome = () => navigate('/home');
+  const goHome = () => {
+    if (LOCK_HOME_FROM_ALGORITHM) {
+      announceStatus('Home stays locked while you are in the feed.');
+      return;
+    }
+    navigate('/home');
+  };
 
-  // Fetch the labeled/ranked feed for the active mode; fall back to synthetic
-  // cards on error or when the backend has no scored videos yet.
+  // ── Infinite-scroll feed ──────────────────────────────────────────────────
+  // Load one balanced page at a time and append more as the user nears the
+  // bottom. Pagination uses the backend exclude_ids contract: we send the ids
+  // already shown so the next page never repeats a video. The built-in synthetic
+  // sample cards are used ONLY when the backend genuinely has no real videos for
+  // the mode (empty pool / network error on the first page).
+  const sentinelRef = useRef(null);
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const paginationRef = useRef(null);
+  if (paginationRef.current === null) {
+    paginationRef.current = {
+      mode, seed: null, excludeIds: [], seen: new Set(),
+      hasMore: true, loading: false, source: null,
+    };
+  }
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadPage = useCallback(async ({ reset }) => {
+    const pg = paginationRef.current;
+    if (pg.loading) return;                       // one fetch at a time
+    if (!reset && !pg.hasMore) return;            // nothing left to load
+    const activeMode = modeRef.current;
+    const synthetic = reelsByMode[activeMode] ?? reelsByMode[DEFAULT_MODE];
+
+    pg.loading = true;
+    setLoadingMore(true);
+    try {
+      const seed = reset ? createFeedSeed() : (pg.seed ?? createFeedSeed());
+      const excludeIds = reset ? [] : pg.excludeIds;
+      const params = new URLSearchParams({ k: String(PAGE_SIZE), seed });
+      const sessionId = getSessionId();
+      if (sessionId) params.set('session_id', sessionId);
+      if (excludeIds.length) params.set('exclude_ids', excludeIds.join(','));
+
+      const response = await fetch(`${API_URL}/api/feed/${activeMode}?${params.toString()}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (modeRef.current !== activeMode) return; // user switched modes mid-flight
+
+      const seen = reset ? new Set() : pg.seen;
+      const mapped = (data.items ?? []).map(apiItemToCard);
+      const { fresh, returnedIds } = selectFreshCards(seen, mapped);  // dedupe by video id
+
+      if (reset && fresh.length === 0) {
+        // Backend genuinely has no eligible videos → static sample fallback.
+        Object.assign(pg, { seed, excludeIds: [], seen: new Set(), hasMore: false, source: 'fallback' });
+        setFeed({ mode: activeMode, cards: synthetic, debug: null, hasMore: false, source: 'fallback' });
+        return;
+      }
+
+      pg.seed = seed;
+      pg.seen = seen;
+      pg.excludeIds = reset ? returnedIds : [...pg.excludeIds, ...returnedIds];
+      pg.hasMore = Boolean(data.has_more) && fresh.length > 0;
+      pg.source = 'live';
+
+      if (reset) {
+        setFeed({ mode: activeMode, cards: fresh, debug: getFeedDebugSnapshot(data), hasMore: pg.hasMore, source: 'live' });
+      } else {
+        setFeed((prev) => (
+          prev.mode === activeMode
+            ? { ...prev, cards: [...(prev.cards ?? []), ...fresh], hasMore: pg.hasMore, source: 'live' }
+            : prev
+        ));
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('[Chrysalis algorithm] Feed page failed:', error);
+      }
+      if (reset) {
+        const synthetic2 = reelsByMode[modeRef.current] ?? reelsByMode[DEFAULT_MODE];
+        Object.assign(pg, { hasMore: false, source: 'fallback' });
+        setFeed({ mode: modeRef.current, cards: synthetic2, debug: null, hasMore: false, source: 'fallback' });
+      }
+      // Non-reset errors keep the current feed; a later scroll can retry.
+    } finally {
+      pg.loading = false;
+      setLoadingMore(false);
+    }
+  }, []);
+
+  // (Re)load page 0 whenever the mode changes or the feed is (re)entered.
   useEffect(() => {
     if (!onboarded) return undefined;
-    let cancelled = false;
-    const synthetic = reelsByMode[mode] ?? reelsByMode[DEFAULT_MODE];
+    paginationRef.current = {
+      mode, seed: null, excludeIds: [], seen: new Set(),
+      hasMore: true, loading: false, source: null,
+    };
+    loadPage({ reset: true });
+    return undefined;
+  }, [mode, onboarded, loadPage]);
 
-    async function loadFeed() {
-      try {
-        const seed = createFeedSeed();
-        const params = new URLSearchParams({
-          k: String(TARGET_CARD_COUNT),
-          seed,
-        });
-        const sessionId = getSessionId();
-        if (sessionId) params.set('session_id', sessionId);
-        const response = await fetch(`${API_URL}/api/feed/${mode}?${params.toString()}`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        if (cancelled) return;
-
-        const real = (data.items ?? []).map(apiItemToCard);
-
-        if (cancelled) return;
-        setFeed({
-          mode,
-          cards: mergeForMode(real, synthetic),
-          debug: getFeedDebugSnapshot(data),
-        });
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.warn('[Chrysalis algorithm] Falling back to sample cards:', error);
+  // Bottom sentinel → fetch the next page as the user approaches the end.
+  useEffect(() => {
+    if (!onboarded) return undefined;
+    const root = scrollRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          loadPage({ reset: false });
         }
-        if (!cancelled) setFeed({ mode, cards: synthetic, debug: null });
-      }
-    }
-
-    loadFeed();
-
-    return () => { cancelled = true; };
-  }, [mode, onboarded]);
+      },
+      { root, rootMargin: '0px 0px 800px 0px', threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [onboarded, mode, loadPage]);
 
   useEffect(() => {
     window.localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
   useEffect(() => {
+    if (SKIP_ALGORITHM_ONBOARDING) return;
     window.localStorage.setItem(ONBOARDED_KEY, onboarded ? '1' : '0');
   }, [onboarded]);
 
@@ -493,7 +557,7 @@ export function ReelsPage() {
       {onboarded && (
         <AppSidebar
           active="feed"
-          intentionLabel={currentMode?.label ?? 'Flutter Feed'}
+          intentionLabel={currentMode?.label ?? "Cruisin'"}
           intentionLogo={currentMode?.logo}
           onHome={goHome}
           onFeed={scrollToTop}
@@ -514,7 +578,7 @@ export function ReelsPage() {
 
       <ChrysalisTopBar
         showActions={onboarded}
-        intentionLabel={currentMode?.label ?? 'Flutter Feed'}
+        intentionLabel={currentMode?.label ?? "Cruisin'"}
         intentionLogo={currentMode?.logo}
         theme={theme}
         onToggleTheme={toggleTheme}
@@ -561,6 +625,33 @@ export function ReelsPage() {
                       onOpenComments={() => setCommentsOpen(true)}
                     />
                   ))}
+
+                  {/* Infinite-scroll sentinel — always present so the observer
+                      stays attached; loadPage no-ops when there's nothing more. */}
+                  <div ref={sentinelRef} className="reels-feed-sentinel" aria-hidden="true" />
+
+                  {loadingMore && (
+                    <div className="reels-feed-status" role="status" aria-live="polite">
+                      <span className="reels-feed-status__spinner" aria-hidden="true" />
+                      Loading more videos…
+                    </div>
+                  )}
+
+                  {feed.mode === mode && feed.source === 'live' && feed.hasMore === false && (
+                    <div className="reels-feed-end" role="status">
+                      <p className="reels-feed-end__title">You're all caught up</p>
+                      <p className="reels-feed-end__sub">
+                        You've reached the end of fresh videos for now.
+                      </p>
+                      <button
+                        type="button"
+                        className="reels-feed-end__refresh"
+                        onClick={() => loadPage({ reset: true })}
+                      >
+                        Refresh feed
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

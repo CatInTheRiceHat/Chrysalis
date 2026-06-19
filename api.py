@@ -283,6 +283,23 @@ def admin_ingest_youtube(
     return result.to_dict()
 
 
+def _parse_exclude_ids(raw: str | None, *, limit: int = 500) -> list[str]:
+    """Parse a comma-separated ``exclude_ids`` query value into a clean id list."""
+    if not raw:
+        return []
+    seen: set[str] = set()
+    out: list[str] = []
+    for piece in str(raw).split(","):
+        vid = piece.strip()
+        if not vid or vid in seen:
+            continue
+        seen.add(vid)
+        out.append(vid)
+        if len(out) >= limit:
+            break
+    return out
+
+
 @app.get("/api/feed/{mode}")
 def chrysalis_feed(
     mode: str,
@@ -290,6 +307,8 @@ def chrysalis_feed(
     seed: str | None = None,
     session_id: str | None = None,
     user_id: str | None = None,
+    offset: int = 0,
+    exclude_ids: str | None = None,
 ):
     """
     Shared real-video feed for a reels mode (daily-dew, metamorphosis,
@@ -336,6 +355,8 @@ def chrysalis_feed(
         k=k,
         public_signal_context=public_signal_context,
         shuffle_seed=seed,
+        offset=offset,
+        exclude_ids=_parse_exclude_ids(exclude_ids),
     )
     return {
         "mode": mode,

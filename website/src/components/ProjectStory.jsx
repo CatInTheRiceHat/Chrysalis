@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { Brain, FlaskConical, TrendingUp, Zap } from 'lucide-react';
 import { BeveledSliderSection } from './BeveledSliderSection';
 
@@ -97,7 +98,7 @@ const SLIDES = [
     icon: FlaskConical,
     eyebrow: 'The Research',
     title: 'Six documented harms became six targeted fixes.',
-    body: 'Chrysalis maps research-backed harms into precise ranking interventions rather than treating wellbeing as a vague afterthought.',
+    body: `${BRAND} maps research-backed harms into precise ranking interventions rather than treating wellbeing as a vague afterthought.`,
     visual: <HarmGrid />,
   },
   {
@@ -113,7 +114,7 @@ const SLIDES = [
     icon: TrendingUp,
     eyebrow: 'The Results',
     title: 'Better wellbeing signals without giving up discovery.',
-    body: 'Against an engagement-only baseline, Chrysalis improves diversity and prosocial exposure while reducing repetitive same-topic loops.',
+    body: `Against an engagement-only baseline, ${BRAND} improves diversity and prosocial exposure while reducing repetitive same-topic loops.`,
     visual: <MetricsList />,
   },
 ];
@@ -124,7 +125,7 @@ export function ProjectStory() {
       id="project"
       label="The Project"
       heading="The problem. The research. The solution."
-      intro="A compact walkthrough of how Chrysalis turns the critique of social media into an algorithm with different incentives."
+      intro={`A compact walkthrough of how ${BRAND} turns the critique of social media into an algorithm with different incentives.`}
       slides={SLIDES}
     />
   );

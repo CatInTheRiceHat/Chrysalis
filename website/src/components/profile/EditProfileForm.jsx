@@ -9,7 +9,7 @@ import { AvatarUploader } from './AvatarUploader';
 const MODE_OPTIONS = [
   { value: '', label: 'Not set' },
   { value: 'daily-dew', label: 'Daily Dew' },
-  { value: 'flutter-feed', label: 'Flutter Feed' },
+  { value: 'flutter-feed', label: "Cruisin'" },
   { value: 'metamorphosis', label: 'Metamorphosis' },
 ];
 

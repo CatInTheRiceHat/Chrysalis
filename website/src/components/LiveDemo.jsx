@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { useEffect, useState, useRef } from 'react';
 import { motion as MOTION, useInView, AnimatePresence, useReducedMotion } from 'motion/react';
 import { FlutterFeed } from './FlutterFeed';
@@ -17,7 +18,7 @@ const PHASE_ICONS = [
   },
   {
     src: '/images/journey-chrysalis.png',
-    alt: 'Chrysalis phase',
+    alt: `${BRAND} phase`,
   },
   {
     src: '/images/journey-emerged.png',
@@ -30,7 +31,7 @@ const TABS = [
     id: 'algorithm',
     label: 'Flutter Feed',
     title: 'Try the algorithm.',
-    subtitle: 'Configure and run the Chrysalis recommendation engine against a live dataset.',
+    subtitle: `Configure and run the ${BRAND} recommendation engine against a live dataset.`,
   },
   {
     id: 'cocoon',
@@ -116,7 +117,7 @@ function AlgorithmUnderConstruction({ reduceMotion }) {
             Algorithm under construction.
           </h1>
           <p className="font-body font-light text-base sm:text-lg text-foreground/60 max-w-xl leading-relaxed">
-            This part of Chrysalis is still being polished, so please do not test the algorithm yet.
+            This part of {BRAND} is still being polished, so please do not test the algorithm yet.
           </p>
         </div>
       </MOTION.div>

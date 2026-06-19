@@ -236,7 +236,7 @@ export const INBOX_PREVIEWS = [
 /** Map a Chrysalis mode key to a friendly label (mirrors ProfileCard). */
 const MODE_LABELS = {
   'daily-dew': 'Daily Dew',
-  'flutter-feed': 'Flutter Feed',
+  'flutter-feed': "Cruisin'",
   metamorphosis: 'Metamorphosis',
 };
 

@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 import { Github, Linkedin, Mail, Instagram, ArrowUpRight } from 'lucide-react';
@@ -118,7 +119,7 @@ export function Contact() {
             />
             <div className="flex flex-col gap-1">
               <h3 className="font-body font-semibold text-lg text-foreground leading-tight">Elaine</h3>
-              <p className="font-body font-light text-sm text-foreground/50">Creator &amp; Developer, Chrysalis</p>
+              <p className="font-body font-light text-sm text-foreground/50">Creator &amp; Developer, {BRAND}</p>
               <div className="flex gap-3 mt-2">
                 <a href="#" aria-label="Substack" className="transition-colors" style={{ color: 'var(--wing-yellow)' }}>
                   <SubstackIcon className="w-4 h-4" />
@@ -178,7 +179,7 @@ export function Contact() {
           style={{ borderTop: '1px solid rgba(0,0,0,0.07)' }}
         >
           <p className="font-body font-light text-xs text-foreground/35">
-            Chrysalis © 2026 — Elaine Che
+            {BRAND} © 2026 — Elaine Che
           </p>
           <div className="flex items-center gap-2">
             <ButterflyFooterIcon />

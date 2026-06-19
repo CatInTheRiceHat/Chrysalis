@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
 import { ArrowUpRight } from 'lucide-react';
@@ -137,7 +138,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.75, delay: 0.15 }}
         >
-          Chrysalis Algorithm Project
+          {BRAND} Algorithm Project
         </motion.p>
         <CyclingHeadline />
         <motion.p
@@ -146,7 +147,7 @@ export function Hero() {
           transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="hero-subhead"
         >
-          Chrysalis is a research-backed recommendation algorithm that changes what a feed optimizes for:
+          {BRAND} is a research-backed recommendation algorithm that changes what a feed optimizes for:
           less passive scrolling, more diversity, safer timing, and clearer control.
         </motion.p>
 

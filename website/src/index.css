@@ -26,7 +26,7 @@
   --font-heading: "Story Script", sans-serif;
   --font-body: "Montserrat", sans-serif;
   --glass-bg: rgba(250, 249, 246, 0.78);
-  --glass-border: rgba(147, 142, 151, 0.34);
+  --glass-border: rgba(139, 168, 204, 0.34);
   --glass-shadow: 0 18px 48px rgba(43, 38, 49, 0.08);
   --glass-blur: 16px;
   --step-6: clamp(2.986rem, calc(0.7966rem + 7.6154vw), 19.0735rem);
@@ -52,6 +52,23 @@
   --section-padding: var(--space-l);
 }
 
+/* ── TEMP: Sunshine (yellow/blue) palette for the marketing/landing site.
+   Driven by SUNSHINE_LANDING in src/brand.js (data-sunshine="on" on the
+   app wrapper). Remove the flag to restore Chrysalis purple. ───────────── */
+[data-sunshine="on"] {
+  --primary: 217 79% 62%;            /* sunshine blue — links / buttons / accents */
+  --primary-foreground: 45 60% 98%;  /* near-white text on blue */
+  --secondary: 48 100% 88%;          /* pale yellow surface */
+  --secondary-foreground: 269 13% 17%;
+  --muted: 205 22% 60%;
+  --muted-foreground: 220 16% 40%;
+  --accent: 42 100% 76%;             /* sunshine yellow — accent fills */
+  --accent-foreground: 269 13% 17%;  /* dark text on yellow */
+  --border: 205 52% 78%;             /* soft blue outline */
+  --input: 204 45% 86%;
+  --ring: 217 79% 62%;
+}
+
 body {
   background: #faf9f6;
   color: hsl(var(--foreground));
@@ -66,7 +83,7 @@ body {
     background-blend-mode: luminosity;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    border: 1px solid rgba(147, 142, 151, 0.22);
+    border: 1px solid rgba(139, 168, 204, 0.22);
     box-shadow: 0 18px 48px rgba(43, 38, 49, 0.08);
     position: relative;
     overflow: hidden;
@@ -81,10 +98,10 @@ body {
     background: linear-gradient(
       180deg,
       rgba(250, 249, 246, 0.5) 0%,
-      rgba(207, 203, 211, 0.24) 20%,
+      rgba(205, 222, 240, 0.24) 20%,
       rgba(250, 249, 246, 0) 40%,
       rgba(250, 249, 246, 0) 60%,
-      rgba(207, 203, 211, 0.24) 80%,
+      rgba(205, 222, 240, 0.24) 80%,
       rgba(250, 249, 246, 0.5) 100%
     );
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -98,7 +115,7 @@ body {
     background-blend-mode: luminosity;
     backdrop-filter: blur(50px);
     -webkit-backdrop-filter: blur(50px);
-    border: 1px solid rgba(147, 142, 151, 0.3);
+    border: 1px solid rgba(139, 168, 204, 0.3);
     box-shadow: 0 18px 48px rgba(43, 38, 49, 0.09);
     position: relative;
     overflow: hidden;
@@ -113,10 +130,10 @@ body {
     background: linear-gradient(
       180deg,
       rgba(250, 249, 246, 0.55) 0%,
-      rgba(207, 203, 211, 0.28) 20%,
+      rgba(205, 222, 240, 0.28) 20%,
       rgba(250, 249, 246, 0) 40%,
       rgba(250, 249, 246, 0) 60%,
-      rgba(207, 203, 211, 0.28) 80%,
+      rgba(205, 222, 240, 0.28) 80%,
       rgba(250, 249, 246, 0.55) 100%
     );
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);

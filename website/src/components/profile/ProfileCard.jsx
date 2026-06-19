@@ -7,7 +7,7 @@ import { Compass, Lock, Sparkles, Pencil } from 'lucide-react';
  */
 const MODE_LABELS = {
   'daily-dew': 'Daily Dew',
-  'flutter-feed': 'Flutter Feed',
+  'flutter-feed': "Cruisin'",
   metamorphosis: 'Metamorphosis',
 };
 

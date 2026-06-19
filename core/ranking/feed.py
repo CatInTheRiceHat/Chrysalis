@@ -81,6 +81,8 @@ def build_feed(
     public_signal_context: PublicSignalContext | None = None,
     public_signal_override: bool = False,
     shuffle_seed: str | None = None,
+    offset: int = 0,
+    exclude_ids: list[str] | set[str] | None = None,
 ) -> list[dict]:
     """
     Returns a list of API-ready items for `mode`:
@@ -92,6 +94,10 @@ def build_feed(
         public_signal_reason }
     Empty input (or an unknown mode) yields an empty list. New metadata fields are
     null/empty for older rows that predate richer extraction.
+
+    Pagination: pass the video ids already shown to the user as ``exclude_ids``
+    and the feed serves the next balanced page over the not-yet-seen pool, so
+    pages never repeat a video (see ``build_feed_payload`` for the metadata).
     """
     items, _debug = _build_feed_result(
         rows,
@@ -100,6 +106,8 @@ def build_feed(
         public_signal_context=public_signal_context,
         public_signal_override=public_signal_override,
         shuffle_seed=shuffle_seed,
+        offset=offset,
+        exclude_ids=exclude_ids,
     )
     return items
 
@@ -111,7 +119,22 @@ def build_feed_payload(
     public_signal_context: PublicSignalContext | None = None,
     public_signal_override: bool = False,
     shuffle_seed: str | None = None,
+    offset: int = 0,
+    exclude_ids: list[str] | set[str] | None = None,
 ) -> dict:
+    """Build one feed page plus pagination metadata.
+
+    Pagination is ``exclude_ids``-based: the caller accumulates the ids already
+    shown and passes them back, and each request returns the next balanced page
+    over the remaining eligible pool. The response carries:
+      * ``returned_count``      — items in this page
+      * ``eligible_pool_count`` — total videos that pass every safety/language
+                                  filter (stable across pages)
+      * ``has_more``            — whether another non-empty page exists
+      * ``next_offset`` / ``next_cursor`` — informational cursor for the client
+    ``offset`` is informational only; the page contents are driven by
+    ``exclude_ids`` so per-page content-mix balancing is preserved.
+    """
     resolved_seed = normalize_shuffle_seed(shuffle_seed) or new_shuffle_seed()
     items, debug = _build_feed_result(
         rows,
@@ -120,6 +143,8 @@ def build_feed_payload(
         public_signal_context=public_signal_context,
         public_signal_override=public_signal_override,
         shuffle_seed=resolved_seed,
+        offset=offset,
+        exclude_ids=exclude_ids,
     )
     payload = {"count": len(items), "items": items, **debug}
     payload["debug"] = dict(debug)
@@ -144,9 +169,18 @@ def _build_feed_result(
     public_signal_context: PublicSignalContext | None = None,
     public_signal_override: bool = False,
     shuffle_seed: str | None = None,
+    offset: int = 0,
+    exclude_ids: list[str] | set[str] | None = None,
 ) -> tuple[list[dict], dict]:
+    exclude_set = {str(v).strip() for v in (exclude_ids or []) if str(v).strip()}
     if not is_valid_mode(mode) or not rows:
-        return [], _debug_metadata([], [], k, shuffle_seed=shuffle_seed)
+        return [], _debug_metadata(
+            [], [], k,
+            shuffle_seed=shuffle_seed,
+            offset=offset,
+            eligible_pool_count=0,
+            has_more=False,
+        )
 
     candidates: list[dict] = []
     seen_video_ids: set[str] = set()
@@ -204,14 +238,35 @@ def _build_feed_result(
             "channel_title": row.get("channel_title") or row.get("channel") or "",
         })
 
-    ranked = rank_videos(
+    # Full eligible pool (everything that clears every safety / integrity /
+    # public-signal gate). Used only to size the pool and decide ``has_more`` —
+    # the page itself is ranked from the not-yet-seen slice below so per-page
+    # content-mix balancing (target 40-60% healthy at size ``k``) is preserved.
+    eligible_all = rank_videos(
         candidates,
+        mode,
+        k=len(candidates),
+        public_signal_context=public_signal_context,
+        public_signal_override=public_signal_override,
+        shuffle_seed=shuffle_seed,
+    )
+    eligible_ids = [str(cand.get("video_id") or "") for cand in eligible_all]
+    eligible_pool_count = len(eligible_ids)
+    eligible_remaining = sum(1 for vid in eligible_ids if vid not in exclude_set)
+
+    remaining_candidates = (
+        [cand for cand in candidates if cand["video_id"] not in exclude_set]
+        if exclude_set else candidates
+    )
+    ranked = rank_videos(
+        remaining_candidates,
         mode,
         k=k,
         public_signal_context=public_signal_context,
         public_signal_override=public_signal_override,
         shuffle_seed=shuffle_seed,
     )
+    has_more = eligible_remaining > len(ranked)
 
     items: list[dict] = []
     for cand in ranked:
@@ -321,6 +376,9 @@ def _build_feed_result(
         ranked,
         k,
         shuffle_seed=shuffle_seed,
+        offset=offset,
+        eligible_pool_count=eligible_pool_count,
+        has_more=has_more,
         popular_below_threshold=popular_below_threshold,
         language_filtered=language_filtered,
         region_filtered=region_filtered,
@@ -334,6 +392,9 @@ def _debug_metadata(
     k: int,
     *,
     shuffle_seed: str | None,
+    offset: int = 0,
+    eligible_pool_count: int = 0,
+    has_more: bool = False,
     popular_below_threshold: int = 0,
     language_filtered: int = 0,
     region_filtered: int = 0,
@@ -365,10 +426,18 @@ def _debug_metadata(
         if category in {"reduced", "blocked"}
     )
 
+    returned_count = len(ranked)
+    safe_offset = max(0, int(offset))
     return {
         "shuffle_seed": shuffle_seed,
         "real_count": len(ranked),
         "template_count": max(0, int(k) - len(ranked)),
+        # ── Pagination / infinite-scroll contract ──────────────────────────
+        "returned_count": returned_count,
+        "eligible_pool_count": eligible_pool_count,
+        "has_more": bool(has_more),
+        "next_offset": safe_offset + returned_count,
+        "next_cursor": str(safe_offset + returned_count) if has_more else None,
         "average_integrity_score": (
             round(sum(integrity_scores) / len(integrity_scores), 4)
             if integrity_scores else 0.0

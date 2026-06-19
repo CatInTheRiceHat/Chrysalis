@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 
@@ -33,7 +34,7 @@ export function Solution() {
           transition={{ duration: 0.8, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
           className="font-body font-light text-xl text-foreground/55 max-w-xl leading-relaxed"
         >
-          Chrysalis is a recommendation algorithm built around wellbeing. It gradually
+          {BRAND} is a recommendation algorithm built around wellbeing. It gradually
           tapers screen time, diversifies your feed, and eases you toward healthier habits —
           without quitting cold turkey.
         </motion.p>

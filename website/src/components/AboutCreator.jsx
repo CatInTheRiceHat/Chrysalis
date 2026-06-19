@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { createElement, useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 import { Github, Linkedin, Mail, ArrowUpRight } from 'lucide-react';
@@ -26,13 +27,13 @@ export function AboutCreator() {
           <span className="creator-section__kicker">About the Creator</span>
           <h2>Built from the feeling that the feed should not get the final word.</h2>
           <p>
-            Chrysalis began as a personal refusal to accept that the most intimate technology in
+            {BRAND} began as a personal refusal to accept that the most intimate technology in
             our day should be tuned only for retention. I wanted to build something that could
             name the harms, translate research into ranking logic, and make a different kind of
             feed feel possible.
           </p>
           <p>
-            I am Elaine, the creator and developer behind Chrysalis. This project is part critique,
+            I am Elaine, the creator and developer behind {BRAND}. This project is part critique,
             part prototype, and part proof that algorithms can be designed around care when care is
             made measurable.
           </p>

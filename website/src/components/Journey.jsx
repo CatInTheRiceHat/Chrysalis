@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { Code2, Database, Rocket, ScrollText } from 'lucide-react';
 import { BeveledSliderSection } from './BeveledSliderSection';
 
@@ -34,7 +35,7 @@ const SLIDES = [
     icon: Database,
     eyebrow: 'Dataset',
     title: 'First, the feed needed a real baseline.',
-    body: 'The build started by loading and validating social media data, then comparing Chrysalis against a simple engagement-only ranker.',
+    body: `The build started by loading and validating social media data, then comparing ${BRAND} against a simple engagement-only ranker.`,
     visual: <MilestoneList items={['VK-LSVD dataset loaded', 'Baseline algorithm built', 'Metric comparison scaffolded']} />,
   },
   {
@@ -69,7 +70,7 @@ export function Journey() {
       id="journey"
       label="The Journey"
       heading="From idea to algorithm."
-      intro="The build path, compressed into the moments that changed Chrysalis from a research question into a working prototype."
+      intro={`The build path, compressed into the moments that changed ${BRAND} from a research question into a working prototype.`}
       slides={SLIDES}
     />
   );

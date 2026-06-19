@@ -1,3 +1,4 @@
+import { BRAND } from '../brand.js';
 import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 import { AnimatedSection, AnimatedItem } from './AnimatedSection';
@@ -58,7 +59,7 @@ export function About() {
                 },
                 {
                   delay: 0.4,
-                  text: "Chrysalis is what came out of that: a recommendation algorithm grounded in psychology and data science, tested on real data, and built specifically for teenagers. I'm Elaine Che — a student and builder who thinks technology can be designed to actually care about the people using it.",
+                  text: `${BRAND} is what came out of that: a recommendation algorithm grounded in psychology and data science, tested on real data, and built specifically for teenagers. I'm Elaine Che — a student and builder who thinks technology can be designed to actually care about the people using it.`,
                 },
               ].map(({ delay, text }) => (
                 <motion.p
@@ -109,7 +110,7 @@ export function About() {
                 />
                 <div>
                   <p className="font-body font-semibold text-sm text-foreground">Elaine Che</p>
-                  <p className="font-body font-light text-xs text-foreground/50">Creator of Chrysalis</p>
+                  <p className="font-body font-light text-xs text-foreground/50">Creator of {BRAND}</p>
                 </div>
               </div>
 

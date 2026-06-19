@@ -66,7 +66,7 @@ export function HomeShell({ active = 'home', children }) {
   const nav = {
     onHome: () => navigate('/home'),
     onFeed: () => navigate('/algorithm'),
-    onCommunity: comingSoon('Community is coming soon ✨'),
+    onCommunity: () => navigate('/community'),
     onSaved: comingSoon('Saved is coming soon — your kept moments will live here.'),
     onProfile: () => navigate(user ? '/profile' : '/login'),
     onSearch: () => navigate('/search'),
@@ -81,7 +81,7 @@ export function HomeShell({ active = 'home', children }) {
     <main className="reels-shell home-shell" data-algorithm data-theme={theme} data-color-preview="yellow" data-onboarded="true">
       <AppSidebar
         active={active}
-        intentionLabel={intention?.label ?? 'Flutter Feed'}
+        intentionLabel={intention?.label ?? "Cruisin'"}
         intentionLogo={intention?.logo}
         onHome={nav.onHome}
         onFeed={nav.onFeed}
