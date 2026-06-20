@@ -1,85 +1,155 @@
 import { useEffect, useState } from 'react';
-import { Bookmark, Play, X } from 'lucide-react';
+import { Bookmark, Heart, Play, Sparkles, X } from 'lucide-react';
 import { HomeShell } from '../home/HomeShell';
 import { useSavedVideos } from '../reels/useSavedVideos';
+import { useLikedVideos } from '../reels/useLikedVideos';
+import { useReflections } from '../reels/useReflections';
 import { buildYouTubeEmbedUrl } from '../reels/youtubeEmbed';
 import '../../saved.css';
 
 /**
- * Saved — the videos a user kept via the bookmark on a feed card.
+ * Liked / Saved — a personal collection (not a public flex), with tabs for the
+ * three things a card can capture: Liked, Saved, and Reflections. All three are
+ * device-local (localStorage) snapshots taken at the moment you tapped — there is
+ * no backend. Tapping a tile opens an in-app modal player; the corner button
+ * removes the item from that collection.
  *
- * Reuses the social-app chrome via <HomeShell active="saved"> so it feels like one
- * app with Home and the feed. Saves are device-local (useSavedVideos → localStorage);
- * there is no backend, so this lists snapshots taken at save time. Tapping a tile
- * opens an in-app modal player; the bookmark on a tile removes it.
+ * Route stays /saved (active key "saved") so existing links keep working.
  */
+const TABS = [
+  { key: 'liked', label: 'Liked', Icon: Heart },
+  { key: 'saved', label: 'Saved', Icon: Bookmark },
+  { key: 'reflections', label: 'Reflections', Icon: Sparkles },
+];
+
 export function SavedPage() {
   const { saved, removeSave } = useSavedVideos();
+  const { liked, removeLike } = useLikedVideos();
+  const { reflections, removeReflection } = useReflections();
+  const [tab, setTab] = useState('liked');
   const [active, setActive] = useState(null);
+
+  const counts = { liked: liked.length, saved: saved.length, reflections: reflections.length };
 
   return (
     <HomeShell active="saved">
       <div className="home-narrow saved-page">
         <header className="saved-head">
-          <h1 className="saved-head__title">Saved</h1>
-          <p className="saved-head__sub">
-            {saved.length === 0
-              ? 'Your kept videos live here.'
-              : `${saved.length} kept ${saved.length === 1 ? 'video' : 'videos'} — only on this device.`}
-          </p>
+          <h1 className="saved-head__title">Your collection</h1>
+          <p className="saved-head__sub">Liked, saved, and reflected — kept just for you, only on this device.</p>
         </header>
 
-        {saved.length === 0 ? (
-          <div className="saved-empty">
-            <span className="saved-empty__icon" aria-hidden="true">
-              <Bookmark size={28} />
-            </span>
-            <p className="saved-empty__title">Nothing saved yet</p>
-            <p className="saved-empty__note">
-              Tap the bookmark on any video in your feed to keep it here.
-            </p>
-          </div>
-        ) : (
-          <ul className="saved-grid" aria-label="Saved videos">
-            {saved.map((item) => (
-              <li key={item.id} className="saved-tile">
-                <button
-                  type="button"
-                  className="saved-tile__open"
-                  onClick={() => setActive(item)}
-                  aria-label={`Play ${item.title}`}
-                >
-                  <span className="saved-tile__thumb">
-                    {item.thumbnail ? (
-                      <img src={item.thumbnail} alt="" loading="lazy" />
-                    ) : (
-                      <span className="saved-tile__thumb-fallback" aria-hidden="true" />
-                    )}
-                    <span className="saved-tile__play" aria-hidden="true">
-                      <Play size={20} fill="currentColor" />
-                    </span>
-                  </span>
-                  <span className="saved-tile__title">{item.title}</span>
-                  {item.source && <span className="saved-tile__source">{item.source}</span>}
-                </button>
-                <button
-                  type="button"
-                  className="saved-tile__remove"
-                  onClick={() => removeSave(item.id)}
-                  aria-label={`Remove ${item.title} from saved`}
-                >
-                  <Bookmark size={18} fill="currentColor" aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
+        <div className="lib-tabs" role="tablist" aria-label="Collection tabs">
+          {TABS.map((t) => {
+            const TabIcon = t.Icon;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.key}
+                className={`lib-tab${tab === t.key ? ' is-active' : ''}`}
+                onClick={() => setTab(t.key)}
+              >
+                <TabIcon size={16} aria-hidden="true" />
+                <span>{t.label}</span>
+                <span className="lib-tab__count">{counts[t.key]}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {tab === 'liked' && (
+          <CollectionGrid
+            items={liked}
+            emptyIcon={<Heart size={28} />}
+            emptyTitle="No likes yet"
+            emptyNote="Tap the heart on a video to keep your favourites here."
+            onOpen={setActive}
+            onRemove={removeLike}
+            removeLabel="like"
+          />
+        )}
+
+        {tab === 'saved' && (
+          <CollectionGrid
+            items={saved}
+            emptyIcon={<Bookmark size={28} />}
+            emptyTitle="Nothing saved yet"
+            emptyNote="Tap the bookmark on any video in your feed to keep it here."
+            onOpen={setActive}
+            onRemove={removeSave}
+            removeLabel="saved item"
+          />
+        )}
+
+        {tab === 'reflections' && (
+          <CollectionGrid
+            items={reflections}
+            emptyIcon={<Sparkles size={28} />}
+            emptyTitle="No reflections yet"
+            emptyNote="Use Reflect on a video to note how it left you feeling — Calmer, Curious, or Not for me."
+            onOpen={setActive}
+            onRemove={removeReflection}
+            removeLabel="reflection"
+            showReflection
+          />
         )}
       </div>
 
-      {active && (
-        <SavedVideoModal video={active} onClose={() => setActive(null)} />
-      )}
+      {active && <SavedVideoModal video={active} onClose={() => setActive(null)} />}
     </HomeShell>
+  );
+}
+
+function CollectionGrid({ items, emptyIcon, emptyTitle, emptyNote, onOpen, onRemove, removeLabel, showReflection }) {
+  if (items.length === 0) {
+    return (
+      <div className="saved-empty">
+        <span className="saved-empty__icon" aria-hidden="true">{emptyIcon}</span>
+        <p className="saved-empty__title">{emptyTitle}</p>
+        <p className="saved-empty__note">{emptyNote}</p>
+      </div>
+    );
+  }
+
+  return (
+    <ul className="saved-grid" aria-label="Collection items">
+      {items.map((item) => (
+        <li key={item.id} className="saved-tile">
+          <button
+            type="button"
+            className="saved-tile__open"
+            onClick={() => onOpen(item)}
+            aria-label={`Play ${item.title}`}
+          >
+            <span className="saved-tile__thumb">
+              {item.thumbnail ? (
+                <img src={item.thumbnail} alt="" loading="lazy" />
+              ) : (
+                <span className="saved-tile__thumb-fallback" aria-hidden="true" />
+              )}
+              <span className="saved-tile__play" aria-hidden="true">
+                <Play size={20} fill="currentColor" />
+              </span>
+              {showReflection && item.reflection && (
+                <span className="saved-tile__reflection">{item.reflection}</span>
+              )}
+            </span>
+            <span className="saved-tile__title">{item.title}</span>
+            {item.source && <span className="saved-tile__source">{item.source}</span>}
+          </button>
+          <button
+            type="button"
+            className="saved-tile__remove"
+            onClick={() => onRemove(item.id)}
+            aria-label={`Remove ${item.title} from ${removeLabel}`}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 

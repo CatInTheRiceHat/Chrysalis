@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BRAND, SUNSHINE_LANDING } from './brand.js';
+import { BRAND } from './brand.js';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Lenis from 'lenis';
 import { AnimatePresence } from 'motion/react';
@@ -16,6 +16,7 @@ import { SearchPage } from './components/home/SearchPage';
 import { InboxPage } from './components/home/InboxPage';
 import { CommunityPage } from './components/community/CommunityPage';
 import { SavedPage } from './components/saved/SavedPage';
+import { ChallengesPage } from './components/challenges/ChallengesPage';
 import './App.css';
 import './auth.css';
 
@@ -31,6 +32,7 @@ function isAppPath(pathname) {
     || pathname === '/reels'
     || pathname === '/home'
     || pathname === '/community'
+    || pathname === '/challenges'
     || pathname === '/saved'
     || pathname === '/search'
     || pathname === '/inbox'
@@ -78,7 +80,7 @@ function AppShell({ showIntro, setShowIntro }) {
           <IntroScreen key="intro" onDone={() => setShowIntro(false)} />
         )}
       </AnimatePresence>
-      <div className="min-h-screen overflow-x-hidden" data-sunshine={SUNSHINE_LANDING ? 'on' : undefined}>
+      <div className="min-h-screen overflow-x-hidden">
         {!isAlgorithmExperience && <Navbar />}
         <Routes>
           <Route path="/" element={<MainPage />} />
@@ -86,6 +88,7 @@ function AppShell({ showIntro, setShowIntro }) {
           <Route path="/reels" element={<Navigate to="/algorithm" replace />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/community" element={<CommunityPage />} />
+          <Route path="/challenges" element={<ChallengesPage />} />
           <Route path="/saved" element={<SavedPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/inbox" element={<InboxPage />} />

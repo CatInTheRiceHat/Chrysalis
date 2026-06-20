@@ -1,10 +1,71 @@
 /* Saved page — kept videos grid + in-app modal player.
    Scoped under the [data-algorithm] token system (set by HomeShell), so it reads
-   on-palette in light/dark and the Sunshine preview, reusing the same custom
-   properties as home.css / community.css. */
+   on-palette in light/dark, reusing the same custom properties as
+   home.css / community.css. */
 
 .saved-page {
   padding-bottom: 32px;
+}
+
+.challenges-page {
+  padding-bottom: 32px;
+}
+
+/* Liked / Saved / Reflections tab switcher */
+.lib-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 18px;
+  flex-wrap: wrap;
+}
+
+.lib-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--button-bg);
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.lib-tab:hover {
+  background: color-mix(in srgb, var(--accent-soft) 20%, var(--button-bg));
+}
+
+.lib-tab.is-active {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+
+.lib-tab__count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  line-height: 18px;
+  text-align: center;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+
+/* Reflection label badge on a collection tile */
+.saved-tile__reflection {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(20, 16, 28, 0.6);
+  backdrop-filter: blur(2px);
 }
 
 .saved-head {

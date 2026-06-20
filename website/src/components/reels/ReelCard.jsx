@@ -1,11 +1,14 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { motion as MOTION } from 'motion/react';
-import { Play, Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 import { ReelActionRail } from './ReelActionRail';
 import { ReelCaption } from './ReelCaption';
 import { getRecommendationInsight } from './feedTaxonomy';
 import { buildYouTubeEmbedUrl } from './youtubeEmbed';
+import { CroppedYouTubePlayer } from './CroppedYouTubePlayer';
 import { useSavedVideos } from './useSavedVideos';
+import { useLikedVideos } from './useLikedVideos';
+import { useReflections } from './useReflections';
 
 function scoreValue(card, key) {
   const value = Number(card.chrysalis_scores?.[key]);
@@ -70,6 +73,8 @@ export function ReelCard({
   const [loaded, setLoaded] = useState(false);
   const iframeRef = useRef(null);
   const { isSaved, toggleSave } = useSavedVideos();
+  const { isLiked, toggleLike } = useLikedVideos();
+  const { reflectionFor, setReflection } = useReflections();
 
   const videoSource = reel.embed_url || reel.embedUrl || reel.youtube_id || reel.youtubeId;
   const hasVideo = Boolean(videoSource);
@@ -111,6 +116,18 @@ export function ReelCard({
     );
   };
 
+  const liked = isLiked(reel.id);
+  const handleToggleLike = () => {
+    const nowLiked = toggleLike(reel);
+    onStatus?.(nowLiked ? 'Added to your likes.' : 'Removed from your likes.');
+  };
+
+  const reflection = reflectionFor(reel.id);
+  const handleChooseReflection = (label) => {
+    setReflection(reel, label);
+    onStatus?.(label ? `Reflection noted: ${label}.` : 'Reflection cleared.');
+  };
+
   return (
     <article className="reel-card">
       <MOTION.div
@@ -141,18 +158,19 @@ export function ReelCard({
 
             {hasVideo ? (
               shouldRenderEmbed ? (
-                <iframe
+                <CroppedYouTubePlayer
                   key={embedSrc}
-                  ref={iframeRef}
-                  className="reel-media reel-embed"
                   src={embedSrc}
                   title={reel.title}
+                  iframeRef={iframeRef}
                   loading={isActive ? 'eager' : 'lazy'}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                   referrerPolicy="strict-origin-when-cross-origin"
                 />
               ) : (
+                /* Not-yet-active card: show just the tappable poster. No big
+                   play badge/overlay on load — tapping activates playback. */
                 <button
                   type="button"
                   className="reel-play"
@@ -169,10 +187,6 @@ export function ReelCard({
                       style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.5s ease' }}
                     />
                   )}
-                  <span className="reel-play__badge" aria-hidden="true">
-                    <Play size={26} fill="currentColor" />
-                  </span>
-                  <span className="reel-play__hint" aria-hidden="true">Tap to play</span>
                 </button>
               )
             ) : (
@@ -232,6 +246,10 @@ export function ReelCard({
           sourceSafetyStatus={reel.source_safety_status}
           saved={saved}
           onToggleSave={handleToggleSave}
+          liked={liked}
+          onToggleLike={handleToggleLike}
+          reflection={reflection}
+          onChooseReflection={handleChooseReflection}
           onStatus={onStatus}
           onRegenerate={onRegenerate}
           onComment={onOpenComments}

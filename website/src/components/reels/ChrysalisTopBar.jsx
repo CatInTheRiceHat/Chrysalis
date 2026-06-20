@@ -2,7 +2,6 @@ import { BRAND } from '../../brand.js';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, SlidersHorizontal, Trophy, UserCircle } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-import { ColorPreviewToggle } from './ColorPreviewToggle';
 
 /**
  * App-style top header for the Chrysalis algorithm feed.
@@ -16,7 +15,6 @@ import { ColorPreviewToggle } from './ColorPreviewToggle';
  *   intentionLabel — human label for the active intention/mode (e.g. "Daily Dew")
  *   intentionLogo  — small image for the active intention
  *   theme, onToggleTheme — light/dark control
- *   colorPreview, onToggleColorPreview — TEMP Sunshine (yellow/blue) preview toggle
  *   onOpenDetails, detailsOpen — Feed details drawer trigger + state
  *   onOpenChallenges, challengesOpen, streak — IRL challenges trigger
  *   onOpenProfile, profileOpen — profile trigger
@@ -28,8 +26,6 @@ export function ChrysalisTopBar({
   intentionLogo,
   theme,
   onToggleTheme,
-  colorPreview,
-  onToggleColorPreview,
   onOpenDetails,
   detailsOpen,
   onOpenChallenges,
@@ -46,7 +42,7 @@ export function ChrysalisTopBar({
         <Link to="/home" className="app-topbar__home" aria-label={`Back to ${BRAND} home`}>
           <ArrowLeft size={18} aria-hidden="true" />
         </Link>
-        <span className="app-topbar__logo" aria-hidden="true">☀️</span>
+        <span className="app-topbar__logo" aria-hidden="true"><img src="/images/logo.png" alt="" /></span>
         <span className="app-topbar__wordmark">{BRAND}</span>
       </div>
 
@@ -61,7 +57,7 @@ export function ChrysalisTopBar({
           title="Your intention — tap for feed details"
         >
           <span className="app-topbar__intention-logo" aria-hidden="true">
-            {intentionLogo || '🌊'}
+            <img src={intentionLogo || '/images/flutter-feed.png'} alt="" />
           </span>
           <span className="app-topbar__intention-text">
             <span className="app-topbar__intention-eyebrow">Your intention</span>
@@ -125,7 +121,6 @@ export function ChrysalisTopBar({
         )}
         </>
         )}
-        <ColorPreviewToggle preview={colorPreview} onToggle={onToggleColorPreview} />
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       </div>
     </header>

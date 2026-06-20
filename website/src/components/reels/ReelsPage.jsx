@@ -17,7 +17,6 @@ import { getFeedDebugSnapshot } from './feedTaxonomy';
 import { BreakScreen } from './BreakScreen';
 import { useSessionTimer } from './useSessionTimer';
 import { DEFAULT_TIME_SCALE_MS, DEMO_TIME_SCALE_MS } from './sessionBreaks';
-import { ChallengesPanel } from './ChallengesPanel';
 import { useChallenges } from './useChallenges';
 import { CommentsPanel } from './CommentsPanel';
 import '../../reels.css';
@@ -287,10 +286,6 @@ function applySessionTuning(cards, mode, selectedTunes) {
 export function ReelsPage() {
   const scrollRef = useRef(null);
   const [theme, setTheme] = useState(initialTheme);
-  // TEMP — Sunshine (yellow/blue) color preview. Defaults ON (current project
-  // theme); the top-bar toggle flips the feed back to Chrysalis purple. Remove
-  // this state + the data-color-preview attr + ColorPreviewToggle to delete.
-  const [colorPreview, setColorPreview] = useState('yellow');
   const [onboarded, setOnboarded] = useState(initialOnboarded);
   const [mode, setMode] = useState(initialMode);
   const [modeSelectionInitial, setModeSelectionInitial] = useState(null);
@@ -319,7 +314,6 @@ export function ReelsPage() {
 
   // IRL challenges (points, streaks, friend competition) — local demo state.
   const challenges = useChallenges();
-  const [challengesOpen, setChallengesOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
 
   // Profile lives on its own route now: send signed-in users to /profile, others
@@ -330,6 +324,8 @@ export function ReelsPage() {
   const goToProfile = () => navigate(user ? '/profile' : '/login');
   const goToCommunity = () => navigate('/community');
   const goToSaved = () => navigate('/saved');
+  const goToChallenges = () => navigate('/challenges');
+  const goToSearch = () => navigate('/search');
   const goHome = () => {
     if (LOCK_HOME_FROM_ALGORITHM) {
       announceStatus('Home stays locked while you are in the feed.');
@@ -469,7 +465,6 @@ export function ReelsPage() {
   }, [toast]);
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
-  const toggleColorPreview = () => setColorPreview((p) => (p === 'yellow' ? 'off' : 'yellow'));
 
   const startFeed = (chosenMode) => {
     const nextMode = reelsByMode[chosenMode] ? chosenMode : DEFAULT_MODE;
@@ -555,28 +550,36 @@ export function ReelsPage() {
     scroller?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Unified nav handler for the shared sidebar/bottom-bar. On the feed, tapping
+  // "Reels" scrolls back to the top instead of routing; everything else routes.
+  const onNav = (key) => {
+    switch (key) {
+      case 'home': goHome(); break;
+      case 'reels': scrollToTop(); break;
+      case 'community': goToCommunity(); break;
+      case 'challenges': goToChallenges(); break;
+      case 'search': goToSearch(); break;
+      case 'saved': goToSaved(); break;
+      case 'profile': goToProfile(); break;
+      default: break;
+    }
+  };
+
   return (
     <main
       className="reels-shell"
       data-algorithm
       data-theme={theme}
-      data-color-preview={colorPreview === 'yellow' ? 'yellow' : undefined}
       data-onboarded={onboarded ? 'true' : 'false'}
     >
       {onboarded && (
         <AppSidebar
-          active="feed"
+          active="reels"
           intentionLabel={currentMode?.label ?? "Cruisin'"}
           intentionLogo={currentMode?.logo}
-          onHome={goHome}
-          onFeed={scrollToTop}
-          onCommunity={goToCommunity}
-          onSaved={goToSaved}
-          onProfile={goToProfile}
+          onNavigate={onNav}
           onOpenDetails={() => setCompassOpen(true)}
           detailsOpen={compassOpen}
-          onOpenChallenges={() => setChallengesOpen(true)}
-          challengesOpen={challengesOpen}
           streak={challenges.stats.streak}
           theme={theme}
           onToggleTheme={toggleTheme}
@@ -591,12 +594,10 @@ export function ReelsPage() {
         intentionLogo={currentMode?.logo}
         theme={theme}
         onToggleTheme={toggleTheme}
-        colorPreview={colorPreview}
-        onToggleColorPreview={toggleColorPreview}
         onOpenDetails={() => setCompassOpen(true)}
         detailsOpen={compassOpen}
-        onOpenChallenges={() => setChallengesOpen(true)}
-        challengesOpen={challengesOpen}
+        onOpenChallenges={goToChallenges}
+        challengesOpen={false}
         streak={challenges.stats.streak}
         onOpenProfile={goToProfile}
         profileOpen={false}
@@ -667,14 +668,7 @@ export function ReelsPage() {
               </div>
             </div>
 
-            <AppBottomNav
-              active="feed"
-              onHome={goHome}
-              onFeed={scrollToTop}
-              onCommunity={goToCommunity}
-              onSaved={goToSaved}
-              onProfile={goToProfile}
-            />
+            <AppBottomNav active="reels" onNavigate={onNav} />
 
             <FeedDetailsDrawer
               open={compassOpen}
@@ -704,46 +698,8 @@ export function ReelsPage() {
             tier={dueTier}
             elapsedMin={elapsedMin}
             onComplete={handleBreakComplete}
-            onOpenChallenges={() => setChallengesOpen(true)}
+            onOpenChallenges={goToChallenges}
           />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {challengesOpen && (
-          <MOTION.div
-            className="feed-compass-sheet challenges-sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-label="IRL Challenges"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div
-              className="feed-compass-sheet__scrim"
-              aria-hidden="true"
-              onClick={() => setChallengesOpen(false)}
-            />
-            <MOTION.div
-              className="feed-compass-sheet__panel"
-              initial={{ y: 28, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 28, opacity: 0 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <ChallengesPanel
-                stats={challenges.stats}
-                completedToday={challenges.completedToday}
-                badges={challenges.badges}
-                leaderboard={challenges.leaderboard}
-                onComplete={challenges.complete}
-                onStatus={announceStatus}
-                onClose={() => setChallengesOpen(false)}
-              />
-            </MOTION.div>
-          </MOTION.div>
         )}
       </AnimatePresence>
 

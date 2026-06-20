@@ -24,30 +24,27 @@ export function ReelActionRail({
   sourceSafetyStatus,
   saved = false,
   onToggleSave,
+  liked = false,
+  onToggleLike,
+  reflection = null,
+  onChooseReflection,
   onStatus,
   onRegenerate,
   onComment,
 }) {
-  const [liked, setLiked] = useState(false);
   const [showReflect, setShowReflect] = useState(false);
-  const [reflection, setReflection] = useState(null);
   const [showWhy, setShowWhy] = useState(false);
   const showPublicSignal = Boolean(publicSignalReason && publicSignalEffect !== 'none');
 
   const announce = (message) => onStatus?.(message);
 
+  // Like / Save / Reflect persistence + status copy are owned by ReelCard (via the
+  // useLikedVideos / useSavedVideos / useReflections hooks); the rail reflects the
+  // props and forwards taps so the choices survive in the Liked/Saved section.
   const toggleLiked = () => {
-    const nextLiked = !liked;
-    setLiked(nextLiked);
-    announce(
-      nextLiked
-        ? 'Saved as a positive signal for this session.'
-        : 'Removed from positive signals for this session.',
-    );
+    onToggleLike?.();
   };
 
-  // Persistence + status copy are owned by ReelCard (via useSavedVideos); the rail
-  // just reflects the `saved` prop and forwards the tap.
   const toggleSaved = () => {
     onToggleSave?.();
   };
@@ -64,9 +61,9 @@ export function ReelActionRail({
   };
 
   const chooseReflection = (option) => {
-    setReflection(option);
+    // Tapping the current reflection again clears it.
+    onChooseReflection?.(option === reflection ? null : option);
     setShowReflect(false);
-    announce(`Reflection noted: ${option}.`);
   };
 
   const toggleWhy = () => {

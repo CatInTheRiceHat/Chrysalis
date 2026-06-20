@@ -1,6 +1,7 @@
 import { BRAND } from '../../brand.js';
-import { Home, Film, Users, Bookmark, UserCircle, SlidersHorizontal, Trophy, Search, Inbox } from 'lucide-react';
+import { SlidersHorizontal, Inbox } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { NAV_SECTIONS } from './navSections';
 
 /**
  * Desktop-only left navigation rail, in the spirit of a social-app home screen.
@@ -9,32 +10,20 @@ import { ThemeToggle } from './ThemeToggle';
  * wide screens (driven entirely by CSS via the --app-sidebar-w token). On mobile
  * it is hidden — the top bar + bottom tab bar take over there.
  *
- * Primary nav (Home / Reflect / Saved / Profile) mirrors the bottom nav; the
- * secondary group exposes Feed details and Challenges. Nothing here leaks raw
- * algorithm internals.
+ * Shows all seven main sections in the canonical order (see navSections.js). A
+ * secondary group exposes Feed details (Algorithm Compass) and Inbox, which are
+ * not top-level sections. Nothing here leaks raw algorithm internals.
+ *
+ * Navigation is delegated to `onNavigate(key)` so the feed and the router pages
+ * can each handle a tap their own way (the feed scrolls instead of routing).
  */
-const PRIMARY = [
-  { key: 'home', label: 'Home', Icon: Home },
-  { key: 'feed', label: 'Feed', Icon: Film },
-  { key: 'community', label: 'Community', Icon: Users },
-  { key: 'saved', label: 'Saved', Icon: Bookmark },
-  { key: 'profile', label: 'Profile', Icon: UserCircle },
-];
-
 export function AppSidebar({
   active = 'home',
   intentionLabel,
   intentionLogo,
-  onHome,
-  onFeed,
-  onCommunity,
-  onSaved,
-  onProfile,
+  onNavigate,
   onOpenDetails,
   detailsOpen,
-  onOpenChallenges,
-  challengesOpen,
-  onSearch,
   onInbox,
   streak = 0,
   theme,
@@ -42,50 +31,56 @@ export function AppSidebar({
   showBreakDemo = false,
   onTriggerBreak,
 }) {
-  const handlers = {
-    home: onHome, feed: onFeed, community: onCommunity, saved: onSaved, profile: onProfile,
-  };
-
   return (
     <>
     <aside className="app-sidebar" aria-label={`${BRAND} navigation`}>
       <div className="app-sidebar__brand">
-        <span className="app-sidebar__logo" aria-hidden="true">☀️</span>
+        <span className="app-sidebar__logo" aria-hidden="true"><img src="/images/logo.png" alt="" /></span>
         <span className="app-sidebar__wordmark">{BRAND}</span>
       </div>
 
-      <button
-        type="button"
-        className="app-sidebar__intention"
-        onClick={onOpenDetails}
-        aria-label={`Your intention: ${intentionLabel}. Open feed details.`}
-        aria-haspopup="dialog"
-        aria-expanded={detailsOpen}
-        title="Your intention — open feed details"
-      >
-        <span className="app-sidebar__intention-logo" aria-hidden="true">
-          {intentionLogo || '🌊'}
-        </span>
-        <span className="app-sidebar__intention-text">
-          <span className="app-sidebar__intention-eyebrow">Your intention</span>
-          <span className="app-sidebar__intention-label">{intentionLabel}</span>
-        </span>
-      </button>
+      {onOpenDetails && (
+        <button
+          type="button"
+          className="app-sidebar__intention"
+          onClick={onOpenDetails}
+          aria-label={`Your intention: ${intentionLabel}. Open feed details.`}
+          aria-haspopup="dialog"
+          aria-expanded={detailsOpen}
+          title="Your intention — open feed details"
+        >
+          <span className="app-sidebar__intention-logo" aria-hidden="true">
+            <img src={intentionLogo || '/images/flutter-feed.png'} alt="" />
+          </span>
+          <span className="app-sidebar__intention-text">
+            <span className="app-sidebar__intention-eyebrow">Your intention</span>
+            <span className="app-sidebar__intention-label">{intentionLabel}</span>
+          </span>
+        </button>
+      )}
 
       <nav className="app-sidebar__nav">
-        {PRIMARY.map((item) => {
+        {NAV_SECTIONS.map((item) => {
           const isActive = item.key === active;
           const ItemIcon = item.Icon;
+          const showStreak = item.key === 'challenges' && streak > 0;
           return (
             <button
               key={item.key}
               type="button"
               className={`app-sidebar__item${isActive ? ' is-active' : ''}`}
-              onClick={() => handlers[item.key]?.()}
+              onClick={() => onNavigate?.(item.key)}
               aria-current={isActive ? 'page' : undefined}
               title={item.label}
             >
-              <ItemIcon size={22} aria-hidden="true" />
+              <span className="app-sidebar__item-icon">
+                <ItemIcon size={22} aria-hidden="true" />
+                {showStreak && (
+                  <span className="app-sidebar__badge" aria-label={`${streak} day streak`}>
+                    {streak}
+                  </span>
+                )}
+              </span>
               <span className="app-sidebar__label">{item.label}</span>
             </button>
           );
@@ -94,61 +89,35 @@ export function AppSidebar({
 
       <div className="app-sidebar__spacer" aria-hidden="true" />
 
-      <nav className="app-sidebar__nav app-sidebar__nav--secondary">
-        {onSearch && (
-          <button
-            type="button"
-            className={`app-sidebar__item${active === 'search' ? ' is-active' : ''}`}
-            onClick={onSearch}
-            aria-current={active === 'search' ? 'page' : undefined}
-            title="Search"
-          >
-            <Search size={22} aria-hidden="true" />
-            <span className="app-sidebar__label">Search</span>
-          </button>
-        )}
-        {onInbox && (
-          <button
-            type="button"
-            className={`app-sidebar__item${active === 'inbox' ? ' is-active' : ''}`}
-            onClick={onInbox}
-            aria-current={active === 'inbox' ? 'page' : undefined}
-            title="Inbox"
-          >
-            <Inbox size={22} aria-hidden="true" />
-            <span className="app-sidebar__label">Inbox</span>
-          </button>
-        )}
-        <button
-          type="button"
-          className="app-sidebar__item"
-          onClick={onOpenDetails}
-          aria-haspopup="dialog"
-          aria-expanded={detailsOpen}
-          title="Feed details"
-        >
-          <SlidersHorizontal size={22} aria-hidden="true" />
-          <span className="app-sidebar__label">Feed details</span>
-        </button>
-        <button
-          type="button"
-          className="app-sidebar__item"
-          onClick={onOpenChallenges}
-          aria-haspopup="dialog"
-          aria-expanded={challengesOpen}
-          title="IRL Challenges"
-        >
-          <span className="app-sidebar__item-icon">
-            <Trophy size={22} aria-hidden="true" />
-            {streak > 0 && (
-              <span className="app-sidebar__badge" aria-label={`${streak} day streak`}>
-                {streak}
-              </span>
-            )}
-          </span>
-          <span className="app-sidebar__label">Challenges</span>
-        </button>
-      </nav>
+      {(onOpenDetails || onInbox) && (
+        <nav className="app-sidebar__nav app-sidebar__nav--secondary">
+          {onInbox && (
+            <button
+              type="button"
+              className={`app-sidebar__item${active === 'inbox' ? ' is-active' : ''}`}
+              onClick={onInbox}
+              aria-current={active === 'inbox' ? 'page' : undefined}
+              title="Inbox"
+            >
+              <Inbox size={22} aria-hidden="true" />
+              <span className="app-sidebar__label">Inbox</span>
+            </button>
+          )}
+          {onOpenDetails && (
+            <button
+              type="button"
+              className="app-sidebar__item"
+              onClick={onOpenDetails}
+              aria-haspopup="dialog"
+              aria-expanded={detailsOpen}
+              title="Feed details"
+            >
+              <SlidersHorizontal size={22} aria-hidden="true" />
+              <span className="app-sidebar__label">Feed details</span>
+            </button>
+          )}
+        </nav>
+      )}
 
       {showBreakDemo && (
         <div className="app-sidebar__footer">

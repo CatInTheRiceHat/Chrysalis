@@ -4,7 +4,7 @@
    Layered on top of reels.css + home.css: it lives inside the same
    [data-algorithm] token scope (rendered through <HomeShell>), so every var()
    below (--bg, --card, --accent, --tone-*, --border, --text…) resolves to the
-   active theme + Sunshine preview. Class names are Community-specific (cmty-*)
+   active theme. Class names are Community-specific (cmty-*)
    so nothing leaks into the feed, Home, or the marketing site. It reuses the
    shared .home-btn and .cx-avatar primitives for buttons and avatars.
    =========================================================================== */

@@ -15,6 +15,10 @@ import {
  * activity vocabulary, and is honest about it ("Searching Chrysalis demo content").
  * No fake backend claims, no popularity ranking.
  */
+// Healthy-feed vibe filters — Chrysalis's content tones, so Search reads as a calm
+// discovery surface rather than a generic explore grid. Tapping one searches it.
+const FILTER_TAGS = ['calm', 'funny', 'wellness', 'perspective', 'creative', 'study', 'social'];
+
 function matches(text, query) {
   return text.toLowerCase().includes(query.trim().toLowerCase());
 }
@@ -51,6 +55,21 @@ export function SearchPage() {
             autoFocus
           />
         </label>
+
+        <section className="search-filters" aria-label="Filter by vibe">
+          <div className="chips-wrap">
+            {FILTER_TAGS.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                className={`home-btn home-btn--chip${query.trim().toLowerCase() === tag ? ' is-active' : ''}`}
+                onClick={() => setQuery(tag)}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        </section>
 
         {!active && (
           <section className="search-suggested" aria-label="Suggested searches">
@@ -100,9 +119,11 @@ export function SearchPage() {
         )}
 
         {active && (
-          <section className="search-results" aria-label="Saved and feed items">
-            <h2 className="section-title">Saved &amp; feed</h2>
-            <p className="empty-note">Searching your saved resets is coming soon.</p>
+          <section className="search-results" aria-label="Your collection">
+            <h2 className="section-title">Your collection</h2>
+            <p className="empty-note">
+              Looking for something you kept? Check <Link to="/saved">Liked &amp; Saved</Link>.
+            </p>
           </section>
         )}
 

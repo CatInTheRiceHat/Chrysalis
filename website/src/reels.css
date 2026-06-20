@@ -18,7 +18,7 @@
   --tone-healthy: #7fa384;
   --tone-positive:#d78b9a;
   --tone-fun:     #d6a456;
-  --tone-perspective: #7899ad;
+  --tone-perspective: #938e97;
   --tone-creative:#bf8f61;
   --tone-social:  #83a99f;
   --tone-reset:   #8ba989;
@@ -50,7 +50,7 @@
   --tone-healthy: #95b99a;
   --tone-positive:#efa8b6;
   --tone-fun:     #e2b867;
-  --tone-perspective: #8fb0c2;
+  --tone-perspective: #938e97;
   --tone-creative:#d1a277;
   --tone-social:  #9ac0b7;
   --tone-reset:   #9fb99d;
@@ -62,39 +62,6 @@
   --reel-shadow:  0 24px 60px rgba(0, 0, 0, 0.45);
   --reel-radius:  28px;
 }
-
-/* ============================================================
-   TEMP — Sunshine (yellow/blue) preview theme.
-   Active when .reels-shell carries data-color-preview="yellow"
-   (the current project default; toggle in the feed top bar flips
-   it back to Chrysalis purple).
-   To remove the preview entirely: delete this whole block, delete
-   ColorPreviewToggle + its state in ReelsPage, and remove the
-   data-color-preview attributes from ReelsPage / HomeShell.
-   ============================================================ */
-
-/* Light theme + preview: yellow surfaces, yellow/blue accents. */
-[data-algorithm]:not([data-theme="dark"])[data-color-preview="yellow"] {
-  --bg:          #fffef4;                                 /* soft warm white base         */
-  --bg-soft:     #FFFAB8;                                 /* main yellow surface/highlight */
-  --accent:      #FFDE86;                                 /* accent yellow — accents/buttons/borders */
-  --accent-soft: #B7E7F6;                                 /* secondary blue accent         */
-  --border:      rgba(162, 196, 253, 0.50);              /* cool blue outline (A2C4FD)    */
-  --button-bg:   rgba(255, 250, 184, 0.72);              /* translucent main yellow       */
-  --reel-shadow: 0 24px 60px rgba(162, 196, 253, 0.50); /* blue glow / shadow            */
-  --on-accent:   #2b2631;                                /* dark text on now-pale fills   */
-}
-
-/* Dark theme + preview: keep dark surfaces, recolor accents + glow only
-   so dark mode stays dark. */
-[data-algorithm][data-theme="dark"][data-color-preview="yellow"] {
-  --accent:      #FFDE86;
-  --accent-soft: #B7E7F6;
-  --border:      rgba(162, 196, 253, 0.38);
-  --reel-shadow: 0 24px 60px rgba(162, 196, 253, 0.45);
-  --on-accent:   #2b2631;
-}
-/* ===================== end Sunshine preview ================= */
 
 /* ── Page shell ─────────────────────────────────────────────────────────── */
 .reels-shell {
@@ -154,8 +121,13 @@
   border-radius: var(--reel-radius);
   overflow: hidden;
   /* Establish a size container so the video embed can be scaled to *cover* the
-     frame using container units (cqw/cqh) — see .reel-embed. */
+     frame using container units (cqw/cqh) — see .cropped-yt__frame. */
   container-type: size;
+  /* How far the cropped YouTube reel is zoomed past a perfect cover-fit.
+     1.0 = exact cover (may leave hairline black bars from rounding).
+     Raise toward 1.25 if any black edge still shows; lower toward 1.08 if the
+     video feels too zoomed-in / faces get cropped. */
+  --yt-crop-scale: 1.18;
   background: var(--card);
   border: 1px solid var(--border);
   box-shadow: var(--reel-shadow);
@@ -182,20 +154,25 @@
     linear-gradient(150deg, var(--bg-soft), color-mix(in srgb, var(--accent-soft) 30%, var(--card)));
 }
 
-/* Placeholder/seed cards: spinning sun while the live feed loads */
+/* Placeholder/seed cards: spinning butterfly while the live feed loads */
 .reel-media-loader {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .reel-loader-sun {
-  font-size: 88px;
+  width: 88px;
+  height: 88px;
   line-height: 1;
   filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
   animation: reelsFeedSpin 1.6s linear infinite;
 }
 .reel-loader-sun::before {
-  content: "\2600\FE0F"; /* ☀️ */
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: url('/images/logo.png') center / contain no-repeat;
 }
 
 /* ── Side action rail ───────────────────────────────────────────────────── */
@@ -454,12 +431,6 @@
   transition: transform 0.2s ease, background 0.2s ease;
 }
 .reels-fab { width: 42px; justify-content: center; padding: 0; }
-/* TEMP — active state for the Sunshine preview toggle (ColorPreviewToggle). */
-.reels-fab.is-on {
-  border-color: var(--accent);
-  color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
-}
 .reels-fab:hover,
 .reel-back:hover { transform: translateY(-2px); }
 .reel-back {
@@ -1324,17 +1295,62 @@
    Real-video cards — YouTube embed, play poster, reasons (v1 labeling)
    ───────────────────────────────────────────────────────────────────────── */
 
-/* The YouTube embed is an <iframe>, so object-fit can't crop it. Instead size the
-   iframe to cover the (portrait) frame as 16:9 content, centered, and let the
-   frame's overflow:hidden clip the excess — no black letterbox/pillarbox bars. */
-.reel-embed {
-  inset: auto;
+/* Cropped YouTube reel player (see CroppedYouTubePlayer.jsx).
+   The embed is an <iframe>, so object-fit can't crop it. Instead we size the
+   iframe to cover the portrait frame as 16:9 content, centered, then zoom it by
+   --yt-crop-scale so its edges overshoot the frame. The frame's overflow:hidden
+   clips the excess — giving a TikTok/Reels "cover" crop with no black bars. */
+.cropped-yt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+.cropped-yt__frame {
+  position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
   width: max(100cqw, 100cqh * 16 / 9);
   height: max(100cqh, 100cqw * 9 / 16);
+  transform: translate(-50%, -50%) scale(var(--yt-crop-scale, 1.18));
+  transform-origin: center center;
   border: 0;
+}
+/* Transparent tap layer: toggles pause/play. Sits above the iframe but below
+   the source/popular badges (z-index 3) and the mute button (z-index 4), so
+   those stay clickable. */
+.cropped-yt__tap {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.cropped-yt__icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  color: #fff;
+  background: color-mix(in srgb, #000 42%, transparent);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+  opacity: 0;
+  transform: scale(0.86);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  pointer-events: none;
+}
+.cropped-yt__icon.is-visible {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* Tap-to-play poster button (fills the frame) */
@@ -3112,7 +3128,11 @@
 }
 
 .reels-feed-status__spinner::before {
-  content: "\2600\FE0F"; /* ☀️ */
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: url('/images/logo.png') center / contain no-repeat;
 }
 
 @keyframes reelsFeedSpin {
@@ -3155,7 +3175,7 @@
   font-weight: 700;
   cursor: pointer;
   color: var(--accent-contrast, #1a1a1a);
-  background: var(--accent, #ffd24a);
+  background: var(--accent, #7c6d8c);
   transition: filter 0.15s ease, transform 0.15s ease;
 }
 

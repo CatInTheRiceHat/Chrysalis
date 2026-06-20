@@ -3,35 +3,30 @@ import { HomeShell } from '../home/HomeShell';
 import { CommunityHeader } from './CommunityHeader';
 import { FriendSwipeDeck } from './FriendSwipeDeck';
 import { GoodThingsLeaderboard } from './GoodThingsLeaderboard';
-import { TouchGrassChallenges } from './TouchGrassChallenges';
 import { YourCircle } from './YourCircle';
 import { SafetyNote } from './SafetyNote';
-import {
-  CHALLENGES,
-  LEADERBOARD,
-  STARTER_CIRCLE,
-} from './communityData';
+import { LEADERBOARD, STARTER_CIRCLE } from './communityData';
 import '../../community.css';
 
 /**
- * Chrysalis Community — make friends through shared goals, offline activities,
- * and wellness challenges, with a leaderboard that rewards healthy actions
- * instead of popularity.
+ * Chrysalis Community — make friends through healthy actions, not clout. Friend
+ * discovery (the swipe deck), your small circle, and a leaderboard that rewards
+ * kind, real-world action with Dewdrops instead of follower counts.
  *
- * Reuses the social-app chrome via <HomeShell active="community"> so it feels
- * like one app with Home and the feed. All interactive state lives here and is
- * frontend-only (no backend): the friend deck index, the user's circle, the set
- * of completed challenges, and the Dewdrops earned this session. Completing a
- * challenge bumps the header stat and re-ranks the leaderboard live.
+ * Wellness challenges live in their own top-level Challenges section now; Community
+ * stays focused on people. Dewdrops here are earned through *social* good — adding
+ * someone to your circle or sending encouragement — which bumps the header stat and
+ * re-ranks the leaderboard live. All frontend-only (no backend).
  */
 const BASE_WEEK_DEWDROPS = 128; // header "earned this week" starting figure
 const SELF_BASE_SCORE = 310; // the "You" leaderboard row's starting Dewdrops
+const CONNECT_DEWDROPS = 8; // adding a friend to your circle
+const ENCOURAGE_DEWDROPS = 5; // inviting / cheering someone on
 
 export function CommunityPage() {
   const [deckIndex, setDeckIndex] = useState(0);
   const [lastConnected, setLastConnected] = useState(null);
   const [circle, setCircle] = useState(STARTER_CIRCLE);
-  const [completed, setCompleted] = useState(() => new Set());
   const [earnedDewdrops, setEarnedDewdrops] = useState(0);
   const [circleNote, setCircleNote] = useState(null);
 
@@ -51,39 +46,30 @@ export function CommunityPage() {
   const handleDecision = (candidate, decision) => {
     if (decision === 'connect') {
       setLastConnected(candidate.name);
-      setCircle((prev) =>
-        prev.some((m) => m.id === candidate.id)
-          ? prev
-          : [
-              ...prev,
-              {
-                id: candidate.id,
-                name: candidate.name,
-                emoji: candidate.emoji,
-                circleGoal: candidate.circleGoal,
-                activity: candidate.activity,
-              },
-            ],
-      );
+      setCircle((prev) => {
+        if (prev.some((m) => m.id === candidate.id)) return prev;
+        setEarnedDewdrops((d) => d + CONNECT_DEWDROPS);
+        return [
+          ...prev,
+          {
+            id: candidate.id,
+            name: candidate.name,
+            emoji: candidate.emoji,
+            circleGoal: candidate.circleGoal,
+            activity: candidate.activity,
+          },
+        ];
+      });
     }
     setDeckIndex((i) => i + 1);
   };
 
-  const handleComplete = (challenge) => {
-    if (completed.has(challenge.id)) return;
-    setCompleted((prev) => {
-      const next = new Set(prev);
-      next.add(challenge.id);
-      return next;
-    });
-    setEarnedDewdrops((d) => d + challenge.reward);
-  };
-
   const handleGuidedAction = (member, kind) => {
+    setEarnedDewdrops((d) => d + ENCOURAGE_DEWDROPS);
     setCircleNote(
       kind === 'invite'
-        ? `You invited ${member.name} to a challenge. 🌿`
-        : `You sent ${member.name} some encouragement. 💜`,
+        ? `You invited ${member.name} to a challenge. 🌿 +${ENCOURAGE_DEWDROPS} Dewdrops`
+        : `You sent ${member.name} some encouragement. 💜 +${ENCOURAGE_DEWDROPS} Dewdrops`,
     );
   };
 
@@ -93,9 +79,6 @@ export function CommunityPage() {
       row.isSelf ? { ...row, dewdrops: SELF_BASE_SCORE + earnedDewdrops } : row,
     ).sort((a, b) => b.dewdrops - a.dewdrops);
   }, [earnedDewdrops]);
-
-  const completedCount = completed.size;
-  const completedAll = completedCount === CHALLENGES.length;
 
   return (
     <HomeShell active="community">
@@ -109,12 +92,6 @@ export function CommunityPage() {
               lastConnected={lastConnected}
               onDecision={handleDecision}
             />
-            <TouchGrassChallenges completed={completed} onComplete={handleComplete} />
-            {completedAll && (
-              <p className="cmty-note cmty-note--inline">
-                Every challenge done today — that’s real Dewdrops, not screen time. 🌿
-              </p>
-            )}
           </div>
 
           <div className="cmty-col cmty-col--side">

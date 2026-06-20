@@ -57,7 +57,7 @@ export function AuthPage({ mode = 'login' }) {
 
       <div className="cx-card cx-card--auth">
         <div className="cx-brand">
-          <span className="cx-brand__logo" aria-hidden="true">☀️</span>
+          <span className="cx-brand__logo" aria-hidden="true"><img src="/images/logo.png" alt="" /></span>
           <span className="cx-brand__word">{BRAND}</span>
         </div>
 

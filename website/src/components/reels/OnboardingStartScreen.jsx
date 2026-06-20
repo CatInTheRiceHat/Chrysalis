@@ -42,7 +42,7 @@ export function OnboardingStartScreen({ initialMode = null, onStart }) {
               onClick={() => setSelectedMode(mode.key)}
             >
               <span className="mode-card__logo" aria-hidden="true">
-                {mode.logo}
+                <img src={mode.logo} alt="" />
               </span>
               <span className="mode-card__title">{mode.label}</span>
               <span className="mode-card__desc">{mode.description}</span>
