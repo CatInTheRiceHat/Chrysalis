@@ -6,8 +6,6 @@ from datetime import date
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import pandas as pd
 from pathlib import Path
@@ -119,12 +117,7 @@ app.add_middleware(
 )
 
 ROOT = Path(__file__).parent
-WEBSITE_DIR = ROOT / "website" / "dist"
 DEFAULT_DATASET = ROOT / "datasets" / "processed_dataset.csv"
-
-@app.get("/")
-def serve_index():
-    return FileResponse(WEBSITE_DIR / "index.html")
 
 from pydantic import BaseModel, Field
 
@@ -569,8 +562,6 @@ def cocoon_advance(user_id: str):
         "graduated": graduating,
     }
 
-
-app.mount("/", StaticFiles(directory=WEBSITE_DIR, html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn

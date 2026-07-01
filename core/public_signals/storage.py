@@ -159,19 +159,45 @@ def load_cached_context_postgres(
     """
     row_list = list(rows)
     context = PublicSignalContext.empty()
+    channel_ids = [cid for cid, _ in _unique_channels(row_list)]
+    video_ids = [vid for vid, _ in _unique_videos(row_list)]
     try:
-        for channel_id, _channel_title in _unique_channels(row_list):
-            signal = _get_postgres_public_signal(conn, "channel", channel_id)
-            safety = _get_postgres_channel_safety(conn, channel_id)
-            if signal is not None:
-                context.channel_signals[channel_id] = signal
-            if safety is not None:
-                context.channel_safety[channel_id] = safety
+        cur = conn.cursor()
 
-        for video_id, _row in _unique_videos(row_list):
-            signal = _get_postgres_public_signal(conn, "video", video_id)
-            if signal is not None:
-                context.video_signals[video_id] = signal
+        if channel_ids:
+            cur.execute(
+                """
+                SELECT * FROM public_signal_records
+                WHERE target_type = 'channel' AND target_id IN %s
+                """,
+                (tuple(channel_ids),),
+            )
+            for row in _cursor_rows(cur):
+                signal = PublicSignalRecord.from_row(row)
+                if signal is not None and not signal.is_expired():
+                    context.channel_signals[row["target_id"]] = signal
+
+            cur.execute(
+                "SELECT * FROM channel_safety_records WHERE channel_id IN %s",
+                (tuple(channel_ids),),
+            )
+            for row in _cursor_rows(cur):
+                safety = ChannelSafetyRecord.from_row(row)
+                if safety is not None and not safety.is_expired():
+                    context.channel_safety[row["channel_id"]] = safety
+
+        if video_ids:
+            cur.execute(
+                """
+                SELECT * FROM public_signal_records
+                WHERE target_type = 'video' AND target_id IN %s
+                """,
+                (tuple(video_ids),),
+            )
+            for row in _cursor_rows(cur):
+                signal = PublicSignalRecord.from_row(row)
+                if signal is not None and not signal.is_expired():
+                    context.video_signals[row["target_id"]] = signal
     except Exception:
         try:
             conn.rollback()
@@ -523,3 +549,9 @@ def _cursor_row(cur, row) -> dict | None:
         return row
     cols = [d[0] for d in cur.description]
     return dict(zip(cols, row))
+
+
+def _cursor_rows(cur) -> list[dict]:
+    """Fetch all remaining rows from a cursor as column-keyed dicts."""
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
