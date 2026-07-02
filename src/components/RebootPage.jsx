@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   AnimatePresence,
   motion as MOTION,
@@ -820,10 +819,16 @@ function HeroSection() {
               Take the survey
               <ArrowUpRight size={17} />
             </a>
-            <Link to="/algorithm" className="ct-button ct-button--ghost" data-cursor="soft">
+            <a
+              href="https://thechrysalisproject.vercel.app/algorithm"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ct-button ct-button--ghost"
+              data-cursor="soft"
+            >
               Try the algorithm
               <ArrowUpRight size={17} />
-            </Link>
+            </a>
           </DroopyElement>
           <div className="ct-origin-grid" aria-label="Project origin highlights">
             {originCards.map(([title, body], index) => (
