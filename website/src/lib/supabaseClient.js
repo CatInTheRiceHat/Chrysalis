@@ -14,14 +14,24 @@ import { createClient } from '@supabase/supabase-js';
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const isSupabaseConfigured = Boolean(url && anonKey);
-
-export const supabase = isSupabaseConfigured
-  ? createClient(url, anonKey, {
+function createSupabaseClient() {
+  if (!url || !anonKey) return null;
+  try {
+    return createClient(url, anonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
       },
-    })
-  : null;
+    });
+  } catch (err) {
+    // A malformed VITE_SUPABASE_URL (e.g. missing the https:// scheme) must not
+    // white-screen the whole app. Fall back to the "auth not configured" state.
+    console.error('[supabase] client init failed; running without auth:', err);
+    return null;
+  }
+}
+
+export const supabase = createSupabaseClient();
+
+export const isSupabaseConfigured = Boolean(supabase);
