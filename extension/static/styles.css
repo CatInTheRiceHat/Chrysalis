@@ -1,0 +1,104 @@
+@font-face { font-family: Montserrat; src: url('assets/Montserrat.ttf') format('truetype'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: Abril; src: url('assets/AbrilFatface.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+:root { color-scheme: light; --bg: #faf9f6; --surface: #f2eef5; --ink: #2b2631; --muted: #736c7d; --line: #d9d2de; --accent: #685975; --on-accent: #fff; }
+:root[data-theme='dark'] { color-scheme: dark; --bg: #161320; --surface: #221c30; --ink: #efeaf3; --muted: #b5acbf; --line: #493e54; --accent: #c9b8d8; --on-accent: #221c30; }
+@media (prefers-color-scheme: dark) { :root[data-theme='system'] { color-scheme: dark; --bg: #161320; --surface: #221c30; --ink: #efeaf3; --muted: #b5acbf; --line: #493e54; --accent: #c9b8d8; --on-accent: #221c30; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 Montserrat, sans-serif; }
+.popup { width: 375px; padding: 20px 24px 0; }
+.popup h1 { font-size: 29px; }
+.brand { display: flex; align-items: center; gap: 9px; padding-bottom: 20px; border-bottom: 1px solid var(--line); font-weight: 650; }
+.brand img { object-fit: contain; }
+.edition { margin-left: auto; font-size: 10px; color: var(--muted); font-weight: 500; }
+.eyebrow { margin: 26px 0 10px; color: var(--accent); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; font-weight: 650; }
+h1 { margin: 0; font: 400 34px/1.14 Abril, serif; letter-spacing: -.02em; }
+h2 { font-size: 18px; line-height: 1.3; margin: 0 0 18px; }
+.intro { margin: 16px 0 22px; color: var(--muted); font-size: 13px; }
+.controls { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 18px 0; cursor: pointer; }
+.toggle-row strong { display: block; font-size: 13px; font-weight: 600; }
+small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+input[type='checkbox'] { accent-color: var(--accent); width: 22px; height: 22px; flex: 0 0 22px; margin: 10px 0 10px 10px; cursor: pointer; }
+.select-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding: 12px 0; font-size: 13px; }
+select { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; min-height: 44px; padding: 0 10px; max-width: 65%; }
+button { cursor: pointer; font: inherit; min-height: 44px; }
+:is(button, input, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+:disabled { cursor: wait; opacity: .55; }
+.primary { display: flex; justify-content: space-between; align-items: center; width: 100%; border: 0; border-radius: 10px; background: var(--accent); color: var(--on-accent); padding: 12px 16px; font-size: 13px; font-weight: 600; }
+.status { color: var(--muted); font-size: 11px; margin: 10px 0 16px; }
+.note { color: var(--muted); font-size: 11px; line-height: 1.6; margin: 16px 0 22px; }
+footer { display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding: 14px 0; font-size: 10px; color: var(--muted); }
+.text-button { background: none; border: 0; color: var(--accent); padding: 0; text-decoration: underline; }
+[hidden] { display: none !important; }
+.settings-shell { max-width: 740px; padding: 24px; margin: 0 auto; }
+.options h1 { font-size: 40px; }
+.options .intro, .privacy p { font-size: 16px; }
+.options .controls { margin-top: 32px; padding-top: 24px; }
+.options .toggle-row strong, .options .select-row { font-size: 16px; }
+.options small { font-size: 13px; max-width: 420px; }
+.options .status, .options .note { font-size: 13px; }
+.privacy { margin: 38px 0; max-width: 62ch; }
+.privacy p { color: var(--muted); }
+.privacy .eyebrow { font-size: 10px; }
+@media (min-width: 640px) { .settings-shell { padding: 40px; } .options h1 { font-size: 50px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+#session-root { border-top: 1px solid var(--line); padding: 20px 0; margin: 20px 0; }
+.session-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.session-heading h2 { margin: 0; }
+#session-phase { color: var(--accent); font-size: 12px; }
+#session-plan { display: grid; gap: 10px; margin-top: 18px; }
+#session-plan label { display: block; font-size: 12px; font-weight: 600; }
+#session-plan :is(select,input) { width: 100%; max-width: none; min-height: 44px; }
+#session-root input { border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; border-radius: 8px; padding: 8px; }
+#session-root button:not(.primary) { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+.session-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.elapsed { margin: 12px 0; font-size: 32px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.elapsed small { font-size: 11px; margin-top: 8px; }
+.notice { border-left: 3px solid var(--accent); padding: 10px 12px; background: var(--surface); font-size: 12px; line-height: 1.6; }
+.timer-contract { font-size: 11px; color: var(--muted); margin: 18px 0 0; }
+.break-controls { display: grid; grid-template-columns: 1fr 65px; gap: 8px; align-items: center; margin-top: 18px; font-size: 12px; }
+.break-controls button { grid-column: 1 / -1; }
+#summary-values { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; }
+#summary-values dd { margin: 0; text-align: right; }
+#session-intention { font-weight: 600; overflow-wrap: anywhere; }
+
+.viewing-controls { margin-top: 24px; padding-top: 20px; }
+.viewing-controls h2 { margin-bottom: 10px; }
+.viewing-controls .toggle-row + .toggle-row { border-top: 1px solid var(--line); }
+.viewing-controls .note { margin: 8px 0 16px; }
+
+.popup .viewing-controls { padding-top: 0; }
+.popup .viewing-controls summary { padding: 12px 0; cursor: pointer; font-weight: 600; font-size: 13px; }
+.popup .viewing-controls summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Experience: existing Chrysalis typography and warm plum palette. */
+.popup { width: 390px; max-width: 100vw; }
+.popup h1 { font-size: 28px; }
+.popup #session-root { margin-top: 18px; }
+#session-plan { gap: 8px; }
+#session-root #session-intention, #summary-intention { overflow-wrap: anywhere; }
+#session-root #session-intention { font-size: 17px; line-height: 1.5; }
+.quick-preferences { margin: 18px 0; }
+summary { cursor: pointer; padding: 12px 0; font-size: 13px; }
+summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.secondary { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 10px 14px; font-size: 13px; }
+.full-width { width: 100%; }
+.welcome-points { padding-left: 20px; font-size: 13px; line-height: 1.7; }
+.welcome-points li { padding: 5px 0; }
+#introduction { padding: 4px 0 20px; }
+.settings-nav { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 22px 0; }
+a { color: var(--accent); }
+.settings-nav a { padding: 8px 0; font-size: 14px; }
+.preference-section { padding: 24px 0; margin-top: 28px; scroll-margin-top: 20px; }
+.preference-section .eyebrow { margin-top: 0; }
+.field-label { display: block; font-size: 14px; margin: 16px 0 8px; }
+.preference-section input[type='number'] { width: 100px; max-width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); padding: 8px; font: inherit; margin-right: 8px; }
+.preference-section select { max-width: 100%; font: inherit; }
+.preference-section .secondary { margin-top: 8px; }
+dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--bg); color: var(--ink); padding: 24px; max-width: min(440px, calc(100vw - 32px)); font: inherit; }
+dialog::backdrop { background: #16132099; }
+dialog .primary { width: auto; }
+#delete-error { color: var(--accent); font-size: 13px; }
+[tabindex='-1']:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
+@media (min-width: 640px) { .welcome-points { font-size: 16px; } .popup .welcome-points { font-size: 13px; } }

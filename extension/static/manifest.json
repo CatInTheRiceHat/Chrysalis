@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Chrysalis",
+  "version": "0.3.0",
+  "description": "Plan YouTube sessions, notice foreground time and choose which supported recommendation surfaces to hide.",
+  "minimum_chrome_version": "111",
+  "permissions": [
+    "storage"
+  ],
+  "incognito": "not_allowed",
+  "icons": {
+    "100": "icons/icon-100.png"
+  },
+  "action": {
+    "default_title": "Chrysalis",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "100": "icons/icon-100.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "world": "ISOLATED"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+  }
+}
