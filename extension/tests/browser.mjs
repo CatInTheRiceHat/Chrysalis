@@ -32,6 +32,8 @@ try {
   const popup = await context.newPage();
   watchErrors(popup);
   await popup.goto(`${base}popup.html`);
+  await popup.locator('#intro-skip').click();
+  await popup.locator('.quick-preferences summary').click();
   await expect(popup.getByRole('heading', { name: 'Time, on your terms.' })).toBeVisible();
   await expect(popup.locator('#connection')).toHaveText('Extension connected');
   await expect(popup.locator('#show-indicator')).toBeChecked();
@@ -44,6 +46,7 @@ try {
   const reopened = await context.newPage();
   watchErrors(reopened);
   await reopened.goto(`${base}popup.html`);
+  await reopened.locator('.quick-preferences summary').click();
   await expect(reopened.locator('#theme')).toHaveValue('dark');
   const optionsPromise = context.waitForEvent('page');
   await reopened.getByRole('button', { name: 'Open settings' }).click();

@@ -1,6 +1,6 @@
 {
   "name": "chrysalis-extension",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,9 +11,11 @@
     "test": "node scripts/test.mjs",
     "build": "npm run typecheck && node scripts/build.mjs && node scripts/verify-build.mjs",
     "check": "npm run test && npm run build",
-    "test:browser": "npm run build && node tests/browser.mjs && node tests/session-browser.mjs && node tests/viewing-browser.mjs",
+    "test:browser": "npm run build && node tests/browser.mjs && node tests/session-browser.mjs && node tests/viewing-browser.mjs && node tests/experience-browser.mjs",
     "test:viewing": "npm run build && node tests/viewing-browser.mjs",
-    "test:viewing:live": "npm run build && node tests/viewing-live.mjs"
+    "test:viewing:live": "npm run build && node tests/viewing-live.mjs",
+    "test:experience": "npm run build && node tests/experience-browser.mjs",
+    "test:experience:live": "npm run build && node tests/experience-live.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

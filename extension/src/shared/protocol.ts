@@ -42,8 +42,8 @@ function mutation(value: unknown): value is SessionMutation {
 }
 export function parseRequest(value: unknown): Request | null {
   if (!record(value) || value.channel !== CHANNEL) return null;
-  if (value.type === 'OPEN_PAGE') return keys(value, ['channel', 'type', 'page']) && ['session', 'edit', 'settings'].includes(String(value.page)) ? value as Request : null;
-  if (value.type === 'DELETE_DATA') return keys(value, ['channel', 'type', 'scope', 'expectedRevision', 'expectedSessionRevision']) && ['history', 'all'].includes(String(value.scope)) && natural(value.expectedRevision) && natural(value.expectedSessionRevision) ? value as Request : null;
+  if (value.type === 'OPEN_PAGE') return keys(value, ['channel', 'type', 'page']) && typeof value.page === 'string' && ['session', 'edit', 'settings'].includes(value.page) ? value as Request : null;
+  if (value.type === 'DELETE_DATA') return keys(value, ['channel', 'type', 'scope', 'expectedRevision', 'expectedSessionRevision']) && typeof value.scope === 'string' && ['history', 'all'].includes(value.scope) && natural(value.expectedRevision) && natural(value.expectedSessionRevision) ? value as Request : null;
   if (value.type === 'SESSION_CONTROL') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) && ['pause', 'resume', 'finish', 'continue', 'end-break'].includes(value.mutation.command.action) ? value as Request : null;
   if (value.type === 'SESSION') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) ? value as Request : null;
   if (value.type === 'OBSERVE') {

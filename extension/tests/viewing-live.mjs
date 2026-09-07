@@ -14,6 +14,7 @@ try {
   const id = new URL(worker.url()).hostname;
   const options = await context.newPage(); await options.goto(`chrome-extension://${id}/options.html`);
   await expect(options.locator('#connection')).toHaveText('Extension connected');
+  await options.locator('#intro-skip').click();
   async function toggle(selector, value) {
     await options.locator(selector).setChecked(value);
     await expect(options.locator('#save-status')).toHaveText('Saved on this device.');

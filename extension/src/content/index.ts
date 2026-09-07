@@ -9,7 +9,18 @@ declare global { interface Window { __chrysalisFoundation?: { dispose(): void } 
 
 if (window === window.top && supportedUrl(location.href)) {
   window.__chrysalisFoundation?.dispose();
-  const indicator = createIndicator(document);
+  const indicator = createIndicator(document, async (action, session) => {
+    if (action === 'edit' || action === 'session') {
+      const reply = await request({ channel: CHANNEL, type: 'OPEN_PAGE', page: action });
+      if (!reply.ok) throw new Error(reply.error);
+    } else {
+      const reply = await request({ channel: CHANNEL, type: 'SESSION_CONTROL', mutation: {
+        requestId: crypto.randomUUID(), expectedRevision: session.revision, expectedSessionId: session.id, command: { action },
+      } });
+      if (!reply.ok) { void refresh(); throw new Error(reply.error); }
+      if (reply.type === 'DISPLAY') apply(reply.settings, reply.session, reply.sequence);
+    }
+  });
   const controls = createViewingControls(document, window);
   let disposed = false;
   let pageSuspended = false;

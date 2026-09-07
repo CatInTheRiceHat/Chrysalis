@@ -56,9 +56,15 @@ export function mountSession(root: HTMLElement) {
   function render(state: StorageSnapshot) {
     if (current && state.sequence < current.sequence) return;
     const previousPhase = current?.currentSession.phase;
+    const dataReset = current && state.currentSession.phase === 'idle' && state.sessionRevision !== current.sessionRevision && state.revision !== current.revision;
     current = state;
     const s = state.currentSession;
-    if (previousPhase !== s.phase && ['idle','finished'].includes(s.phase)) planInitialized = false;
+    if (dataReset || (previousPhase !== s.phase && ['idle','finished'].includes(s.phase))) {
+      planInitialized = false; editing = false; draftBase = null;
+      el<HTMLSelectElement>('intention').value = 'Entertainment';
+      el<HTMLInputElement>('custom-intention').value = '';
+      el<HTMLInputElement>('custom-minutes').value = '20';
+    }
     if (!planInitialized && !editing) {
       const value = state.settings.defaultTargetMs === null ? 'none' : String(state.settings.defaultTargetMs / 60000);
       el<HTMLSelectElement>('time-target').value = ['none','5','15','30','60'].includes(value) ? value : 'custom';
@@ -98,7 +104,7 @@ export function mountSession(root: HTMLElement) {
     root.querySelectorAll<HTMLButtonElement>('[data-action]').forEach(button => { button.hidden = !allowed[button.dataset.action!]?.includes(s.phase); });
     el('break-controls').hidden = !['active', 'paused', 'checkpoint'].includes(s.phase);
     root.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement>('button, input, select').forEach(control => { control.disabled = busy; });
-    if (openEditor && hasSession) { openEditor = false; queueMicrotask(() => el('edit-plan').click()); }
+    if (openEditor && hasSession && !root.closest('[hidden]')) { openEditor = false; queueMicrotask(() => el('edit-plan').click()); }
     const focused = document.activeElement;
     if (!busy && focused instanceof HTMLElement && root.contains(focused) && focused.closest('[hidden]')) (s.phase === 'finished' ? root.querySelector<HTMLElement>('#session-summary h3') : root.querySelector<HTMLElement>('h2'))?.focus();
   }

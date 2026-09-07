@@ -1,3 +1,4 @@
+import { dock } from './dock';
 import { viewingDefaults, type Settings, type Theme, type ViewingControls } from '../shared/types';
 import { affectsControls, controlStatus, controlStyles, detectPage, PAGE_ATTRIBUTE, STATUS_ID, STYLE_ID } from './youtube-adapter';
 
@@ -7,6 +8,7 @@ export function createViewingControls(doc: Document, win: Window) {
   let theme: Theme = 'system';
   let style: HTMLStyleElement | null = null;
   let host: HTMLElement | null = null;
+  let release: (() => void) | null = null;
   let report: HTMLElement | null = null;
   let observer: MutationObserver | null = null;
   let pending: ReturnType<typeof setTimeout> | undefined;
@@ -40,19 +42,20 @@ export function createViewingControls(doc: Document, win: Window) {
     host.setAttribute('aria-label', 'Chrysalis viewing controls status');
     const shadow = host.attachShadow({ mode: 'open' });
     const sheet = doc.createElement('style');
-    sheet.textContent = `:host { all: initial; position: fixed; bottom: 72px; left: 18px; z-index: 2147483645;
+    sheet.textContent = `:host { all: initial; display: block; contain: content; width: 100%; flex: 0 0 100%; max-width: calc(100vw - 32px); margin: 8px 0;
       font: 12px/1.5 system-ui, sans-serif; --bg: #faf9f6; --ink: #2b2631; --line: #c9c2cf;
       color: var(--ink); color-scheme: light; }
       :host([data-theme="dark"]) { --bg: #221c30; --ink: #efeaf3; --line: #685975; color-scheme: dark; }
       @media (prefers-color-scheme: dark) { :host([data-theme="system"]) { --bg: #221c30; --ink: #efeaf3; --line: #685975; color-scheme: dark; } }
-      details { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; max-width: min(310px, calc(100vw - 40px)); }
+      :host([hidden]) { display: none !important; }
+      details { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; max-width: 760px; }
       summary { cursor: pointer; padding: 12px; } summary:focus-visible { outline: 2px solid currentColor; }
       p { padding: 0 12px 12px; margin: 0; white-space: pre-line; }`;
     const details = doc.createElement('details');
     const summary = doc.createElement('summary'); summary.textContent = 'Chrysalis · viewing controls';
     report = doc.createElement('p');
     const hint = doc.createElement('p'); hint.textContent = 'To restore the ordinary layout, open Chrysalis and choose Restore ordinary layout.';
-    details.append(summary, report, hint); shadow.append(sheet, details); doc.documentElement.append(host);
+    details.append(summary, report, hint); shadow.append(sheet, details); release = dock(doc, host);
     observer = new MutationObserver(records => { if (affectsControls(records)) schedule(); });
     observer.observe(doc.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'page-subtype', 'href', 'title', 'is-shorts'] });
     doc.addEventListener('yt-navigate-start', startNavigation);
@@ -63,7 +66,7 @@ export function createViewingControls(doc: Document, win: Window) {
     enabled = false; navigating = false;
     observer?.disconnect(); observer = null;
     clearTimeout(pending); pending = undefined;
-    style?.remove(); host?.remove(); style = null; host = null; report = null;
+    release?.(); release = null; style?.remove(); host?.remove(); style = null; host = null; report = null;
     doc.documentElement.removeAttribute(PAGE_ATTRIBUTE);
     doc.removeEventListener('yt-navigate-start', startNavigation);
     doc.removeEventListener('yt-navigate-finish', navigate);

@@ -77,3 +77,34 @@ export function affectsControls(records: MutationRecord[]): boolean {
   }
   return false;
 }
+
+// In-flow placement only: no viewport overlay, search/guide/player ancestor or
+// player-sized spacer. Unknown real YouTube layouts fall back to the popup.
+export function indicatorAnchor(doc: Document): Element | null {
+  const page = detectPage(doc.location.href);
+  if (page === 'watch') {
+    const below = doc.querySelector('ytd-watch-flexy:not([hidden]) #below');
+    if (below || doc.querySelector('ytd-app')) return below;
+  }
+  const root = page === 'home'
+    ? doc.querySelector('ytd-browse[page-subtype="home"]:not([hidden]) ytd-rich-grid-renderer > #contents')
+    : doc.querySelector('ytd-browse:not([hidden]), ytd-search:not([hidden])');
+  if (root) return root;
+  // Ordinary documents (including controlled fixtures) can safely reserve flow
+  // space. Real YouTube's unrecognized app layouts remain untouched.
+  return doc.querySelector('ytd-app') ? null : doc.body;
+}
+
+export function affectsPlacement(records: MutationRecord[]): boolean {
+  let budget = 80;
+  for (const record of records) {
+    if (--budget < 0) return true;
+    if (record.target instanceof Element && record.target.matches('body, ytd-app, ytd-page-manager, ytd-browse, ytd-watch-flexy, #below')) return true;
+    if (record.addedNodes.length > budget) return true;
+    for (const node of record.addedNodes) {
+      budget--;
+      if (node instanceof Element && (/^(YTD-|YT-)/.test(node.tagName) || node.matches('#below, #contents'))) return true;
+    }
+  }
+  return false;
+}

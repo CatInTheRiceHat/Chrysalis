@@ -40,6 +40,7 @@ try {
   const options = await context.newPage();
   await options.goto(`chrome-extension://${id}/options.html`);
   await expect(options.locator('#connection')).toHaveText('Extension connected');
+  await options.locator('#intro-skip').click();
   await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: fixture }));
   const youtube = await context.newPage();
   const errors = [];
@@ -80,16 +81,11 @@ try {
   await youtube.evaluate(() => { window.originalCard = document.querySelector('#home-video'); window.originalHtml = window.originalCard.outerHTML; });
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${id}/popup.html`);
-  await popup.locator('#viewing-heading').click();
-  await popup.locator('#hide-home').check();
-  await expect(options.locator('#hide-home')).toBeChecked();
+  await popup.locator('#viewing-preferences').click();
+  await options.locator('#hide-home').check();
+  await expect(options.locator('#save-status')).toHaveText('Saved on this device.');
   await popup.close();
-  const reopened = await context.newPage();
-  await reopened.goto(`chrome-extension://${id}/popup.html`);
-  await reopened.locator('#viewing-heading').click();
-  await expect(reopened.locator('#hide-home')).toBeChecked();
-  await reopened.screenshot({ path: 'test-results/viewing-popup-light.png', fullPage: true });
-  await reopened.close();
+  await options.reload(); await expect(options.locator('#hide-home')).toBeChecked();
   const second = await context.newPage(); await second.goto('https://www.youtube.com/');
   await expect(second.locator('#home-video')).toBeHidden();
   await hidden('home-video', 'home-shorts');
@@ -145,7 +141,7 @@ try {
   const bundle = await readFile('dist/content.js', 'utf8'); await isolated(bundle); await isolated(bundle);
   await expect(youtube.locator('#chrysalis-viewing-style')).toHaveCount(1);
   await expect(youtube.locator('#chrysalis-viewing-status')).toHaveCount(1);
-  assert.equal(await isolated('activeControlObservers'), 1);
+  assert.equal(await isolated('activeControlObservers'), 2);
   await youtube.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
   // The pagehide observation reply must not remount UI while suspended.
   await youtube.waitForTimeout(600);
@@ -153,7 +149,7 @@ try {
   await visible('home-video', 'home-shorts', 'nav-shorts');
   await youtube.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
   await hidden('home-video');
-  await expect.poll(() => isolated('activeControlObservers')).toBe(1);
+  await expect.poll(() => isolated('activeControlObservers')).toBe(2);
   await options.reload(); await expect(options.locator('#hide-home')).toBeChecked();
   await options.locator('#theme').selectOption('dark');
   await expect(options.locator('#save-status')).toHaveText('Saved on this device.');
@@ -162,7 +158,7 @@ try {
   await expect(options.locator('#save-status')).toHaveText('Saved on this device.');
   await visible('home-video', 'home-shorts', 'nav-shorts', 'mini-shorts');
   await expect(youtube.locator('#chrysalis-viewing-style, #chrysalis-viewing-status, html[data-chrysalis-view-page]')).toHaveCount(0);
-  assert.equal(await isolated('activeControlObservers'), 0);
+  assert.equal(await isolated('activeControlObservers'), 1); // Remaining session dock placement observer.
   await youtube.evaluate(html => document.querySelector('ytd-rich-grid-renderer > #contents').insertAdjacentHTML('beforeend', html), homeCard('after-disable'));
   await youtube.waitForTimeout(600);
   await visible('after-disable');

@@ -1,7 +1,7 @@
 # Reversible YouTube viewing controls
 
-Implemented in extension 0.3.0. All three settings default **off** and persist
-locally. Expand **Your viewing layout** in the popup, or use settings. Turn any
+Viewing rules implemented in 0.3.0; the in-flow experience in 0.4.0 updates their placement. All three settings default **off** and persist
+locally. Use **Viewing preferences** in the popup to open settings. Turn any
 control off to restore its surface; **Restore ordinary layout** disables all three
 across open YouTube tabs without changing the session, indicator or appearance.
 
@@ -34,8 +34,10 @@ private page JavaScript or recommendation data.
 
 - `src/content/youtube-adapter.ts` owns route detection, all YouTube selectors,
   CSS rule construction, mutation filtering and support diagnostics.
-- `src/content/viewing-controls.ts` owns one stylesheet, one removable status
-  disclosure and one observer, created only while a control is enabled.
+- `src/content/viewing-controls.ts` owns one stylesheet, one removable in-flow status
+  disclosure and one support observer, created only while a control is enabled.
+  `dock.ts` shares a separate placement observer with the session indicator; both
+  disclosures hide in fullscreen and reserve normal flow outside the player.
 - Rules hide only positive known card/shelf/entry shapes using `display: none`.
   They never hide the entire grid, `#related`, `#secondary`, a generic link ancestor
   or a whole navigation container. This intentionally leaves gaps or other content
@@ -65,7 +67,7 @@ private page JavaScript or recommendation data.
   potentially remaining. It does not claim complete coverage. This status remains
   available while controls are enabled even if the separate session indicator is off.
 
-Schema **3** adds three boolean preferences. Valid extension schemas 1/2 upgrade
+Schema **4** retains the three boolean viewing preferences and adds experience defaults. Valid extension schemas 1/2/3 upgrade
 without losing settings, sessions, summaries, timing or receipts; unknown/malformed
 records remain untouched. Existing serialized/revision-checked settings messages
 and sender restrictions are reused. No new permissions, telemetry, browsing records,
@@ -96,9 +98,9 @@ From `extension/`:
 
 ```sh
 npm ci
-npm run check                 # 35 Node tests, types, build, generated-file checks
+npm run check                 # 40 Node tests, types, build, generated-file checks
 npx playwright install chromium
-npm run test:browser          # foundation, session and viewing fixture suites
+npm run test:browser          # foundation, session, viewing and experience suites
 npm run test:viewing          # viewing fixtures only, real unpacked extension
 npm run test:viewing:live     # separate actual signed-out YouTube checks
 ```

@@ -12,7 +12,9 @@ presets, custom whole minutes from 1 to 1440, or **No time target** (the default
 The same validation runs in the UI, protocol and domain model.
 
 `originalTargetMs` is assigned once at Start. `targetMs` holds the current plan;
-editing never replaces the original. An intention-only edit does not rearm a
+editing never replaces the original. Checkpoints can be disabled in settings; this suppresses target transitions and
+closes an open checkpoint without stopping time. Turning them back on can show an
+unacknowledged target already reached. An intention-only edit does not rearm a
 previously acknowledged target. A changed target does; choosing no target clears
 it. Setting a target already reached shows a checkpoint while active, or on
 Resume if paused. Editing a target means a new **total** session target.
@@ -137,12 +139,12 @@ user can still finish. Elapsed duration remains separately measured.
   recent sequence ledger for atomic accounting. They are not video/account IDs,
   contain no URL/title/search, are absent from summaries, and clear on restart or
   finish. No document ledger is retained while idle or newly observed while paused.
-- Schema 3 upgrades only this extension's valid schema-1/2 data at the existing
+- Schema 4 upgrades only this extension's valid schema-1/2/3 data at the existing
   `chrysalis.extension.v1` key, preserving display settings and any reserved records.
   Unfinished reserved records upgrade paused. Legacy website/Flutter data is untouched.
 - The latest 100 completed summaries remain local; receipt metadata also contains
-  recent plan choices. Reflection/history-management/deletion UI is a later stage.
-  Uninstall removes extension-local data. Future deletion must also clear receipts.
+  recent plan choices. Reflection/history browsing is a later stage; confirmed deletion works in settings.
+  Uninstall removes extension-local data. History/all-data deletion clears receipts and advances revisions to reject stale commands.
 
 ## Verification
 

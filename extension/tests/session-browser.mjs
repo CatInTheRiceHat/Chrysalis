@@ -26,6 +26,7 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(`${base}popup.html`);
+  await page.locator('#intro-skip').click();
   const state = () => page.evaluate(async () => (await chrome.runtime.sendMessage({ channel: 'chrysalis/v1', type: 'GET_SNAPSHOT' })).snapshot);
   const elapsed = async () => (await state()).currentSession.elapsedMs;
   const youtube = await context.newPage();
@@ -96,7 +97,7 @@ try {
   });
   await youtube.bringToFront();
   await expect.poll(async () => (await state()).currentSession.phase, { timeout: 15000 }).toBe('checkpoint');
-  await expect(youtube.locator('#chrysalis-extension-indicator')).toContainText('Target reached');
+  await expect(youtube.locator('#chrysalis-extension-indicator')).toContainText('Time target reached');
   await page.bringToFront(); await expect(page.locator('#checkpoint-copy')).toBeVisible();
   await page.getByRole('button', { name: 'Continue viewing' }).click();
   await expect(page.locator('#session-phase')).toHaveText('Active');

@@ -100,5 +100,19 @@ dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--b
 dialog::backdrop { background: #16132099; }
 dialog .primary { width: auto; }
 #delete-error { color: var(--accent); font-size: 13px; }
-[tabindex='-1']:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
+[tabindex='-1']:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 @media (min-width: 640px) { .welcome-points { font-size: 16px; } .popup .welcome-points { font-size: 13px; } }
+
+.toggle-row > span { min-width: 0; overflow-wrap: anywhere; }
+.select-row { flex-wrap: wrap; }
+select { min-width: 0; }
+#introduction h1 { margin-top: 0; }
+/* Text and brand wrap even when Chrome zoom leaves a very narrow CSS viewport. */
+body { overflow-wrap: anywhere; }
+.brand { flex-wrap: wrap; }
+h1 { overflow-wrap: anywhere; }
+:root { --control-line: #8f8399; }
+:root[data-theme='dark'] { --control-line: #9583a5; }
+@media (prefers-color-scheme: dark) { :root[data-theme='system'] { --control-line: #9583a5; } }
+input:not([type='checkbox']), select, .secondary, #session-root input,
+#session-root button:not(.primary) { border-color: var(--control-line); }
