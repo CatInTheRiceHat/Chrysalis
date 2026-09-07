@@ -72,7 +72,7 @@ export function HomeShell({ active = 'home', children }) {
     <main className="reels-shell home-shell" data-algorithm data-theme={theme} data-onboarded="true">
       <AppSidebar
         active={active}
-        intentionLabel={intention?.label ?? "Cruisin'"}
+        intentionLabel={intention?.label ?? "Flutter Feed"}
         intentionLogo={intention?.logo}
         onNavigate={go}
         onOpenDetails={() => navigate('/')}

@@ -1,5 +1,5 @@
 /**
- * Pure helpers for the infinite-scroll feed pagination.
+ * Pure helpers for explicit feed pagination.
  *
  * Kept framework-free so the dedupe contract can be unit-tested without a DOM:
  *   npm run test:unit

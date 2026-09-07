@@ -1,0 +1,29 @@
+name: intentional_social
+description: A local-first social prototype for intentions, transparent feeds, and time choices.
+publish_to: none
+version: 1.0.0+1
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.5.5
+  cupertino_icons: ^1.0.9
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/brand/logo.png
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat.ttf
+    - family: Abril Fatface
+      fonts:
+        - asset: assets/fonts/AbrilFatface.ttf
+    - family: Story Script
+      fonts:
+        - asset: assets/fonts/StoryScript.ttf

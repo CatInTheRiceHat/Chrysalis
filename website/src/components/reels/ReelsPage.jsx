@@ -38,8 +38,8 @@ const LEGACY_MODE_KEY = 'chrysalis-reels-mode';
 const LEGACY_INTENTION_KEY = 'chrysalis-reels-intention';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '';
-// Videos requested per infinite-scroll page.
-const PAGE_SIZE = 12;
+// Each additional batch requires an explicit choice to continue.
+const PAGE_SIZE = 10;
 
 /**
  * Demo/test mode for screen-time breaks. Opt-in via `?breaks=demo` (compresses one
@@ -388,13 +388,9 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
     navigate('/home');
   };
 
-  // ── Infinite-scroll feed ──────────────────────────────────────────────────
-  // Load one balanced page at a time and append more as the user nears the
-  // bottom. Pagination uses the backend exclude_ids contract: we send the ids
-  // already shown so the next page never repeats a video. The built-in synthetic
-  // sample cards are used ONLY when the backend genuinely has no real videos for
-  // the mode (empty pool / network error on the first page).
-  const sentinelRef = useRef(null);
+  // Fetch ten posts at a time; only the endpoint button requests another batch.
+  // Keep the backend exclude_ids contract so loaded posts do not repeat.
+  const pendingCardRef = useRef(null);
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const paginationRef = useRef(null);
@@ -405,6 +401,7 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
     };
   }
   const [loadingMore, setLoadingMore] = useState(false);
+  const [pageError, setPageError] = useState(null);
 
   const loadPage = useCallback(async ({ reset }) => {
     const pg = paginationRef.current;
@@ -415,6 +412,7 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
 
     pg.loading = true;
     setLoadingMore(true);
+    setPageError(null);
     try {
       const seed = reset ? createFeedSeed() : (pg.seed ?? createFeedSeed());
       const excludeIds = reset ? [] : pg.excludeIds;
@@ -430,8 +428,9 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         data = await response.json();
       }
-      if (modeRef.current !== activeMode) return; // user switched modes mid-flight
+      if (paginationRef.current !== pg || modeRef.current !== activeMode) return;
 
+      const nextIndex = reset ? 0 : pg.seen.size;
       const seen = reset ? new Set() : pg.seen;
       const mapped = (data.items ?? []).map(apiItemToCard);
       const { fresh: deduped, returnedIds } = selectFreshCards(seen, mapped);  // dedupe by video id
@@ -455,17 +454,19 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
       pg.excludeIds = reset ? returnedIds : [...pg.excludeIds, ...returnedIds];
       pg.hasMore = Boolean(data.has_more) && fresh.length > 0;
       pg.source = 'live';
+      if (fresh.length) pendingCardRef.current = { index: nextIndex, focus: !reset };
 
       if (reset) {
-        setFeed({ mode: activeMode, cards: fresh, debug: getFeedDebugSnapshot(data), hasMore: pg.hasMore, source: 'live' });
+        setFeed({ mode: activeMode, cards: fresh, batchSizes: [fresh.length], debug: getFeedDebugSnapshot(data), hasMore: pg.hasMore, source: 'live' });
       } else {
         setFeed((prev) => (
           prev.mode === activeMode
-            ? { ...prev, cards: [...(prev.cards ?? []), ...fresh], hasMore: pg.hasMore, source: 'live' }
+            ? { ...prev, cards: [...(prev.cards ?? []), ...fresh], batchSizes: [...(prev.batchSizes ?? []), fresh.length], hasMore: pg.hasMore, source: 'live' }
             : prev
         ));
       }
     } catch (error) {
+      if (paginationRef.current !== pg || modeRef.current !== activeMode) return;
       if (import.meta.env.DEV) {
         console.warn('[Chrysalis algorithm] Feed page failed:', error);
       }
@@ -479,10 +480,10 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
           setFeed({ mode: modeRef.current, cards: synthetic2, debug: null, hasMore: false, source: 'fallback' });
         }
       }
-      // Non-reset errors keep the current feed; a later scroll can retry.
+      if (!reset) setPageError('The next posts couldn’t load. You can try again when you’re ready.');
     } finally {
       pg.loading = false;
-      setLoadingMore(false);
+      if (paginationRef.current === pg) setLoadingMore(false);
     }
   }, [isResearchSession, researchTracker]);
 
@@ -493,27 +494,24 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
       mode, seed: null, excludeIds: [], seen: new Set(),
       hasMore: true, loading: false, source: null,
     };
+    pendingCardRef.current = null;
     loadPage({ reset: true });
-    return undefined;
+    return () => { paginationRef.current = null; };
   }, [mode, onboarded, loadPage]);
 
-  // Bottom sentinel → fetch the next page as the user approaches the end.
+  // Continue at the first new post, rather than following the endpoint as it
+  // moves down. Transfer keyboard focus from the load button to that post.
   useEffect(() => {
-    if (!onboarded) return undefined;
-    const root = scrollRef.current;
-    const sentinel = sentinelRef.current;
-    if (!root || !sentinel || typeof IntersectionObserver === 'undefined') return undefined;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          loadPage({ reset: false });
-        }
-      },
-      { root, rootMargin: '0px 0px 800px 0px', threshold: 0 },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [onboarded, mode, loadPage]);
+    const pending = pendingCardRef.current;
+    if (!pending || feed.mode !== mode) return;
+    pendingCardRef.current = null;
+    const card = scrollRef.current?.querySelectorAll('.reel-card')[pending.index];
+    card?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    if (pending.focus) {
+      card?.setAttribute('tabindex', '-1');
+      card?.focus({ preventScroll: true });
+    }
+  }, [feed, mode]);
 
   useEffect(() => {
     window.localStorage.setItem(THEME_KEY, theme);
@@ -552,8 +550,19 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
     [feed.cards, feed.mode, isResearchSession, mode],
   );
   const tunedCards = useMemo(
-    () => (isResearchSession ? cards : applySessionTuning(cards, mode, selectedTunes)),
-    [cards, isResearchSession, mode, selectedTunes],
+    () => {
+      if (isResearchSession) return cards;
+      // Tune within each fetched batch so loading more never moves new posts
+      // ahead of posts already browsed.
+      let offset = 0;
+      return (feed.mode === mode && feed.batchSizes ? feed.batchSizes : [cards.length])
+        .flatMap((size) => {
+          const batch = cards.slice(offset, offset + size);
+          offset += size;
+          return applySessionTuning(batch, mode, selectedTunes);
+        });
+    },
+    [cards, feed.batchSizes, feed.mode, isResearchSession, mode, selectedTunes],
   );
   const activeCard = tunedCards[Math.min(activeIndex, Math.max(tunedCards.length - 1, 0))]
     ?? tunedCards[0];
@@ -669,7 +678,7 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
       {onboarded && (
         <AppSidebar
           active="reels"
-          intentionLabel={currentMode?.label ?? "Cruisin'"}
+          intentionLabel={currentMode?.label ?? "Flutter Feed"}
           intentionLogo={currentMode?.logo}
           onNavigate={onNav}
           onOpenDetails={() => setCompassOpen(true)}
@@ -684,7 +693,7 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
 
       <ChrysalisTopBar
         showActions={onboarded}
-        intentionLabel={currentMode?.label ?? "Cruisin'"}
+        intentionLabel={currentMode?.label ?? "Flutter Feed"}
         intentionLogo={currentMode?.logo}
         theme={theme}
         onToggleTheme={toggleTheme}
@@ -735,31 +744,43 @@ export function ReelsPage({ researchSession = null, researchTracker = null }) {
                     />
                   ))}
 
-                  {/* Infinite-scroll sentinel — always present so the observer
-                      stays attached; loadPage no-ops when there's nothing more. */}
-                  <div ref={sentinelRef} className="reels-feed-sentinel" aria-hidden="true" />
-
                   {loadingMore && (
                     <div className="reels-feed-status" role="status" aria-live="polite">
                       <PhaseIconCarousel className="reels-feed-status__spinner" />
-                      Loading more videos…
+                      Loading posts…
                     </div>
                   )}
 
-                  {feed.mode === mode && feed.source === 'live' && feed.hasMore === false && (
-                    <div className="reels-feed-end" role="status">
-                      <p className="reels-feed-end__title">You're all caught up</p>
+                  {feed.mode === mode && feed.source && (
+                    <MOTION.section
+                      className="reels-feed-end"
+                      aria-label="End of this batch"
+                      viewport={{ amount: 0.5 }}
+                      onViewportEnter={() => setActiveIndex(-1)}
+                    >
+                      <h2 className="reels-feed-end__title">
+                        {feed.hasMore ? 'A moment to choose' : 'You’ve reached the end'}
+                      </h2>
                       <p className="reels-feed-end__sub">
-                        You've reached the end of fresh videos for now.
+                        {feed.hasMore
+                          ? `${tunedCards.length} posts so far. Pause here, or choose another ${PAGE_SIZE}.`
+                          : feed.source === 'fallback'
+                            ? 'These are sample posts. You can try loading the feed again.'
+                            : feed.source === 'error'
+                              ? 'The feed couldn’t load. You can try again when you’re ready.'
+                              : 'There are no more fresh posts in this feed right now.'}
                       </p>
+                      <p className="reels-feed-end__sub" role="status">{pageError}</p>
                       <button
                         type="button"
                         className="reels-feed-end__refresh"
-                        onClick={() => loadPage({ reset: true })}
+                        disabled={loadingMore}
+                        onClick={() => loadPage({ reset: !feed.hasMore })}
                       >
-                        Refresh feed
+                        {loadingMore ? 'Loading…' : pageError ? 'Try again'
+                          : feed.hasMore ? `Load ${PAGE_SIZE} more` : 'Refresh feed'}
                       </button>
-                    </div>
+                    </MOTION.section>
                   )}
                 </div>
               </div>

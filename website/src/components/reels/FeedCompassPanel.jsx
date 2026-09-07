@@ -44,7 +44,7 @@ const MODE_COPY = {
     },
   },
   'flutter-feed': {
-    label: "Cruisin'",
+    label: "Flutter Feed",
     description: 'A healthier personalized feed with more variety, control, and transparency.',
     fallbackScores: {
       calm: 0.48,

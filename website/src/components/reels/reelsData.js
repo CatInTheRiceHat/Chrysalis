@@ -36,7 +36,7 @@ export const MODES = [
   },
   {
     key: 'flutter-feed',
-    label: "Cruisin'",
+    label: "Flutter Feed",
     logo: '/images/flutter-feed.png',
     description: 'A healthier personalized feed with variety, positivity, and transparency.',
     blurb: 'A healthier personalized feed with variety, positivity, and transparency.',
@@ -115,7 +115,7 @@ export const reelsByMode = {
     {
       id: 'healthier-feed',
       title: 'A healthier personalized feed',
-      source: `@${BRAND_HANDLE} · Cruisin'`,
+      source: `@${BRAND_HANDLE} · Flutter Feed`,
       label: 'Balance',
       description: 'Tuned to what you like — and tuned away from what quietly wears you down.',
       image: '/images/flutter-feed.png',

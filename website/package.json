@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:unit": "node --test src/components/reels/*.test.js src/components/diagnostic/*.test.js src/components/research/*.test.js src/lib/researchEvents.test.js",
+    "qa:feed-batches": "node qa/feed-batches-check.mjs",
     "qa:responsive": "node qa/responsive-check.mjs"
   },
   "dependencies": {

@@ -23,6 +23,7 @@ wheels/
 # Frontend source dir — override the Python `lib/` rule above so the
 # Vite app's src/lib (AuthProvider, supabaseClient, etc.) is tracked.
 !website/src/lib/
+!intentional_social/lib/
 
 # Virtual environments
 venv/
