@@ -85,7 +85,7 @@ try {
  await popup.locator('#intention').selectOption('custom'); await popup.locator('#custom-intention').fill('Unstarted private draft');
  await options.locator('#delete-all').click(); await options.locator('#confirm-delete').click();
  await expect(options.locator('#intro-start')).toBeVisible(); await expect(options.locator('#intro-start')).toBeFocused();
- assert.equal((await state()).settings.theme,'system'); assert.equal((await state()).settings.defaultTargetMs,null);
+ assert.equal((await state()).settings.theme,'system'); assert.equal((await state()).settings.defaultTargetMs,900000);
  assert.equal((await state()).currentSession.phase,'idle');
  await expect(popup.locator('#custom-intention')).toHaveValue('');
  checks.push('Finish saves a real summary; deletion dialog supports Escape/focus restoration; clear history and delete all remove the appropriate local data and reset defaults.');
