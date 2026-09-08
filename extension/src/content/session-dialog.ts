@@ -10,8 +10,17 @@ export function createSessionDialog(doc: Document, act: (command: SessionCommand
   let kind: PromptKind = null, busy = false;
   let previous: HTMLElement | null = null;
   let choices: ReturnType<typeof mountChoices> | undefined;
+  let mediaObserver: MutationObserver | undefined;
+  function pauseMedia(event?: Event) {
+    if (kind !== 'intro') return;
+    if (event?.target instanceof HTMLMediaElement) event.target.pause();
+    else doc.querySelectorAll('video, audio').forEach(media => (media as HTMLMediaElement).pause());
+  }
   const el = <T extends HTMLElement = HTMLElement>(id: string) => host!.shadowRoot!.querySelector<T>(`#${id}`)!;
   function remove() {
+    mediaObserver?.disconnect(); mediaObserver = undefined;
+    doc.removeEventListener('play', pauseMedia, true);
+    doc.removeEventListener('playing', pauseMedia, true);
     dialog?.close(); host?.remove(); host = null; dialog = null; kind = null; choices = undefined;
     if (doc.hasFocus() && previous?.isConnected) previous.focus({ preventScroll: true });
     previous = null;
@@ -39,9 +48,9 @@ export function createSessionDialog(doc: Document, act: (command: SessionCommand
   }
   function dismiss() { if (!busy) { if (kind === 'checkpoint') void run({ action: 'dismiss-checkpoint' }); else remove(); } }
   function open(prompt: PromptKind) {
-    if (!prompt || host || !state || !settings || settings.extensionPaused || doc.hidden || !doc.hasFocus()) return;
-    if (prompt === 'intro' && (!settings.autoSessionIntro || !['idle','finished'].includes(state.phase))) return;
-    if (prompt === 'checkpoint' && state.phase !== 'checkpoint') return;
+    if (!prompt || host || !state || !settings || settings.extensionPaused || !doc.body || doc.hidden || !doc.hasFocus()) return false;
+    if (prompt === 'intro' && (!settings.autoSessionIntro || !['idle','finished'].includes(state.phase))) return false;
+    if (prompt === 'checkpoint' && state.phase !== 'checkpoint') return false;
     kind = prompt; previous = doc.activeElement instanceof HTMLElement ? doc.activeElement : null;
     host = doc.createElement('div'); host.id = 'chrysalis-session-dialog'; host.setAttribute('data-chrysalis-owned', '');
     const root = host.attachShadow({ mode: 'open' });
@@ -61,7 +70,7 @@ export function createSessionDialog(doc: Document, act: (command: SessionCommand
     <form id="start-form"><label for="duration">How much time would you like?</label><select id="duration"><option value="5">5 minutes</option><option value="15" selected>15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="custom">Custom duration</option></select>
     <div id="custom-field" hidden><label for="minutes">Minutes (1–1440)</label><input id="minutes" type="number" min="1" max="1440" step="1" value="20"></div>
     <label for="intention">What are you here to watch? <span class="note">Optional</span></label><input id="intention" type="text" maxlength="80" autocomplete="off" placeholder="A tutorial, a favorite creator, a little exploring…">
-    <p class="note">Counts browsing and watching while YouTube is visible in the focused Chrome window. Time away is excluded. Your intention is shown in YouTube’s page; avoid private details.</p>
+    <p class="note">Timing begins only when you start. Playback is paused during this introduction; press play afterward when ready. Counts browsing and watching while YouTube is visible in the focused Chrome window. Time away is excluded. Your intention is shown in YouTube’s page; avoid private details.</p>
     <button class="primary" type="submit">Start session</button><button id="untimed" type="button">Continue without a timer</button></form>
     <div id="check-in" hidden>${checkpointMarkup}<button id="finish" class="primary">Finish session</button>${breakMarkup}</div>
     <p id="dialog-error" role="status" hidden></p></dialog>`;
@@ -109,6 +118,19 @@ export function createSessionDialog(doc: Document, act: (command: SessionCommand
     root.addEventListener('keyup', event => event.stopPropagation());
     doc.documentElement.append(host); // Native modal top layer also covers element fullscreen.
     render(settings, state); dialog?.showModal(); el(prompt === 'intro' ? 'duration' : 'finish').focus();
+    if (prompt === 'intro') {
+      // Cover media that already exists, delayed players, Shorts replacements and
+      // subsequent autoplay attempts. Release on every dismissal/disposal path;
+      // never force playback to resume or interfere with active-session check-ins.
+      doc.addEventListener('play', pauseMedia, true);
+      doc.addEventListener('playing', pauseMedia, true);
+      mediaObserver = new MutationObserver(records => {
+        if (records.some(record => record.addedNodes.length)) pauseMedia();
+      });
+      mediaObserver.observe(doc.documentElement, { childList: true, subtree: true });
+      pauseMedia();
+    }
+    return true;
   }
   return { render, open, remove };
 }

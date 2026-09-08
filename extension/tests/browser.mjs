@@ -153,6 +153,24 @@ try {
   await youtube.locator('#youtube-control').click();
   results.push('Fault-injected early focus cannot consume an introduction before delayed state arrives; the dialog appears once afterward and releases host focus on dismissal.');
 
+  // A failed first handshake must recover without a load/focus/popup action.
+  await isolated('window.__chrysalisFoundation.dispose()');
+  await worker.evaluate(() => chrome.storage.session.remove('chrysalis.visit'));
+  await isolated(`globalThis.__startupAttempts = 0;
+    chrome.runtime.sendMessage = async message => {
+      if (message.type === 'GET_DISPLAY' && ++globalThis.__startupAttempts <= 2) {
+        if (globalThis.__startupAttempts === 1) throw new Error('Injected worker wake failure');
+        return {ok:false, code:'STORAGE', error:'Injected read failure'};
+      }
+      return globalThis.__originalSend(message);
+    };`);
+  await isolated(bundle);
+  await expect(introduction.locator('dialog')).toBeVisible({ timeout: 5000 });
+  assert.equal(await isolated('globalThis.__startupAttempts'), 3);
+  await isolated('chrome.runtime.sendMessage = globalThis.__originalSend');
+  await youtube.keyboard.press('Escape');
+  results.push('Two transient startup failures retry automatically and show the introduction without another navigation, focus event or popup action.');
+
   await options.locator('#show-indicator').uncheck();
   await expect(options.locator('#save-status')).toHaveText('Saved on this device.');
   await expect(indicator.locator('#restore')).toBeVisible();

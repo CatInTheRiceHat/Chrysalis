@@ -40,8 +40,11 @@ const handle = createHandler(store, chrome.runtime.id, chrome.runtime.getManifes
   try {
     const tab = await chrome.tabs.get(sender.tab.id);
     const window = await chrome.windows.getLastFocused();
+    // Loading is not a visibility signal: a usable document can still be
+    // waiting for video/recommendations. The sender's active document lifecycle
+    // is checked by the handler; foreground prompts and timing need no load gate.
     return tab.windowId === window.id && tab.active && !tab.discarded &&
-      tab.status !== 'loading' && window.focused && window.state !== 'minimized';
+      window.focused && window.state !== 'minimized';
   } catch { return false; }
 }, async page => {
   if (page === 'viewing') { await chrome.tabs.create({ url: chrome.runtime.getURL('options.html#viewing') }); return; }

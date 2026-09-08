@@ -28,7 +28,7 @@ export function createViewingControls(doc: Document, win: Window) {
   }
   function startNavigation() {
     navigating = true;
-    doc.documentElement.removeAttribute(PAGE_ATTRIBUTE);
+    doc.documentElement?.removeAttribute(PAGE_ATTRIBUTE);
     if (report) report.textContent = 'Page changing. Checking supported surfaces…';
   }
   function navigate() { navigating = false; updateStatus(); }
@@ -67,7 +67,7 @@ export function createViewingControls(doc: Document, win: Window) {
     observer?.disconnect(); observer = null;
     clearTimeout(pending); pending = undefined;
     release?.(); release = null; style?.remove(); host?.remove(); style = null; host = null; report = null;
-    doc.documentElement.removeAttribute(PAGE_ATTRIBUTE);
+    doc.documentElement?.removeAttribute(PAGE_ATTRIBUTE);
     doc.removeEventListener('yt-navigate-start', startNavigation);
     doc.removeEventListener('yt-navigate-finish', navigate);
     win.removeEventListener('popstate', navigate);

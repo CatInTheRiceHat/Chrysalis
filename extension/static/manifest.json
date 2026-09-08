@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Chrysalis",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Plan YouTube sessions, notice foreground time and choose which supported recommendation surfaces to hide.",
   "minimum_chrome_version": "114",
   "permissions": [
@@ -39,7 +39,7 @@
       "js": [
         "content.js"
       ],
-      "run_at": "document_idle",
+      "run_at": "document_start",
       "all_frames": false,
       "world": "ISOLATED"
     }

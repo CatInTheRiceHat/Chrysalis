@@ -1,7 +1,7 @@
 # Chrome Web Store submission draft — NOT SUBMITTED
 
-Prepared 2026-09-08 for 0.9.0. No publisher account was accessed, no ZIP uploaded,
-and no item published. The owner’s storage decision is implemented: password-free viewing, temporary activity by default, optional encrypted history. See `../../docs/encrypted-history-storage.md`. The matching 0.9.0 policy is now publicly accessible; publisher certification remains required; no approval is guaranteed.
+Prepared 2026-09-08 for 0.9.1. No publisher account was accessed, no ZIP uploaded,
+and no item published. The owner’s storage decision is implemented: password-free viewing, temporary activity by default, optional encrypted history. See `../../docs/encrypted-history-storage.md`. The public policy describes 0.9.0; the synchronized 0.9.1 policy source is prepared locally with unchanged storage practices; publisher certification remains required; no approval is guaranteed.
 
 ## Proposed listing copy
 
@@ -14,9 +14,9 @@ Plan YouTube sessions, notice foreground time and choose which supported recomme
 
 Make desktop YouTube fit what you came for, with choices you can change.
 
-A centered introduction appears once per visit (after 30 minutes away), with an
+Open desktop YouTube and a centered introduction appears automatically when the page can render it, without opening the extension popup or waiting for videos and recommendations. It appears once per visit (a new visit follows 30 minutes away), with an
 optional intention and chosen duration. Refreshes and extra tabs share the visit.
-Continue without a timer starts no session. Disable automatic introductions in settings.
+Playback pauses while this introduction is open; press play afterward when ready. Timing starts only after Start session. Continue without a timer starts no session. Disable automatic introductions in settings.
 Chrysalis is an independent browser extension, not affiliated with or endorsed by
 YouTube or Google. It works on www.youtube.com in desktop Chrome, not the native
 YouTube phone app.
@@ -29,7 +29,7 @@ local session summary.
 Choose which recognized surfaces to hide: Home recommendations, related videos on
 watch pages, and supported Shorts shelves/navigation. Controls start off and can be
 reversed. Hiding Shorts entry points does not block all Shorts URLs. Chrysalis does
-not change the recommendation algorithm, block ads or manipulate playback.
+not change the recommendation algorithm or block ads. Playback is paused only during the introduction; active-session checkpoints do not pause video.
 
 A compact side timer shows foreground YouTube time: browsing and playback while
 YouTube is the active tab of your focused window. This is not exact watch time or
@@ -75,7 +75,7 @@ Entertainment, exploration and longer sessions are valid choices.
 | Data-use certifications | Intended use is the single purpose above. No sale, unrelated transfer, advertising/credit use or remote human access to stored records. The displayed intention is visible within YouTube as disclosed. Final certifications require the publisher's review of the current policy and implemented encryption/migration behavior. |
 | Language | English. |
 | Category | Select the closest currently available category in the dashboard after reviewing its choices; no category was submitted or invented as an established classification. |
-| Privacy URL | https://chrysalis-extension-pages.vercel.app/privacy — verified anonymously over HTTPS on 2026-09-08; exact reviewed 0.9.0 HTML. Hosted separately from the application; no sign-in required. |
+| Privacy URL | https://chrysalis-extension-pages.vercel.app/privacy — verified anonymously over HTTPS on 2026-09-08; published 0.9.0 HTML. The 0.9.1 source update is local and not yet deployed. Hosted separately from the application; no sign-in required. |
 | Publisher/support | Support: https://chrysalis-extension-pages.vercel.app/contact and https://github.com/CatInTheRiceHat/Chrysalis/issues. Public GitHub Issues verified reachable; repository contact: elaineyouyuanche@gmail.com. Publisher registration, identity verification and dashboard declarations still require the owner. |
 | Visibility | No selection made. Consider private trusted testers only after review blockers are resolved; an unlisted link is accessible to anyone who has it. |
 
@@ -85,21 +85,20 @@ an ID during this preparation stage.
 
 ## Assets and reviewer instructions
 
-- ZIP with manifest at root: `../release/chrysalis-0.9.0.zip`.
+- ZIP with manifest at root: `../release/chrysalis-0.9.1.zip`.
 - Required 128px icon: `../static/icons/icon-128.png`; toolbar variants 16/32/48 also
   included. These export the existing Chrysalis butterfly, not a Google/YouTube icon.
 - Draft small promotional tile: `artwork/promo-440x280.png` (440×280).
 - Current capture command: `npm run screenshots`, after package validation. Versioned
-  output: `../release/chrysalis-0.9.0-screenshots/`, including the centered introduction,
+  output: `../release/chrysalis-0.9.1-screenshots/`, including the centered introduction,
   viewing settings, target check-in, encrypted history and locked history. Live timer and temporary history remain supplementary captures. Captures use
   actual signed-out YouTube and real elapsed time; no participant records or statistics.
   The report binds screenshots to the ZIP/source revision. Inspect final sizes/artwork
   before submission; supplemental 375px popup images are not Store-sized candidates.
 - Historical `distribution/screenshots/` stays preserved as 0.7.1 evidence and is not
-  an accurate depiction of 0.9.0. Do not submit old screenshots as this release.
+  an accurate depiction of 0.9.1. Do not submit old screenshots as this release.
 
-Reviewer flow: normal viewing needs no login or password. To test optional persistence, choose a new 12–128-character test password in Session history, enable encryption, Finish a session, lock/unlock history and restart Chrome. The timer continues while locked; restarting clears unfinished activity. No predefined credentials are needed. Open the popup, skip/read setup,
-start a custom one-minute target and keep a supported YouTube tab active. Use settings
+Reviewer flow: normal viewing needs no login or password. To test optional persistence, choose a new 12–128-character test password in Session history, enable encryption, Finish a session, lock/unlock history and restart Chrome. The timer continues while locked; restarting clears unfinished activity. No predefined credentials are needed. Without clicking the toolbar icon, open Home, a direct watch link or Shorts in a fresh profile. Use the automatic centered introduction to start a custom one-minute target and keep a supported YouTube tab active. Use settings
 to turn controls on/off. At the target, continue untimed or add time; take/end a custom
 one-minute break, finish and Skip/answer reflection. Open history, delete a session,
 then use separate Delete all data. Use the popup as an alternative to the in-page timer.
@@ -116,11 +115,11 @@ assertion that Google's review will approve the extension.
 | Production testing, correct manifest/version, description ≤132 characters, ZIP with manifest at root | Build/reference checks, locked dependencies, byte comparisons and extracted-package browser tests prepared. | [Prepare your extension](https://developer.chrome.com/docs/webstore/prepare) |
 | 128px icon, small 440×280 promotion image, at least one real 1280×800 or 640×400 screenshot | Required sizes exported/captured locally; final publisher artwork review remains. | [Supplying images](https://developer.chrome.com/docs/webstore/images) |
 | Narrow purpose, least permissions, remote-code declaration, accurate privacy fields | Drafts above match the actual package; publisher must complete/certify the dashboard. | [Privacy fields](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy) |
-| Local-only data handling still needs disclosure and privacy policy | Full local policy and public policy URL verified; optional history is encrypted and temporary activity stays in memory; the matching 0.9.0 policy is public; final publisher certification remains. GitHub Issues is verified and the repository email is documented. | [User Data FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq) |
+| Local-only data handling still needs disclosure and privacy policy | Full local policy and public policy URL verified; optional history is encrypted and temporary activity stays in memory; the matching 0.9.1 policy is public; final publisher certification remains. GitHub Issues is verified and the repository email is documented. | [User Data FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq) |
 | Limited Use, secure handling, truthful metadata, no impersonation, developer two-step verification | Independent branding and limited-use explanation prepared. Account security and final policy review unverified. | [Program Policies](https://developer.chrome.com/docs/webstore/program-policies/policies) |
 | Registration and publisher setup before publishing | No account/payment action taken; owner supplies verified publisher details. | [Register](https://developer.chrome.com/docs/webstore/register), [Publishing](https://developer.chrome.com/docs/webstore/publish) |
 | Private/unlisted/public items face the same policy review | A private pilot does not bypass review. Do not confuse local unpacked testing with store distribution. | [Distribution settings](https://developer.chrome.com/docs/webstore/cws-dashboard-distribution) |
 
 **Storage decision implemented:** see [the field inventory, migration and key lifecycle](../../docs/encrypted-history-storage.md). Existing 0.8.0 plaintext is preserved only pending an explicit encrypt/delete choice; new activity never extends that record. Browser restart removes the memory key and unfinished activity. The preserved 0.8.0 release is not replaced or retrospectively claimed encrypted.
 
-**Prepared materials:** `release/chrysalis-0.9.0-store-preparation/` is assembled by `node scripts/prepare-store.mjs` after package validation and current screenshots. It includes the exact upload ZIP/checksum, five release screenshots, icon, small promo, listing, disclosures and identity guidance. Review the inventory and validation for actual evidence. Public privacy/support destinations are verified. Publisher account setup and final certifications must be completed before submission. See PUBLISHER_CHECKLIST.md. No Store URL or publisher identity is invented.
+**Prepared materials:** `release/chrysalis-0.9.1-store-preparation/` is assembled by `node scripts/prepare-store.mjs` after package validation and current screenshots. It includes the exact upload ZIP/checksum, five release screenshots, icon, small promo, listing, disclosures and identity guidance. Review the inventory and validation for actual evidence. Public privacy/support destinations are verified. Publisher account setup and final certifications must be completed before submission. See PUBLISHER_CHECKLIST.md. No Store URL or publisher identity is invented.

@@ -26,6 +26,8 @@ assert.equal(manifest.externally_connectable, undefined);
 assert.equal(manifest.web_accessible_resources, undefined);
 assert.equal(manifest.content_security_policy.extension_pages, "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
 assert.deepEqual(manifest.content_scripts[0].matches, ['https://www.youtube.com/*']);
+assert.equal(manifest.content_scripts[0].run_at, 'document_start');
+assert.equal(manifest.content_scripts[0].all_frames, false);
 const files = new Set([
   manifest.background.service_worker, manifest.action.default_popup, manifest.options_ui.page,
   ...Object.values(manifest.icons), ...Object.values(manifest.action.default_icon),

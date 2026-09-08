@@ -44,6 +44,20 @@ if (window === window.top && supportedUrl(location.href)) {
   let promptTimer: ReturnType<typeof setTimeout> | undefined;
   let promptPending = false;
   let displayReady = false;
+  let latest: { settings: Settings; session: SessionDisplay; sequence: number } | undefined;
+  let refreshPending = false;
+  let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  let refreshAttempts = 0;
+  let promptAttempts = 0;
+  let offeredPrompt: 'intro' | 'checkpoint' | null = null;
+  // Start the worker handshake immediately. Only DOM mounting waits for a body,
+  // which may arrive well before DOMContentLoaded or YouTube's application shell.
+  const mountObserver = new MutationObserver(mountWhenReady);
+  function mountWhenReady() {
+    if (!document.body || disposed || pageSuspended) return;
+    mountObserver.disconnect();
+    if (latest) apply(latest.settings, latest.session, latest.sequence);
+  }
   async function prompt() {
     clearTimeout(promptTimer);
     // A focus event can arrive before the first display reply. Do not consume
@@ -52,21 +66,37 @@ if (window === window.top && supportedUrl(location.href)) {
     promptPending = true;
     try {
       const reply = await request({ channel: CHANNEL, type: 'PROMPT' });
-      if (!disposed && !pageSuspended && reply.ok && reply.type === 'PROMPT') dialog.open(reply.prompt);
+      if (!disposed && !pageSuspended && reply.ok && reply.type === 'PROMPT') {
+        offeredPrompt = reply.prompt ?? offeredPrompt;
+        // A focus change during the worker round trip must not lose the offer.
+        // Keep it in this document until it can be displayed in the foreground.
+        if (dialog.open(offeredPrompt)) offeredPrompt = null;
+      }
     } catch { /* Next foreground pulse retries without blocking YouTube. */ }
-    finally { promptPending = false; if (!disposed && !pageSuspended && !extensionPaused && !document.hidden) promptTimer = setTimeout(() => void prompt(), 15000); }
+    finally {
+      promptPending = false;
+      if (!disposed && !pageSuspended && !extensionPaused && !document.hidden) {
+        const delay = [100, 250, 500, 1000][promptAttempts++] ?? 15000;
+        promptTimer = setTimeout(() => void prompt(), delay);
+      }
+    }
   }
   let previousPhase: string | undefined;
   let breakTimer: ReturnType<typeof setTimeout> | undefined;
   function apply(settings: Settings, session: SessionDisplay, sequence: number) {
     if (disposed || pageSuspended || sequence < revision) return;
     revision = sequence;
+    latest = { settings, session, sequence };
+    if (offeredPrompt === 'intro' && (!settings.autoSessionIntro || !['idle', 'finished'].includes(session.phase))) offeredPrompt = null;
+    if (offeredPrompt === 'checkpoint' && session.phase !== 'checkpoint') offeredPrompt = null;
     const wasRunning = running;
     extensionPaused = settings.extensionPaused;
     if (extensionPaused) {
       running = false; clearTimeout(sampleTimer); clearTimeout(breakTimer);
+      displayReady = false; offeredPrompt = null;
       indicator.remove(); dialog.remove(); clearTimeout(promptTimer); promptTimer = undefined; controls.dispose(); return;
     }
+    if (!document.body) return;
     running = session.phase === 'active' || session.phase === 'checkpoint';
     if (supportsSessionUI()) { indicator.render(settings, session); dialog.render(settings, session); displayReady = true; }
     else { indicator.remove(); dialog.remove(); }
@@ -87,7 +117,7 @@ if (window === window.top && supportedUrl(location.href)) {
         visible, mono, sentAt: Date.now(), seq: Math.floor(mono * 1000),
       } });
       if (result.ok && result.type === 'DISPLAY') apply(result.settings, result.session, result.sequence);
-      else if (!result.ok) indicator.error('Chrysalis could not save time. Open the popup to retry.');
+      else if (!result.ok) indicator.error('Chrysalis could not save time. Retrying automatically.');
     } catch {
       if (!chrome.runtime.id) dispose();
       else indicator.error('Chrysalis is disconnected. Reload this page.');
@@ -98,15 +128,25 @@ if (window === window.top && supportedUrl(location.href)) {
     }
   }
   async function refresh() {
+    if (disposed || pageSuspended || refreshPending) return;
+    clearTimeout(refreshTimer); refreshTimer = undefined;
+    refreshPending = true;
     try {
       const result = await request({ channel: CHANNEL, type: 'GET_DISPLAY' });
-      if (result.ok && result.type === 'DISPLAY') apply(result.settings, result.session, result.sequence);
+      if (!result.ok || result.type !== 'DISPLAY') throw new Error('Display unavailable');
+      apply(result.settings, result.session, result.sequence);
+      refreshAttempts = 0;
     } catch {
-      // Invalidated contexts cannot recover. A transient messaging failure can
-      // retry on the next existing lifecycle signal without leaving stale rules.
+      // Invalidated contexts cannot recover. Transient startup/storage failures
+      // retry automatically without requiring the popup or a page-load event.
       if (!chrome.runtime.id) dispose();
-      else { indicator.remove(); dialog.remove(); controls.dispose(); }
+      else {
+        displayReady = false;
+        indicator.remove(); dialog.remove(); controls.dispose();
+        if (!disposed && !pageSuspended) refreshTimer = setTimeout(() => void refresh(), [100, 250, 500, 1000, 2000][refreshAttempts++] ?? 5000);
+      }
     }
+    finally { refreshPending = false; }
   }
   function onMessage(value: unknown, sender: chrome.runtime.MessageSender) {
     if (!disposed && sender.id === chrome.runtime.id && !sender.tab &&
@@ -115,7 +155,7 @@ if (window === window.top && supportedUrl(location.href)) {
       apply(value.settings, value.session, value.sequence);
     }
   }
-  function onPageShow() { pageSuspended = false; checkContext(); void refresh(); void sample(); }
+  function onPageShow() { pageSuspended = false; mountWhenReady(); checkContext(); void refresh(); void sample(); }
   function onVisibility(event: Event) {
     if (!event.isTrusted) return;
     checkContext();
@@ -125,6 +165,7 @@ if (window === window.top && supportedUrl(location.href)) {
   }
   function onPageHide(event: PageTransitionEvent) {
     pageSuspended = true; clearTimeout(contextTimer);
+    clearTimeout(refreshTimer);
     clearTimeout(sampleTimer); clearTimeout(breakTimer);
     void sample(false);
     indicator.remove(); dialog.remove(); clearTimeout(promptTimer); promptTimer = undefined;
@@ -133,6 +174,7 @@ if (window === window.top && supportedUrl(location.href)) {
   }
   function dispose() {
     disposed = true; clearTimeout(contextTimer);
+    mountObserver.disconnect(); clearTimeout(refreshTimer);
     clearTimeout(sampleTimer); clearTimeout(breakTimer);
     indicator.remove(); dialog.remove(); clearTimeout(promptTimer); promptTimer = undefined;
     controls.dispose();
@@ -142,6 +184,7 @@ if (window === window.top && supportedUrl(location.href)) {
     window.removeEventListener('pagehide', onPageHide);
     document.removeEventListener('visibilitychange', onVisibility);
     document.removeEventListener('yt-navigate-finish', refresh);
+    window.removeEventListener('popstate', refresh);
   }
   // No worker messages or writes: invalidated old contexts remove their own UI
   // after reload/disable, including idle sessions with no observation pulses.
@@ -162,6 +205,7 @@ if (window === window.top && supportedUrl(location.href)) {
   document.addEventListener('visibilitychange', onVisibility);
   // This event can only refresh read-only display settings, never mutate state.
   document.addEventListener('yt-navigate-finish', refresh);
+  window.addEventListener('popstate', refresh);
+  if (!document.body) mountObserver.observe(document, { childList: true, subtree: true });
   void refresh();
-  void sample();
 }

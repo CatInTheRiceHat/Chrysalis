@@ -1,4 +1,15 @@
-# Distribution status — Chrysalis 0.8.0
+# Distribution status — Chrysalis 0.9.1
+
+Automatic desktop YouTube startup release. The content script starts at `document_start`, initializes through the worker immediately, and mounts the introduction when a body exists. Neither full page loading nor popup setup is required. The introduction pauses autoplay and does not start timing; users choose Start, dismissal or Continue without a timer. Active sessions, timer preferences and the existing local privacy/storage design are preserved.
+
+Artifacts: `release/chrysalis-0.9.1.zip`, matching `.sha256`, `-unpacked/`, `-build-manifest.json`, `-validation.json`, `-screenshots/` and `-store-preparation/`. The package suite now includes the no-popup startup/lifecycle test, for twelve browser suites. See [startup evidence](../../docs/releases/0.9.1/startup.md). The 0.9.0 and 0.8.0 artifacts remain preserved.
+
+Store copy and installation guidance now describe automatic entry and the introduction's playback pause. Public-site source is synchronized; deployment and Store submission have not been performed. Account certifications remain the publisher's responsibility. No zero-latency or universal YouTube-layout guarantee is made.
+
+---
+
+## Historical 0.8.0 distribution record
+
 
 **0.9.0 storage update:** current activity is browser-memory-only; optional completed history is password-encrypted, and unlocking never gates viewing. Browser restart/reload/update/disable clears temporary activity; earlier plaintext requires an explicit encrypt/delete choice. This supersedes older persistence/restart statements below. See [current privacy policy](../PRIVACY.md) and `docs/encrypted-history-storage.md`.
 

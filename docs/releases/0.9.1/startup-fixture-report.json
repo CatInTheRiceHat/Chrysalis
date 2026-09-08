@@ -1,0 +1,50 @@
+{
+  "version": "0.9.1",
+  "zipSha256": "a0e274468da4dc46ee33d67accdc8f9cf660a85277cfbdf3f79867651da34765",
+  "browser": "153.0.8010.12",
+  "platform": "darwin",
+  "mode": "Controlled YouTube-origin pages with 600ms parser and 6000ms image delays",
+  "noPopupOrOptionsOpened": true,
+  "coldLaunchObservedMs": 2294.1310829999998,
+  "restoreObservation": {
+    "observedByMs": 3345.3000000715256,
+    "readyState": "complete",
+    "loadEventEnd": 2999.8000000715256,
+    "measurement": "Upper bound: automation attached after native restored navigation started; not first-render timing"
+  },
+  "timings": [
+    {
+      "label": "cold fresh profile / Home",
+      "ms": 743.1000000238419,
+      "readyState": "loading",
+      "loadEventEnd": 0
+    },
+    {
+      "label": "suspended worker / direct watch",
+      "ms": 630.3999999761581,
+      "readyState": "interactive",
+      "loadEventEnd": 0
+    },
+    {
+      "label": "new visit / direct Shorts",
+      "ms": 650.1999999284744,
+      "readyState": "interactive",
+      "loadEventEnd": 0
+    }
+  ],
+  "checks": [
+    "Cold fresh-profile Home entry initializes without popup; centered modal, keyboard focus loop, Escape and refresh suppression.",
+    "Stopped worker wakes from direct video entry; idle planning time excluded; Enter starts one session; media guard releases after Start.",
+    "Refresh, second tab, tab handoff, active worker stop and hidden timer retain the session without double-counting; repeated SPA and popstate handled in fixtures.",
+    "Explicit Pause Chrysalis suppresses automatic UI and time tracking.",
+    "Automatic-introduction preference respected; direct Shorts introduction works; Continue without timer does not create a session.",
+    "Native --restore-last-session restored a YouTube tab and automatically opened the new-browser introduction.",
+    "Full browser restart preserves preferences and clears temporary sessions under the unchanged privacy design."
+  ],
+  "errors": [],
+  "limitations": [
+    "First-render timings include network/document arrival and browser/worker scheduling; not zero latency.",
+    "Live YouTube availability/layouts vary; no authenticated account, physical screen reader or OS sleep/wake test.",
+    "Native restoration may start before measurement instrumentation attaches. Browser restart intentionally discards unfinished activity."
+  ]
+}

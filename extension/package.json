@@ -1,6 +1,6 @@
 {
   "name": "chrysalis-extension",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -12,6 +12,8 @@
     "build": "npm run typecheck && node scripts/build.mjs && node scripts/verify-build.mjs",
     "check": "npm run test && npm run build",
     "test:browser": "npm run build && node tests/integrated-browser.mjs && node tests/browser.mjs && node tests/session-browser.mjs && node tests/viewing-browser.mjs && node tests/experience-browser.mjs && node tests/checkpoints-browser.mjs && node tests/history-browser.mjs && node tests/hardening-browser.mjs && node tests/usability-browser.mjs && node tests/usability-native.mjs && node tests/encrypted-history-browser.mjs",
+    "test:startup": "npm run package && node tests/startup-browser.mjs",
+    "test:startup:live": "npm run package && node tests/startup-browser.mjs --live",
     "test:integrated": "npm run build && node tests/integrated-browser.mjs",
     "test:integrated:live": "npm run build && node tests/integrated-browser.mjs --live",
     "test:viewing": "npm run build && node tests/viewing-browser.mjs",

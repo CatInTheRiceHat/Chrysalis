@@ -1,3 +1,9 @@
+# Current 0.9.1 screenshots
+
+Run `npm run screenshots` after packaging. The current screenshots and their hash-bound provenance are in `release/chrysalis-0.9.1-screenshots/`; the five Store candidates are copied into `release/chrysalis-0.9.1-store-preparation/screenshots/`. The introduction now explains that playback pauses until dismissal/Start and timing starts only after Start. Recapture this changed surface from the actual package. No toolbar click is required to initialize the extension.
+
+The files beside this README are historical captures; do not submit them as 0.9.1. The 0.9.0 release captures remain preserved separately.
+
 # Real screenshot provenance
 
 Captured with `npm run screenshots` from the verified ZIP-extracted extension in

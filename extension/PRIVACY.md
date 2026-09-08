@@ -1,6 +1,6 @@
 # Chrysalis privacy explanation
 
-Applies to local preview 0.9.0. Updated 2026-09-08.
+Applies to local preview 0.9.1. Updated 2026-09-08.
 Chrysalis is independent and is not affiliated with or endorsed by YouTube or Google.
 Supports desktop Chrome 114+ on www.youtube.com only.
 
