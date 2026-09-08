@@ -12,7 +12,8 @@ await mkdir(out, { recursive: true });
 const report = { origin, checkedAt: new Date().toISOString(), passed: false, routes: [], assets: [], errors: [], externalRequests: [] };
 const browser = await chromium.launch({ channel: 'chromium', headless: true });
 try {
-  const context = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  // Supply only an explicitly authorized test-session state file, never a personal browser profile.
+  const context = await browser.newContext({ viewport: { width: 375, height: 812 }, ...(process.env.CHRYSALIS_SITE_AUTH_STATE ? { storageState: process.env.CHRYSALIS_SITE_AUTH_STATE } : {}) });
   const page = await context.newPage();
   page.on('pageerror', e => report.errors.push(e.message));
   page.on('request', r => { if (new URL(r.url()).origin !== origin) report.externalRequests.push(new URL(r.url()).origin); });
@@ -26,6 +27,7 @@ try {
     assert.equal(response.headers()['referrer-policy'], 'no-referrer', route);
     assert.equal(response.headers()['x-content-type-options'], 'nosniff', route);
     await expect(page.locator('h1')).toBeVisible();
+    if (route === '/privacy') await expect(page.locator('main')).toContainText('local preview 0.9.0');
     if (legacyRoutes.includes(route)) await expect(page.locator('main')).toContainText(/prototype|original/i);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, route);
     assert.equal((await page.reload()).status(), status, `refresh ${route}`);

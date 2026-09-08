@@ -82,10 +82,11 @@ try {
   await settings.locator('#history-password-confirm').fill('capture-only unique passphrase');
   await settings.locator('#vault-submit').click();
   await expect(settings.locator('#vault-mode')).toContainText('Encrypted history is unlocked');
-  await settings.locator('#history-storage').scrollIntoViewIfNeeded();
+  await settings.locator('#history-storage').evaluate(el => el.scrollIntoView({ block: 'start' }));
   await capture(settings, '05-encrypted-history.png', 'Actual optional encrypted history enabled through its UI; password fields are cleared and no password appears in the capture.', true);
   await settings.locator('#vault-lock').click();
   await expect(settings.locator('#vault-mode')).toContainText('Saved history is locked');
+  await settings.locator('#history-storage').evaluate(el => el.scrollIntoView({ block: 'start' }));
   await capture(settings, '06-locked-history.png', 'Actual locked-history controls; planning and viewing remain available without unlocking.', true);
   checks.push('Real foreground pulses reached a checkpoint on live YouTube; UI target revisions, added time, voluntary break, finish and Skip produced the photographed history record.');
   limitations.push('Signed-out Home only; native toolbar popover, authenticated feeds and all experimental layouts are not established by these captures.');

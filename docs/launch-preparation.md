@@ -1,5 +1,7 @@
 # 0.8.0 launch preparation
 
+**Superseded for the extension:** [0.9.0 launch preparation](releases/0.9.0/README.md) implements the owner’s storage decision. This document retains the earlier 0.8.0 launch and production-access evidence.
+
 Started from clean `e3462b6`; remote main already contained both transition commits.
 No unrelated local changes were present. Work is on `launch/extension-0.8.0`.
 
