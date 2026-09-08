@@ -71,11 +71,11 @@ try {
   await youtube.bringToFront();
   const introduction = youtube.locator('#chrysalis-session-dialog');
   await expect(introduction.locator('dialog')).toBeVisible({ timeout: 22000 });
-  await introduction.getByRole('button', { name: 'Continue without a timer', exact: true }).click();
+  await introduction.getByRole('button', { name: 'Close session introduction', exact: true }).click();
   await expect(introduction).toHaveCount(0);
   await youtube.locator('#youtube-control').click();
   assert.equal(await worker.evaluate(async () => (await chrome.storage.session.get('chrysalis.extension.v1'))['chrysalis.extension.v1'].currentSession.phase), 'idle');
-  results.push('Default introduction dismisses through Continue without a timer, restores host interaction and creates no session.');
+  results.push('Default introduction dismisses through its close control, restores host interaction and creates no session.');
   const indicator = youtube.locator('#chrysalis-extension-indicator');
   await expect(indicator).toHaveCount(1);
   await expect(indicator).toContainText('Ready when you are');

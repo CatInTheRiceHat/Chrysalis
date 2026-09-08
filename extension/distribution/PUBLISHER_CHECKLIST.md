@@ -1,16 +1,16 @@
-# Chrysalis 0.9.1 — publisher upload handoff
+# Chrysalis 0.9.2 — publisher upload handoff
 
 No Store item was created, ZIP uploaded, account setting certified, or extension submitted/published by this preparation.
 
 ## Exact upload
 
-Upload only `chrysalis-0.9.1.zip` from this kit (repository path `extension/release/chrysalis-0.9.1.zip`). Do not upload this folder, source, screenshots or an unpacked directory.
+Upload only `chrysalis-0.9.2.zip` from this kit (repository path `extension/release/chrysalis-0.9.2.zip`). Do not upload this folder, source, screenshots or an unpacked directory.
 
-SHA-256: `a0e274468da4dc46ee33d67accdc8f9cf660a85277cfbdf3f79867651da34765`
+SHA-256: `6f5a741e846fcb364b9ce1e6e06d5e7b1ce6a1ca8ea5420cf4b4b6ba6b251326`
 
-Release source identity is recorded in `build-manifest.json`; validation binds all twelve packaged browser suites to the ZIP checksum. See `docs/releases/0.9.1/startup.md` for startup measurements and CI evidence. Do not reuse the older 0.9.0 CI run as evidence for this release.
+Release source identity is recorded in `build-manifest.json`; validation binds all twelve packaged browser suites to the ZIP checksum. See `docs/releases/0.9.2/README.md` for startup measurements and CI evidence. Do not reuse the older 0.9.0 CI run as evidence for this release.
 
-The verified 0.9.0 ZIP remains unchanged at SHA-256 `781a8fd16c7dec02710aafd17115cd63bfb3aad1a2ec1447457efb98c65980f2`. The public policy currently describes 0.9.0; this preparation updates the synchronized 0.9.1 source locally with unchanged storage behavior. No public-site deployment or Store submission is part of this release preparation.
+The verified 0.9.0 ZIP remains unchanged at SHA-256 `781a8fd16c7dec02710aafd17115cd63bfb3aad1a2ec1447457efb98c65980f2`. The public policy currently describes 0.9.0; this preparation updates the synchronized 0.9.2 source locally with unchanged storage behavior. No public-site deployment or Store submission is part of this release preparation.
 
 ## Paste-ready materials
 
@@ -33,8 +33,8 @@ The verified 0.9.0 ZIP remains unchanged at SHA-256 `781a8fd16c7dec02710aafd1711
 
 ## Storage status — explicit limitations
 
-No unresolved storage implementation or product-choice blocker is identified for a fresh 0.9.1 Store installation. Activity is session-memory-only by default; optional completed history uses AES-256-GCM with PBKDF2-SHA256, 600,000 iterations, random salt/nonces and a key held only in trusted browser-session memory. Preferences remain unencrypted and contain no free text/activity. Viewing never requires unlocking.
+No unresolved storage implementation or product-choice blocker is identified for a fresh 0.9.2 Store installation. Activity is session-memory-only by default; optional completed history uses AES-256-GCM with PBKDF2-SHA256, 600,000 iterations, random salt/nonces and a key held only in trusted browser-session memory. Preferences remain unencrypted and contain no free text/activity. Viewing never requires unlocking.
 
 **Legacy plaintext remains until the user chooses:** an existing unpacked 0.8.0 installation keeps its old plaintext record until explicit encryption or confirmed deletion. This is intentional preservation, prominently disclosed, not a claim that old records became encrypted automatically. Successful migration replaces the sole old plaintext root; it does not erase device backups or forensic disk remnants. A future Store installation does not automatically import that older installation's data. Browser restart/reload/update/disable loses unfinished sessions, temporary history and unsaved changes; forgotten passwords cannot be recovered.
 
-Google must still assess compliance, including local-data handling and migration; no approval is guaranteed. If a reviewer requires a different migration policy, that would require another reviewed release rather than changing the verified 0.9.1 ZIP silently. [Official User Data FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq).
+Google must still assess compliance, including local-data handling and migration; no approval is guaranteed. If a reviewer requires a different migration policy, that would require another reviewed release rather than changing the verified 0.9.2 ZIP silently. [Official User Data FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq).

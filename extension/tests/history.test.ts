@@ -27,7 +27,7 @@ test('new summaries record explicit revisions and actual break time separately f
   await f.command({ action: 'dismiss-checkpoint' });
   await f.command({ action: 'edit', plan: { intention: 'Exploring', targetMs: 60000 } });
   await f.command({ action: 'extend', durationMs: 60000 });
-  await f.command({ action: 'edit', plan: { intention: 'Exploring', targetMs: null } });
+  await f.command({ action: 'edit', plan: { intention: 'Exploring', targetMs: 900000 } });
   await f.command({ action: 'break', durationMs: 120000 }); f.advance(30000);
   await f.command({ action: 'end-break' });
   await f.command({ action: 'break', durationMs: 60000 }); f.advance(100000);
@@ -36,7 +36,7 @@ test('new summaries record explicit revisions and actual break time separately f
   const summary = s.completedSessions[0]!;
   assert.equal(summary.history.breakMs, 90000, 'expiry caps at the chosen deadline');
   assert.equal(summary.elapsedMs, 60000);
-  assert.deepEqual(summary.history.targetRevisions.map(r => [r.kind, r.fromMs, r.toMs]), [['extend', 60000, 120000], ['edit', 120000, null]]);
+  assert.deepEqual(summary.history.targetRevisions.map(r => [r.kind, r.fromMs, r.toMs]), [['extend', 60000, 120000], ['edit', 120000, 900000]]);
   assert.equal(summary.originalTargetMs, 60000); assert.equal(summary.reflection, null);
   assert(summaryRows(summary).some(([label, value]) => label === 'Break time (wall-clock)' && value === '1:30'));
 });
@@ -144,9 +144,9 @@ test('unchanged summary targets display once; different final targets remain exp
   const unchanged = (await f.command({ action: 'finish' })).completedSessions[0]!;
   assert.deepEqual(summaryRows(unchanged).filter(([label]) => label.includes('target')), [['Original time target', '1 minute']]);
   await f.command({ action: 'reset' }); await f.start();
-  await f.command({ action: 'edit', plan: { intention: 'Entertainment', targetMs: null } });
+  await f.command({ action: 'edit', plan: { intention: 'Entertainment', targetMs: 900000 } });
   const revised = (await f.command({ action: 'finish' })).completedSessions.find(item => item.id !== unchanged.id)!;
-  assert.deepEqual(summaryRows(revised).filter(([label]) => label.includes('target')), [['Original time target', '1 minute'], ['Final time target', 'No time target']]);
+  assert.deepEqual(summaryRows(revised).filter(([label]) => label.includes('target')), [['Original time target', '1 minute'], ['Final time target', '15 minutes']]);
 });
 
 test('viewing deep link remains enumerated and rejects arbitrary destinations', () => {

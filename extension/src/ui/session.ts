@@ -31,8 +31,8 @@ export function mountSession(root: HTMLElement) {
       <label for="intention">What brings you to YouTube?</label>
       <select id="intention"><option>Studying</option><option>Watching a specific video</option><option selected>Entertainment</option><option>Exploring</option><option value="custom">My own intention</option></select>
       <div id="custom-intention-field" hidden><label for="custom-intention">Your intention (up to 80 characters)</label><input id="custom-intention" type="text" maxlength="80" autocomplete="off"></div>
-      <label for="time-target">Time target (optional)</label><select id="time-target"><option value="none">No time target</option><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="custom">Custom duration</option><option value="current" hidden>Keep current target</option></select>
-      <div id="custom-duration-field" hidden><label for="custom-minutes">Minutes (1–1440)</label><input id="custom-minutes" type="number" min="1" max="1440" step="1" value="20"></div>
+      <label for="time-target">Time target</label><select id="time-target"><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="custom">Custom duration</option><option value="current" hidden>Keep current target</option></select>
+      <div id="custom-duration-field"><label for="custom-minutes">Minutes (1–1440)</label><input id="custom-minutes" type="number" min="1" max="1440" step="1" value="15" required></div>
       <p class="note">You can change your plan anytime. A new target offers a new checkpoint.</p>
       <button id="submit-plan" class="primary" type="submit">Start session</button><button id="cancel-edit" type="button" hidden>Cancel edit</button>
     </form>
@@ -65,8 +65,10 @@ export function mountSession(root: HTMLElement) {
   const choices = mountChoices(root, cmd => command(cmd, null), showError);
   function formVisibility() {
     el('custom-intention-field').hidden = el<HTMLSelectElement>('intention').value !== 'custom';
-    el('custom-duration-field').hidden = el<HTMLSelectElement>('time-target').value !== 'custom';
+    const duration = el<HTMLSelectElement>('time-target').value;
+    if (['5', '15', '30', '60'].includes(duration)) el<HTMLInputElement>('custom-minutes').value = duration;
   }
+  const stateDefaultTarget = () => current?.settings.defaultTargetMs ?? 900000;
   const targetText = (ms: number | null) => ms === null ? 'No time target' : durationText(ms);
   function render(state: StorageSnapshot) {
     if (current && state.sequence < current.sequence) return;
@@ -84,9 +86,9 @@ export function mountSession(root: HTMLElement) {
       el<HTMLInputElement>('custom-minutes').value = '20';
     }
     if (!planInitialized && !editing) {
-      const value = state.settings.defaultTargetMs === null ? 'none' : String(state.settings.defaultTargetMs / 60000);
-      el<HTMLSelectElement>('time-target').value = ['none','5','15','30','60'].includes(value) ? value : 'custom';
-      if (value !== 'none') el<HTMLInputElement>('custom-minutes').value = value;
+      const value = String((state.settings.defaultTargetMs ?? 900000) / 60000);
+      el<HTMLSelectElement>('time-target').value = ['5','15','30','60'].includes(value) ? value : 'custom';
+      el<HTMLInputElement>('custom-minutes').value = value;
       planInitialized = true; formVisibility();
     }
 
@@ -130,7 +132,7 @@ export function mountSession(root: HTMLElement) {
     resume.textContent = s.phase === 'break' ? 'Resume session now' : 'Resume session';
     root.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement>('button, input, select').forEach(control => { control.disabled = busy; });
     if (state.settings.extensionPaused) {
-      root.querySelectorAll<HTMLButtonElement>('[data-action="resume"], [data-choice="break"], [data-choice="extend"], [data-choice="continue-untimed"]').forEach(control => { control.disabled = true; });
+      root.querySelectorAll<HTMLButtonElement>('[data-action="resume"], [data-choice="break"], [data-choice="extend"]').forEach(control => { control.disabled = true; });
       if (!editing) el<HTMLButtonElement>('submit-plan').disabled = true;
     }
     if (openEditor && hasSession && !root.closest('[hidden]')) { openEditor = false; queueMicrotask(() => el('edit-plan').click()); }
@@ -160,7 +162,7 @@ export function mountSession(root: HTMLElement) {
     } catch (error) { showError(error instanceof Error ? error.message : 'Session change was not confirmed. Refresh before retrying.', true); }
     finally {
       busy = false; if (current) render(current);
-      const targets: Record<string, string> = { start: '#session-intention', edit: '#edit-plan', pause: '[data-action="resume"]', resume: '[data-action="pause"]', continue: '[data-action="pause"]', 'dismiss-checkpoint': '[data-action="pause"]', extend: '[data-action="pause"]', 'continue-untimed': '[data-action="pause"]', finish: '#session-summary h3', break: '[data-action="end-break"]', 'end-break': '[data-action="resume"]', reset: '#intention' };
+      const targets: Record<string, string> = { start: '#session-intention', edit: '#edit-plan', pause: '[data-action="resume"]', resume: '[data-action="pause"]', continue: '[data-action="pause"]', 'dismiss-checkpoint': '[data-action="pause"]', extend: '[data-action="pause"]', finish: '#session-summary h3', break: '[data-action="end-break"]', 'end-break': '[data-action="resume"]', reset: '#intention' };
       const target = root.querySelector<HTMLElement>(targets[command.action] ?? 'h2');
       if (target && !target.closest('[hidden]')) target.focus();
     }
@@ -173,9 +175,9 @@ export function mountSession(root: HTMLElement) {
     el<HTMLSelectElement>('intention').value = preset ? s.intention! : 'custom';
     el<HTMLInputElement>('custom-intention').value = preset ? '' : s.intention ?? '';
     editTarget = s.targetMs;
-    const minutes = s.targetMs === null ? 'none' : String(s.targetMs / 60_000);
-    el<HTMLSelectElement>('time-target').value = ['none', '5', '15', '30', '60'].includes(minutes) ? minutes : 'custom';
-    if (minutes !== 'none') el<HTMLInputElement>('custom-minutes').value = String(Math.ceil(Number(minutes)));
+    const minutes = String((s.targetMs ?? stateDefaultTarget()) / 60_000);
+    el<HTMLSelectElement>('time-target').value = ['5', '15', '30', '60'].includes(minutes) ? minutes : 'custom';
+    el<HTMLInputElement>('custom-minutes').value = String(Math.ceil(Number(minutes)));
     const precise = s.targetMs !== null && s.targetMs % 60000 !== 0;
     const keep = el<HTMLSelectElement>('time-target').querySelector<HTMLOptionElement>('[value="current"]')!;
     keep.hidden = !precise; keep.textContent = `Keep current target (${targetText(s.targetMs)})`;
@@ -185,13 +187,14 @@ export function mountSession(root: HTMLElement) {
   el('cancel-edit').addEventListener('click', () => { clearActionError(); editing = false; draftBase = null; if (current) render(current); el('edit-plan').focus(); });
   el('intention').addEventListener('change', formVisibility);
   el('time-target').addEventListener('change', formVisibility);
+  el('custom-minutes').addEventListener('input', () => { el<HTMLSelectElement>('time-target').value = 'custom'; });
   form.addEventListener('submit', event => {
     event.preventDefault();
     try {
       const choice = el<HTMLSelectElement>('intention').value;
       const duration = el<HTMLSelectElement>('time-target').value;
       const plan = validatePlan({ intention: choice === 'custom' ? el<HTMLInputElement>('custom-intention').value : choice,
-        targetMs: duration === 'none' || duration === 'current' ? null : targetFromMinutes(duration === 'custom' ? el<HTMLInputElement>('custom-minutes').value : duration) });
+        targetMs: duration === 'current' ? 60000 : targetFromMinutes(duration === 'custom' ? el<HTMLInputElement>('custom-minutes').value : duration) });
       if (duration === 'current' && editing) plan.targetMs = editTarget;
       void command({ action: editing ? 'edit' : 'start', plan });
     } catch (error) { showError(error instanceof Error ? error.message : 'Check your plan.'); }

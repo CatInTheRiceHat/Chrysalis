@@ -91,11 +91,11 @@ test('valid schema 5 upgrades without losing history, settings, or unfinished se
     return source.execute({ requestId: `upgrade-${++n}`, expectedRevision: s.sessionRevision, expectedSessionId: s.currentSession.phase === 'idle' ? null : s.currentSession.id, command });
   };
   await command({ action: 'start', plan: { intention: 'Stored intention', targetMs: 300000 } });
-  await command({ action: 'edit', plan: { intention: 'Revised intention', targetMs: null } });
+  await command({ action: 'edit', plan: { intention: 'Revised intention', targetMs: 900000 } });
   await command({ action: 'finish' });
   let current = await source.read();
   await source.changeHistory(current.completedSessions[0]!.id, current.historyRevision, { action: 'reflect', reflection: { answer: 'partly', note: 'Stored note' } });
-  await command({ action: 'start', plan: { intention: 'Unfinished plan', targetMs: null } });
+  await command({ action: 'start', plan: { intention: 'Unfinished plan', targetMs: 900000 } });
   current = await source.read(); current.settings.hideShortsEntries = true;
   const legacy = { ...current, schemaVersion: 5, settings: { ...current.settings } };
   delete (legacy.settings as Partial<typeof current.settings>).extensionPaused;
@@ -113,4 +113,15 @@ test('repeated read-only renders and paused observations do not repeatedly persi
     await store.observe({ visible: true, mono: i, sentAt: Date.now(), seq: i }, { tabId: 1, windowId: 1, documentId: 'doc' }, async () => true);
   }
   assert.equal(m.writes(), writes);
+});
+
+
+test('earlier null default targets remain readable but new preferences require a duration', async () => {
+  const legacy = defaultSnapshot(); legacy.settings.defaultTargetMs = null;
+  const m = memory(legacy); const store = createStore(m.adapter);
+  const before = await store.read();
+  await assert.rejects(store.updateSettings({ defaultTargetMs: null }, before.revision));
+  assert.deepEqual(await store.read(), before);
+  const chosen = await store.updateSettings({ defaultTargetMs: 17 * 60000 }, before.revision);
+  assert.equal(chosen.settings.defaultTargetMs, 17 * 60000);
 });

@@ -20,7 +20,7 @@ not block all Shorts URLs, change YouTube's algorithm, block ads or control play
 
 No server, account, API key, Node or Python is needed to use the prepared extension.
 
-1. Extract `release/chrysalis-0.9.1.zip` into a permanent folder. Do not run files
+1. Extract `release/chrysalis-0.9.2.zip` into a permanent folder. Do not run files
    from inside the ZIP. The folder you select must contain `manifest.json` directly.
 2. Open `chrome://extensions` in desktop Chrome. Turn **Developer mode** on.
 3. Choose **Load unpacked**, then select the extracted folder.
@@ -28,7 +28,7 @@ No server, account, API key, Node or Python is needed to use the prepared extens
    Settings → Viewing controls contains the optional layout choices.
 
 In this workspace you can load either `extension/dist/` or the verified extracted
-folder `extension/release/chrysalis-0.9.1-unpacked/`. Existing `dist/` users should
+folder `extension/release/chrysalis-0.9.2-unpacked/`. Existing `dist/` users should
 reload that installation rather than adding a second copy. Keep installation folders
 in place; refresh YouTube after an update. Keep Developer mode on for unpacked use.
 
@@ -60,7 +60,7 @@ npm run screenshots   # actual extension/live YouTube captures; allow about two 
 - One shared session across desktop YouTube tabs. Counts browsing and playback only
   in the active tab of the focused window; excludes hidden/unfocused tabs, pauses
   and breaks. It cannot measure attention or exact video watch time.
-- Optional targets, neutral checkpoints, extra time, untimed continuation and
+- Required time targets, neutral checkpoints, extra time and
   voluntary breaks. Break expiry stays paused. No playback interruption.
 - Reversible controls, automatic session introductions and a compact floating timer.
   Theater/fullscreen and small windows use a restore tab; check-ins stay centered.
@@ -98,7 +98,9 @@ The original React/Python/Flutter applications remain independent. Technical con
 [session model](SESSION_MODEL.md), [viewing adapter](VIEWING_CONTROLS.md),
 [history](HISTORY.md), [experience](EXPERIENCE.md), [hardening evidence](HARDENING.md).
 
-## Current release: 0.9.1
+## Current release: 0.9.2
+
+New sessions require a duration. Type minutes directly in the introduction, popup or default settings; untimed start/continuation options have been removed. Switching tabs refreshes the selected timer through the worker and retains visibility changes while a prior request is pending. Close/Escape, manual pause and hidden-timer tracking remain available. See [release evidence](../docs/releases/0.9.2/README.md).
 
 The centered YouTube introduction, compact side timer and check-ins are included in
 all twelve packaged browser suites. Earlier plaintext needs an explicit encrypt/delete choice; settings are preserved.
@@ -106,5 +108,5 @@ The public website is independent in `public-site/`; old applications remain pre
 at `legacy-web-baseline-2026-09-07`. Their deployed services are a separate decision.
 
 Current evidence supersedes historical runtime behavior in 0.7.x and 0.8.0 reports. The verified 0.8.0 and 0.9.0 ZIPs/tags remain preserved. Exact source identity and
-ZIP digest are recorded in `release/chrysalis-0.9.1-build-manifest.json` and the
+ZIP digest are recorded in `release/chrysalis-0.9.2-build-manifest.json` and the
 matching validation file. See [current status](../docs/extension-implementation-status.md).

@@ -96,9 +96,10 @@ try {
   assert.equal((await state()).currentSession.targetMs, extendedTarget);
   await seedNearTarget(); await yt.bringToFront();
   await expect(checkpoint.locator('#checkpoint-controls')).toBeVisible({ timeout: 15000 });
-  await checkpoint.locator('[data-choice="continue-untimed"]').click();
-  assert.equal((await state()).currentSession.targetMs, null);
-  checks.push('Explicit target revisions rearm; custom validation rejects zero; additional time starts at measured decision time; next checkpoint can continue untimed while retaining original target.');
+  await expect(checkpoint.locator('[data-choice="continue-untimed"]')).toHaveCount(0);
+  await checkpoint.locator('[data-choice="dismiss-checkpoint"]').click();
+  assert.equal((await state()).currentSession.targetMs, extendedTarget);
+  checks.push('Explicit target revisions rearm; custom validation rejects zero; additional time starts at measured decision time; dismissal retains the chosen time target.');
 
   await indicator.locator('#break-duration').selectOption('custom'); await indicator.locator('#break-minutes').fill('2');
   await indicator.locator('[data-choice="break"]').click();

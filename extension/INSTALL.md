@@ -1,4 +1,4 @@
-# Build, install and troubleshoot Chrysalis 0.9.1
+# Build, install and troubleshoot Chrysalis 0.9.2
 
 ## Personal installation / volunteer files
 
@@ -8,7 +8,7 @@ onto Chrome or select the repository/source folder.
 
 1. Read the [privacy explanation](PRIVACY.md) and [pilot guide](pilot/GUIDE.md) first.
    Participation and every control are optional. You can stop and delete data.
-2. Extract `chrysalis-0.9.1.zip` using your normal archive tool. Place the extracted
+2. Extract `chrysalis-0.9.2.zip` using your normal archive tool. Place the extracted
    files in a stable folder you control, for example `Documents/Chrysalis-extension`.
    Opening that folder must show `manifest.json`, `popup.html`, `background.js`, etc.
 3. Open `chrome://extensions` in desktop Chrome and turn **Developer mode** on.
@@ -25,10 +25,10 @@ Requires desktop Chrome 114 or later. The website access is only the desktop You
 Exact paths in this workspace:
 
 - Development production build: `/Users/elaine/Documents/Chrysalis/extension/dist`
-- Extracted distribution: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.9.1-unpacked`
-- ZIP: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.9.1.zip`
-- Checksums and per-file inventory: `release/chrysalis-0.9.1.sha256` and
-  `release/chrysalis-0.9.1-build-manifest.json`
+- Extracted distribution: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.9.2-unpacked`
+- ZIP: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.9.2.zip`
+- Checksums and per-file inventory: `release/chrysalis-0.9.2.sha256` and
+  `release/chrysalis-0.9.2-build-manifest.json`
 
 ## Reproducible production build
 
@@ -71,8 +71,8 @@ proof. Node/Python versions can change bytes; equivalence across untested toolch
 is not promised. Re-run this command after changing inputs.
 
 To verify a received checksum (from `release/`): macOS `shasum -a 256 -c
-chrysalis-0.9.1.sha256`; Linux `sha256sum -c chrysalis-0.9.1.sha256`. On Windows,
-`Get-FileHash .\chrysalis-0.9.1.zip -Algorithm SHA256` in PowerShell and compare with
+chrysalis-0.9.2.sha256`; Linux `sha256sum -c chrysalis-0.9.2.sha256`. On Windows,
+`Get-FileHash .\chrysalis-0.9.2.zip -Algorithm SHA256` in PowerShell and compare with
 the checksum text. A checksum detects differing bytes; it does not authenticate an
 unknown sender. Obtain the files and expected checksum through a trusted source.
 
@@ -86,7 +86,7 @@ or load another copy to update. Changing installation identity/folder can separa
 its storage; moving to a later Store installation is not an implemented data migration.
 See Chrome's [extension ID guidance](https://developer.chrome.com/docs/extensions/reference/manifest/key).
 
-Version 0.9.1 preserves the retention design introduced in 0.9.0. Settings survive updates. Existing 0.8.0 plaintext stays untouched until you open Session history and explicitly confirm encrypting it with a new password or deleting it. Encryption retains the latest 100 completed sessions and archives an unfinished earlier plan without resuming it. The confirmation explains discarded technical records and any history limit. Cancel preserves the old record. Unreadable old data is not silently reset.
+Version 0.9.2 preserves the retention design introduced in 0.9.0. Settings survive updates. Existing 0.8.0 plaintext stays untouched until you open Session history and explicitly confirm encrypting it with a new password or deleting it. Encryption retains the latest 100 completed sessions and archives an unfinished earlier plan without resuming it. The confirmation explains discarded technical records and any history limit. Cancel preserves the old record. Unreadable old data is not silently reset.
 
 New session activity, including unfinished timers and temporary history, disappears when Chrome restarts or Chrysalis is reloaded, updated or disabled. Finish first and enable/unlock optional encrypted history if you want completed records to survive. A worker wake-up does not clear browser memory or relock history. A browser restart does both; no unfinished timer resumes. Unlocking is never required for planning or viewing controls.
 

@@ -7,7 +7,7 @@ export interface Plan { intention: string; targetMs: number | null }
 export type SessionCommand =
   { action: 'start' | 'edit'; plan: Plan } |
   { action: 'break' | 'extend'; durationMs: number } |
-  { action: 'pause' | 'resume' | 'continue' | 'dismiss-checkpoint' | 'continue-untimed' | 'end-break' | 'finish' | 'reset' };
+  { action: 'pause' | 'resume' | 'continue' | 'dismiss-checkpoint' | 'end-break' | 'finish' | 'reset' };
 export interface SessionMutation {
   requestId: string;
   expectedRevision: number;
@@ -30,7 +30,7 @@ export function targetFromMinutes(value: string): number {
 export function validatePlan(plan: Plan): Plan {
   const intention = plan.intention.trim();
   if (!intention || intention.length > 80 || /[\u0000-\u001f\u007f]/.test(intention)) throw new SessionError('Write an intention of 1 to 80 characters on one line.');
-  if (plan.targetMs !== null && (!Number.isSafeInteger(plan.targetMs) || plan.targetMs < 60_000 || plan.targetMs > 86_400_000 || plan.targetMs % 60_000 !== 0)) throw new SessionError('Choose a whole number of minutes from 1 to 1440, or no time target.');
+  if (plan.targetMs === null || (!Number.isSafeInteger(plan.targetMs) || plan.targetMs < 60_000 || plan.targetMs > 86_400_000 || plan.targetMs % 60_000 !== 0)) throw new SessionError('Choose a whole number of minutes from 1 to 1440.');
   return { intention, targetMs: plan.targetMs };
 }
 export const counting = (state: StorageSnapshot) => !state.settings.extensionPaused && ['active', 'checkpoint'].includes(state.currentSession.phase);
@@ -145,19 +145,19 @@ export function applyCommand(state: StorageSnapshot, mutation: SessionMutation, 
   // Validate before modifying any state; failed requests cannot partially apply.
   const unchangedTarget = command.action === 'edit' && s.phase !== 'idle' && command.plan.targetMs === s.targetMs;
   const plan = command.action === 'start' || command.action === 'edit'
-    ? { ...validatePlan({ ...command.plan, targetMs: unchangedTarget ? null : command.plan.targetMs }), targetMs: command.plan.targetMs } : null;
+    ? { ...validatePlan({ ...command.plan, targetMs: unchangedTarget && command.plan.targetMs !== null ? 60000 : command.plan.targetMs }), targetMs: command.plan.targetMs } : null;
   if ((command.action === 'break' || command.action === 'extend') && (!Number.isSafeInteger(command.durationMs) || command.durationMs < 60_000 || command.durationMs > 86_400_000 || command.durationMs % 60_000)) throw new SessionError('Choose 1 to 1440 whole minutes.');
   const allowed: Record<SessionCommand['action'], string[]> = {
     start: ['idle', 'finished'], edit: ['active', 'paused', 'checkpoint', 'break'],
     pause: ['active', 'checkpoint'], resume: ['paused', 'break'], continue: ['checkpoint'], 'dismiss-checkpoint': ['checkpoint'],
-    extend: ['checkpoint', 'active'], 'continue-untimed': ['checkpoint', 'active'],
+    extend: ['checkpoint', 'active'],
     break: ['active', 'paused', 'checkpoint'], 'end-break': ['break'],
     finish: ['active', 'paused', 'checkpoint', 'break'], reset: ['finished'],
   };
-  if (!allowed[command.action].includes(s.phase)) throw new StaleSessionError('This action is not available in the current session state.');
+  if (!allowed[command.action]?.includes(s.phase)) throw new StaleSessionError('This action is not available in the current session state.');
   // Continuation is offered only for an already reached target, including a dismissed prompt.
-  if (['extend', 'continue-untimed'].includes(command.action) && (s.phase === 'idle' || s.targetMs === null || s.elapsedMs < s.targetMs)) throw new SessionError('This target has not been reached. Edit the plan to change it.');
-  if (command.action === 'extend' && s.phase !== 'idle' && s.elapsedMs + command.durationMs + Math.max(0, state.timing.anchor ? now - state.timing.anchor.at : 0) > 86_400_000) throw new SessionError('The revised total target must be at most 1440 minutes. Choose less additional time or continue without a target.');
+  if (command.action === 'extend' && (s.phase === 'idle' || s.targetMs === null || s.elapsedMs < s.targetMs)) throw new SessionError('This target has not been reached. Edit the plan to change it.');
+  if (command.action === 'extend' && s.phase !== 'idle' && s.elapsedMs + command.durationMs + Math.max(0, state.timing.anchor ? now - state.timing.anchor.at : 0) > 86_400_000) throw new SessionError('The revised total target must be at most 1440 minutes. Choose less additional time or finish this session.');
   settle(state, now);
   state.timing.anchor = null;
   switch (command.action) {
@@ -181,8 +181,8 @@ export function applyCommand(state: StorageSnapshot, mutation: SessionMutation, 
         s.phase = 'paused'; s.breakUntil = null;
       } else if (command.action === 'resume' || command.action === 'continue' || command.action === 'dismiss-checkpoint') {
         s.phase = 'active'; s.breakUntil = null;
-      } else if (command.action === 'extend' || command.action === 'continue-untimed') {
-        reviseTarget(s, command.action === 'extend' ? s.elapsedMs + command.durationMs : null, command.action === 'extend' ? 'extend' : 'untimed', now);
+      } else if (command.action === 'extend') {
+        reviseTarget(s, s.elapsedMs + command.durationMs, 'extend', now);
         s.goalAcknowledged = false; s.phase = 'active';
       } else if (command.action === 'break') {
         s.phase = 'break'; s.breakStartedAt = now; s.breakUntil = now + command.durationMs;

@@ -57,7 +57,12 @@ function onBoundary(event: Boundary) {
   const at = Date.now();
   void store.boundary(event, at).catch(() => console.error('Chrysalis could not save a timing boundary.'));
 }
-chrome.tabs.onActivated.addListener(info => onBoundary({ type: 'activate', ...info }));
+chrome.tabs.onActivated.addListener(info => {
+  onBoundary({ type: 'activate', ...info });
+  // Renderer focus/visibility events may be delayed or absent on tab handoff.
+  // Wake the selected tab's existing sampler without storing any new metadata.
+  void chrome.tabs.sendMessage(info.tabId, { channel: CHANNEL, type: 'TAB_ACTIVATED' }).catch(() => undefined);
+});
 chrome.windows.onFocusChanged.addListener(windowId => onBoundary({ type: 'focus', windowId }));
 chrome.tabs.onRemoved.addListener(tabId => onBoundary({ type: 'leave', tabId }));
 chrome.tabs.onDetached.addListener(tabId => onBoundary({ type: 'leave', tabId }));

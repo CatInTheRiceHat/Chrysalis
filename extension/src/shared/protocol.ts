@@ -4,6 +4,9 @@ import { display, finite, keys, natural, record, reflection, settings, settingsP
 import { validatePlan, type Observation, type SessionMutation } from '../session/model';
 
 export const CHANNEL = 'chrysalis/v1' as const;
+export function isTabActivated(value: unknown): boolean {
+  return record(value) && keys(value, ['channel', 'type']) && value.channel === CHANNEL && value.type === 'TAB_ACTIVATED';
+}
 export type Request = { channel: typeof CHANNEL } & (
   { type: 'HISTORY_VAULT'; action: HistoryAction; password?: string } |
   { type: 'PROMPT' } | { type: 'PING' } | { type: 'GET_SETTINGS' } | { type: 'GET_SNAPSHOT' } | { type: 'GET_DISPLAY' } |
@@ -38,18 +41,18 @@ function mutation(value: unknown): value is SessionMutation {
   if (!record(c)) return false;
   if (c.action === 'start' || c.action === 'edit') {
     if (!keys(c, ['action', 'plan']) || !record(c.plan) || !keys(c.plan, ['intention', 'targetMs']) ||
-        typeof c.plan.intention !== 'string' || !(c.plan.targetMs === null || natural(c.plan.targetMs))) return false;
+        typeof c.plan.intention !== 'string' || !natural(c.plan.targetMs)) return false;
     try {
       // Edits may retain a millisecond-precise extended target; the model validates
       // newly chosen targets as whole minutes against the authoritative plan.
-      validatePlan({ intention: c.plan.intention, targetMs: c.action === 'edit' ? null : c.plan.targetMs });
+      validatePlan({ intention: c.plan.intention, targetMs: c.action === 'edit' ? 60000 : c.plan.targetMs });
       if (c.action === 'edit' && c.plan.targetMs !== null && (c.plan.targetMs < 1 || c.plan.targetMs > 86400000)) return false;
       return true;
     } catch { return false; }
   }
   if (c.action === 'break' || c.action === 'extend') return keys(c, ['action', 'durationMs']) && natural(c.durationMs) &&
     c.durationMs >= 60_000 && c.durationMs <= 86_400_000 && c.durationMs % 60_000 === 0;
-  return keys(c, ['action']) && typeof c.action === 'string' && ['pause', 'resume', 'continue', 'dismiss-checkpoint', 'continue-untimed', 'end-break', 'finish', 'reset'].includes(c.action);
+  return keys(c, ['action']) && typeof c.action === 'string' && ['pause', 'resume', 'continue', 'dismiss-checkpoint', 'end-break', 'finish', 'reset'].includes(c.action);
 }
 export function parseRequest(value: unknown): Request | null {
   if (!record(value) || value.channel !== CHANNEL) return null;
@@ -64,7 +67,7 @@ export function parseRequest(value: unknown): Request | null {
   }
   if (value.type === 'OPEN_PAGE') return keys(value, ['channel', 'type', 'page']) && typeof value.page === 'string' && ['session', 'edit', 'settings', 'viewing', 'history'].includes(value.page) ? value as Request : null;
   if (value.type === 'DELETE_DATA') return keys(value, ['channel', 'type', 'scope', 'expectedRevision', 'expectedSessionRevision', 'expectedHistoryRevision']) && typeof value.scope === 'string' && ['history', 'all'].includes(value.scope) && natural(value.expectedRevision) && natural(value.expectedSessionRevision) && natural(value.expectedHistoryRevision) ? value as Request : null;
-  if (value.type === 'SESSION_CONTROL') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) && ['start', 'pause', 'resume', 'finish', 'extend', 'break', 'continue', 'dismiss-checkpoint', 'continue-untimed', 'end-break'].includes(value.mutation.command.action) ? value as Request : null;
+  if (value.type === 'SESSION_CONTROL') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) && ['start', 'pause', 'resume', 'finish', 'extend', 'break', 'continue', 'dismiss-checkpoint', 'end-break'].includes(value.mutation.command.action) ? value as Request : null;
   if (value.type === 'SESSION') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) ? value as Request : null;
   if (value.type === 'OBSERVE') {
     const s = value.sample;

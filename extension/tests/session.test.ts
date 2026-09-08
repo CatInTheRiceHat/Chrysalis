@@ -25,7 +25,7 @@ function fixture(initial = defaultSnapshot()) {
   }
   return { store, adapter, environment, mutation, cmd, pulse,
     now: () => now, advance: (ms: number) => { now += ms; }, epoch: (id: string) => { epoch = id; },
-    start: (targetMs: number | null = null) => cmd({ action: 'start', plan: { intention: 'Entertainment', targetMs } }),
+    start: (targetMs: number | null = 900000) => cmd({ action: 'start', plan: { intention: 'Entertainment', targetMs } }),
   };
 }
 function elapsed(state: StorageSnapshot) { return state.currentSession.phase === 'idle' ? 0 : state.currentSession.elapsedMs; }
@@ -34,11 +34,11 @@ test('target and custom intention validation accepts bounds and rejects ambiguou
   assert.equal(targetFromMinutes('1'), 60_000);
   assert.equal(targetFromMinutes(' 1440 '), 86_400_000);
   for (const value of ['', '0', '-1', '1.5', '1e2', 'Infinity', '1441', 'NaN', 'abc']) assert.throws(() => targetFromMinutes(value));
-  assert.deepEqual(validatePlan({ intention: '  Explore a topic  ', targetMs: null }), { intention: 'Explore a topic', targetMs: null });
-  for (const intention of ['', ' ', 'a'.repeat(81), 'two\nlines']) assert.throws(() => validatePlan({ intention, targetMs: null }));
-  for (const targetMs of [0, -1, 1000, 60_001, Infinity, NaN, 86_400_001]) assert.throws(() => validatePlan({ intention: 'Studying', targetMs }));
+  assert.deepEqual(validatePlan({ intention: '  Explore a topic  ', targetMs: 900000 }), { intention: 'Explore a topic', targetMs: 900000 });
+  for (const intention of ['', ' ', 'a'.repeat(81), 'two\nlines']) assert.throws(() => validatePlan({ intention, targetMs: 900000 }));
+  for (const targetMs of [null, 0, -1, 1000, 60_001, Infinity, NaN, 86_400_001]) assert.throws(() => validatePlan({ intention: 'Studying', targetMs }));
 });
-test('start without target; only one confirmed foreground owner contributes browsing/playback time', async () => {
+test('start with a target; only one confirmed foreground owner contributes browsing/playback time', async () => {
   const f = fixture(); await f.start();
   await f.pulse(); f.advance(2000); await f.pulse();
   assert.equal(elapsed(await f.store.read()), 2000);
@@ -99,7 +99,7 @@ test('checkpoint counts foreground decision time, Continue acknowledges once, ta
   assert.equal((await f.store.read()).currentSession.phase, 'active');
   await f.cmd({ action: 'edit', plan: { intention: 'Exploring', targetMs: 60_000 } });
   assert.equal((await f.store.read()).currentSession.phase, 'active', 'intention-only edit must not rearm target');
-  await f.cmd({ action: 'edit', plan: { intention: 'Exploring', targetMs: null } });
+  await f.cmd({ action: 'edit', plan: { intention: 'Exploring', targetMs: 120000 } });
   await f.cmd({ action: 'edit', plan: { intention: 'Exploring', targetMs: 60_000 } });
   assert.equal((await f.store.read()).currentSession.phase, 'checkpoint');
 });
@@ -114,7 +114,7 @@ test('breaks exclude time, end early or expire paused, and never auto-resume', a
   f.advance(1000); await f.pulse(); assert.equal(elapsed(await f.store.read()), 1000);
 });
 test('concurrent messages and duplicate request receipts produce one start/finish even across worker recreation', async () => {
-  const f = fixture(); const start = await f.mutation({ action: 'start', plan: { intention: 'Studying', targetMs: null } });
+  const f = fixture(); const start = await f.mutation({ action: 'start', plan: { intention: 'Studying', targetMs: 900000 } });
   const results = await Promise.all([f.store.execute(start), f.store.execute(start)]);
   assert.equal(results[0].sessionRevision, results[1].sessionRevision);
   const finish = await f.mutation({ action: 'finish' });
@@ -274,17 +274,16 @@ test('additional duration begins at measured decision time, persists once, prese
   assert.equal(state.completedSessions[0]!.targetMs, 121250);
   assert.equal(state.completedSessions[0]!.originalTargetMs, 60000);
 });
-test('untimed continuation removes only the current target and duplicate choices cannot reopen a checkpoint', async () => {
+test('untimed start, edit and continuation are rejected without changing state', async () => {
   const f = await reached();
-  const untimed = await f.mutation({ action: 'continue-untimed' });
-  const competing = await f.mutation({ action: 'extend', durationMs: 300000 });
-  await f.store.execute(untimed);
-  await assert.rejects(f.store.execute(competing), StaleSessionError);
-  await f.store.execute(untimed);
-  await f.pulse(); f.advance(2000); await f.pulse();
-  const state = await f.cmd({ action: 'finish' });
-  assert.equal(state.completedSessions[0]!.targetMs, null);
-  assert.equal(state.completedSessions[0]!.originalTargetMs, 60000);
+  const before = await f.store.read();
+  await assert.rejects(f.cmd({ action: 'edit', plan: { intention: 'Exploring', targetMs: null } }));
+  const removed = await f.mutation({ action: 'continue-untimed' } as unknown as SessionCommand);
+  await assert.rejects(f.store.execute(removed));
+  assert.equal(parseRequest({ channel: CHANNEL, type: 'SESSION', mutation: removed }), null);
+  assert.deepEqual(await f.store.read(), before);
+  const fresh = fixture(); await assert.rejects(fresh.start(null));
+  assert.equal((await fresh.store.read()).currentSession.phase, 'idle');
 });
 test('disabled prompts keep counting, reenabling arms only unacknowledged targets, and target edits explicitly rearm', async () => {
   const f = fixture(); await f.start(60000);
@@ -360,7 +359,7 @@ test('extension pause settles once, preserves choices, rejects stale actions and
   const f = fixture(); await f.start(300000);
   await f.store.updateSettings({ hideHomeRecommendations: true }, 0);
   await f.pulse(); f.advance(1250);
-  const stale = await f.mutation({ action: 'edit', plan: { intention: 'Old', targetMs: null } });
+  const stale = await f.mutation({ action: 'edit', plan: { intention: 'Old', targetMs: 900000 } });
   const results = await Promise.allSettled([
     f.store.updateSettings({ extensionPaused: true }, 1),
     f.store.updateSettings({ extensionPaused: true }, 1),

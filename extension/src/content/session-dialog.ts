@@ -61,17 +61,17 @@ export function createSessionDialog(doc: Document, act: (command: SessionCommand
       h1 { font:400 32px/1.15 Georgia,serif; letter-spacing:-.03em; margin:22px 0 12px; }
       #dialog-description { color:var(--muted); margin-bottom:22px; }
       input { width:100%; font-size:16px; } select { width:100%; }
-      .primary, #untimed { width:100%; margin-top:16px; } #untimed { margin-top:8px; border:0; text-decoration:underline; }
+      .primary { width:100%; margin-top:16px; }
       .note { margin-top:14px; } #checkpoint-controls { border-top:1px solid var(--line); margin-top:20px; padding-top:12px; }
       #break-controls { border-top:1px solid var(--line); margin-top:20px; } #break-controls button { margin-top:12px; }
       @media(min-width:600px) { dialog { padding:32px; } h1 { font-size:36px; } }
     </style><dialog aria-labelledby="dialog-title" aria-describedby="dialog-description"><div class="top"><span class="brand">Chrysalis</span><button id="close" aria-label="Close session introduction">×</button></div>
     <h1 id="dialog-title">A little intention.<br>Your time, your choice.</h1><p id="dialog-description">Choose how you want to spend your time on YouTube.</p>
     <form id="start-form"><label for="duration">How much time would you like?</label><select id="duration"><option value="5">5 minutes</option><option value="15" selected>15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="custom">Custom duration</option></select>
-    <div id="custom-field" hidden><label for="minutes">Minutes (1–1440)</label><input id="minutes" type="number" min="1" max="1440" step="1" value="20"></div>
+    <div id="custom-field"><label for="minutes">Minutes (1–1440)</label><input id="minutes" type="number" min="1" max="1440" step="1" value="15" required></div>
     <label for="intention">What are you here to watch? <span class="note">Optional</span></label><input id="intention" type="text" maxlength="80" autocomplete="off" placeholder="A tutorial, a favorite creator, a little exploring…">
     <p class="note">Timing begins only when you start. Playback is paused during this introduction; press play afterward when ready. Counts browsing and watching while YouTube is visible in the focused Chrome window. Time away is excluded. Your intention is shown in YouTube’s page; avoid private details.</p>
-    <button class="primary" type="submit">Start session</button><button id="untimed" type="button">Continue without a timer</button></form>
+    <button class="primary" type="submit">Start session</button></form>
     <div id="check-in" hidden>${checkpointMarkup}<button id="finish" class="primary">Finish session</button>${breakMarkup}</div>
     <p id="dialog-error" role="status" hidden></p></dialog>`;
     dialog = root.querySelector('dialog')!;
@@ -84,8 +84,12 @@ export function createSessionDialog(doc: Document, act: (command: SessionCommand
     const minutes = String((settings.defaultTargetMs ?? 900000) / 60000);
     el<HTMLSelectElement>('duration').value = ['5','15','30','60'].includes(minutes) ? minutes : 'custom';
     el<HTMLInputElement>('minutes').value = minutes;
-    const custom = () => { el('custom-field').hidden = el<HTMLSelectElement>('duration').value !== 'custom'; };
+    const custom = () => {
+      const value = el<HTMLSelectElement>('duration').value;
+      if (value !== 'custom') el<HTMLInputElement>('minutes').value = value;
+    };
     custom(); el('duration').addEventListener('change', custom);
+    el('minutes').addEventListener('input', () => { el<HTMLSelectElement>('duration').value = 'custom'; });
     choices = mountChoices(root, run, message => { el('dialog-error').textContent = message; el('dialog-error').hidden = false; }, true);
     let startGesture = false;
     root.querySelector<HTMLButtonElement>('[type="submit"]')!.addEventListener('click', event => {
@@ -101,7 +105,6 @@ export function createSessionDialog(doc: Document, act: (command: SessionCommand
         void run({ action: 'start', plan: { intention: el<HTMLInputElement>('intention').value.trim() || 'Your session', targetMs: targetFromMinutes(value === 'custom' ? el<HTMLInputElement>('minutes').value : value) } });
       } catch (e) { el('dialog-error').textContent = String((e as Error).message); el('dialog-error').hidden = false; }
     });
-    el('untimed').addEventListener('click', event => { if (event.isTrusted) dismiss(); });
     el('close').addEventListener('click', event => { if (event.isTrusted) dismiss(); });
     el('finish').addEventListener('click', event => { if (event.isTrusted) void run({ action: 'finish' }); });
     dialog.addEventListener('cancel', event => { event.preventDefault(); if (event.isTrusted) dismiss(); });

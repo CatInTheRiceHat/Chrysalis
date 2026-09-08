@@ -30,7 +30,7 @@ try {
   assert(Math.abs(box.y + box.height / 2 - 450) < 3);
   await yt.screenshot({path:`test-results/integrated-${live?'live':'fixture'}-intro.png`});
   await modal.locator('#close').focus(); await yt.keyboard.press('Shift+Tab');
-  await expect(modal.locator('#untimed')).toBeFocused();
+  await expect(modal.locator('[type="submit"]')).toBeFocused();
   await yt.keyboard.press('Escape'); await expect(modal).toHaveCount(0);
   if (!live) { await expect(yt.locator('#search')).toBeFocused(); await yt.locator('#search').fill('Ordinary YouTube interaction'); }
   await yt.reload({waitUntil:'domcontentloaded'}); await expect(indicator).toBeVisible();
@@ -121,7 +121,7 @@ try {
   await indicator.locator('[data-action="finish"]').click(); await expect(popup.locator('#session-phase')).toHaveText('Finished');
   await yt.reload({waitUntil:'domcontentloaded'}); await yt.waitForTimeout(1000); await expect(modal).toHaveCount(0);
   checks.push('Real pulses trigger centered check-ins; deliberate extension rearms; break ends paused; resume and finish sync to popup; disabled auto-intro stays off.');
-  console.log('Verifying optional intention and untimed dismissal');
+  console.log('Verifying optional intention and introduction dismissal');
   await options.locator('#auto-session-intro').check();
   const laterVisit = async () => {
     await popup.bringToFront();
@@ -129,7 +129,7 @@ try {
     await yt.bringToFront();
     await expect(modal.locator('dialog')).toBeVisible({timeout:22000});
   };
-  await laterVisit(); await modal.locator('#untimed').click();
+  await laterVisit(); await modal.locator('#close').click();
   await expect(modal).toHaveCount(0); assert.equal((await state()).currentSession.phase,'finished');
   await laterVisit(); await modal.locator('#duration').selectOption('custom'); await modal.locator('#minutes').fill('1');
   await modal.locator('#intention').focus(); await yt.keyboard.press('Enter');
@@ -137,7 +137,7 @@ try {
   await worker.evaluate(async()=>{const k='chrysalis.extension.v1',s=(await chrome.storage.session.get(k))[k];s.currentSession.elapsedMs=59000;s.timing.anchor=null;s.sequence++;await chrome.storage.session.set({[k]:s});});
   await expect(modal.locator('dialog')).toBeVisible({timeout:20000}); await modal.locator('#finish').click();
   await expect(popup.locator('#session-phase')).toHaveText('Finished');
-  checks.push('Continue without a timer creates no session; optional empty intention and Enter submission work; scripted submit is ignored; centered Finish saves the session.');
+  checks.push('Dismissing the introduction creates no session; optional empty intention and Enter submission work; scripted submit is ignored; centered Finish saves the session.');
   if(!live)assert.deepEqual(errors,[]);
   await writeFile(`test-results/integrated-${live?'live':'fixture'}-report.json`,JSON.stringify({browser:context.browser().version(),kind:live?'Live signed-out YouTube':'Unpacked extension on controlled YouTube fixtures',checks,errors,limitations:['No physical screen reader or native toolbar-popup usability test.',...(live?['Live fullscreen and theater controls not exercised in this run.']:[])]},null,2));
   console.log('Integrated browser checks passed.');

@@ -39,7 +39,7 @@ function status(message: string, error = false) {
 }
 function enabled(value: boolean) {
   for (const [ , id] of checks) { const input = $<HTMLInputElement>(id); if (input) input.disabled = !value; }
-  for (const id of ['extension-pause', 'theme', 'default-target', 'break-preference', 'save-break-preference', 'restore-layout', 'intro-start', 'intro-skip', 'save-default-target']) {
+  for (const id of ['extension-pause', 'theme', 'default-target', 'default-custom', 'break-preference', 'save-break-preference', 'restore-layout', 'intro-start', 'intro-skip', 'save-default-target']) {
     const input = $<HTMLButtonElement>(id); if (input) input.disabled = !value;
   }
 }
@@ -59,10 +59,9 @@ function render(settings: Settings, nextRevision: number) {
   $('experience')!.hidden = !intro.hidden;
   const target = $<HTMLSelectElement>('default-target');
   if (target && (!previous || previous.defaultTargetMs !== settings.defaultTargetMs)) {
-    const value = settings.defaultTargetMs === null ? 'none' : String(settings.defaultTargetMs / 60000);
-    target.value = ['none','5','15','30','60'].includes(value) ? value : 'custom';
-    $('default-custom-field')!.hidden = target.value !== 'custom';
-    $<HTMLInputElement>('default-custom')!.value = value === 'none' ? '20' : value;
+    const value = String((settings.defaultTargetMs ?? 900000) / 60000);
+    target.value = ['5','15','30','60'].includes(value) ? value : 'custom';
+    $<HTMLInputElement>('default-custom')!.value = value;
   }
   const duration = $<HTMLInputElement>('break-preference');
   if (duration && (!previous || previous.breakMinutes !== settings.breakMinutes)) duration.value = String(settings.breakMinutes);
@@ -118,15 +117,15 @@ $('open-history')?.addEventListener('click', () => void open('history'));
 $('open-session')?.addEventListener('click', () => void open('session'));
 $<HTMLSelectElement>('default-target')?.addEventListener('change', e => {
   const value = (e.target as HTMLSelectElement).value;
-  $('default-custom-field')!.hidden = value !== 'custom';
   if (value === 'custom') $('default-custom')!.focus();
-  else void save({ defaultTargetMs: value === 'none' ? null : targetFromMinutes(value) });
+  else void save({ defaultTargetMs: targetFromMinutes(value) });
 });
 function durationPreference(id: string, key: 'defaultTargetMs' | 'breakMinutes') {
   try { const value = targetFromMinutes($<HTMLInputElement>(id)!.value); void save({ [key]: key === 'breakMinutes' ? value / 60000 : value }); }
   catch (e) { status(e instanceof Error ? e.message : 'Check the duration.', true); $(id)?.focus(); }
 }
 $('save-default-target')?.addEventListener('click', () => durationPreference('default-custom', 'defaultTargetMs'));
+$('default-custom')?.addEventListener('input', () => { $<HTMLSelectElement>('default-target')!.value = 'custom'; });
 $('save-break-preference')?.addEventListener('click', () => durationPreference('break-preference', 'breakMinutes'));
 const dialog = document.createElement('dialog'); dialog.setAttribute('aria-labelledby', 'delete-title'); dialog.setAttribute('aria-describedby', 'delete-description');
 dialog.innerHTML = `<h2 id="delete-title"></h2><p id="delete-description"></p><p id="delete-error" role="status"></p><div class="session-actions"><button id="cancel-delete" class="secondary">Keep my data</button><button id="confirm-delete" class="primary">Delete</button></div>`;

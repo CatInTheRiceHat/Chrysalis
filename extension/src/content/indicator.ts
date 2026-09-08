@@ -4,7 +4,7 @@ import { checkpointMarkup, breakMarkup, mountChoices } from '../ui/choices';
 import { surfaceStyle, setSurfaceTheme } from './surface';
 
 export const INDICATOR_ID = 'chrysalis-extension-indicator';
-export type IndicatorAction = 'pause' | 'resume' | 'finish' | 'continue' | 'dismiss-checkpoint' | 'continue-untimed' | 'extend' | 'break' | 'end-break' | 'edit' | 'session' | 'viewing';
+export type IndicatorAction = 'pause' | 'resume' | 'finish' | 'continue' | 'dismiss-checkpoint' | 'extend' | 'break' | 'end-break' | 'edit' | 'session' | 'viewing';
 export function createIndicator(doc: Document, act: (action: IndicatorAction, state: SessionDisplay, durationMs?: number) => Promise<void> = async () => {}) {
   let host: HTMLElement | null = null, shadow: ShadowRoot | null = null;
   let session: SessionDisplay | undefined, preferences: Settings | undefined;

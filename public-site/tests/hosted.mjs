@@ -27,7 +27,7 @@ try {
     assert.equal(response.headers()['referrer-policy'], 'no-referrer', route);
     assert.equal(response.headers()['x-content-type-options'], 'nosniff', route);
     await expect(page.locator('h1')).toBeVisible();
-    if (route === '/privacy') await expect(page.locator('main')).toContainText('local preview 0.9.1');
+    if (route === '/privacy') await expect(page.locator('main')).toContainText('local preview 0.9.2');
     if (legacyRoutes.includes(route)) await expect(page.locator('main')).toContainText(/prototype|original/i);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, route);
     assert.equal((await page.reload()).status(), status, `refresh ${route}`);

@@ -65,7 +65,7 @@ async function preferences(patch) {
   await blank.close(); await front?.bringToFront();
   await expect.poll(async () => { const s=await state(); return Object.entries(patch).every(([k,v])=>s.settings[k]===v); }).toBe(true);
 }
-async function laterVisit() { await (await currentWorker()).evaluate(()=>chrome.storage.session.remove('chrysalis.visit')); }
+async function laterVisit() { await sleep(350); await (await currentWorker()).evaluate(()=>chrome.storage.session.remove('chrysalis.visit')); }
 async function measure(page,label) {
   await expect(modal(page).locator('dialog')).toBeVisible();
   await expect.poll(()=>page.evaluate(()=>Boolean(window.__introTiming))).toBe(true);
@@ -101,7 +101,7 @@ try {
   assert.equal((await state()).currentSession.phase,'idle');
   await expect(modal(yt).locator('#duration')).toBeFocused();
   await modal(yt).locator('#close').focus(); await yt.keyboard.press('Shift+Tab');
-  await expect(modal(yt).locator('#untimed')).toBeFocused();
+  await expect(modal(yt).locator('[type="submit"]')).toBeFocused();
   await yt.screenshot({path:`test-results/startup-${live?'live':'fixture'}-intro.png`});
   await yt.keyboard.press('Escape'); await expect(modal(yt)).toHaveCount(0);
   await yt.reload({waitUntil:'commit'}); await expect(indicator(yt)).toHaveCount(1);
@@ -125,10 +125,15 @@ try {
     catch { checks.push('Live player unavailable; autoplay protection verified on a real canvas media stream in the controlled run.'); }
   }
   await yt.waitForTimeout(2200); assert.equal((await state()).currentSession.phase,'idle');
+  await expect(modal(yt).locator('#untimed')).toHaveCount(0);
+  await expect(modal(yt).locator('#minutes')).toBeVisible();
+  await modal(yt).locator('#minutes').fill('17');
+  await expect(modal(yt).locator('#duration')).toHaveValue('custom');
   await modal(yt).locator('#intention').fill('Startup validation');
   await modal(yt).locator('#intention').press('Enter');
   await expect(modal(yt)).toHaveCount(0);
   const sessionId=(await state()).currentSession.id;
+  assert.equal((await state()).currentSession.targetMs,17*60000);
   await expect.poll(async()=> (await state()).currentSession.elapsedMs,{timeout:10000}).toBeGreaterThan(0);
   if (!live) { await yt.locator('video').evaluate(v=>v.play()); await expect.poll(()=>yt.locator('video').evaluate(v=>v.paused)).toBe(false); }
   if (live) {
@@ -149,6 +154,46 @@ try {
   await yt.waitForTimeout(2200); await other.bringToFront(); await other.waitForTimeout(2200);
   const elapsed=(await state()).currentSession.elapsedMs-before;
   assert(elapsed>0 && elapsed<=Date.now()-start+500);
+  // Return to a tab while its last worker reply is still pending. Previously
+  // its visibility/focus pulse was dropped until another two-second interval.
+  if (!live) {
+    const cdp=await context.newCDPSession(yt), worlds=[];
+    cdp.on('Runtime.executionContextCreated',({context:w})=>worlds.push(w));
+    await cdp.send('Runtime.enable');
+    const world=worlds.find(w=>w.origin===base.slice(0,-1)); assert(world);
+    const isolated=async expression=>{const r=await cdp.send('Runtime.evaluate',{expression,contextId:world.id,awaitPromise:true,returnByValue:true});assert.equal(r.exceptionDetails,undefined);return r.result.value;};
+    await yt.bringToFront(); await sleep(150);
+    await isolated(`globalThis.__send=chrome.runtime.sendMessage.bind(chrome.runtime);globalThis.__observations=0;
+      chrome.runtime.sendMessage=async message=>{
+        if(message.type!=='OBSERVE')return __send(message);
+        const count=++globalThis.__observations;const reply=await __send(message);
+        if(count===1)await new Promise(resolve=>globalThis.__releaseObservation=resolve);
+        return reply;
+      };`);
+    await expect.poll(()=>isolated('Boolean(globalThis.__releaseObservation)'),{timeout:5000}).toBe(true);
+    await other.bringToFront(); await sleep(100); await yt.bringToFront(); await sleep(100);
+    await isolated('globalThis.__releaseObservation()');
+    await expect.poll(()=>isolated('globalThis.__observations'),{timeout:1000,intervals:[50]}).toBeGreaterThan(1);
+    await isolated('chrome.runtime.sendMessage=globalThis.__send'); await cdp.detach();
+    console.log('Tab handoff regression passed.');
+    checks.push('Delayed worker reply plus tab handoff flushes the latest visibility immediately; the returning tab does not wait another sampling interval.');
+  }
+  // Repeated real browser tab changes must retain one running session. Away
+  // time longer than the recovery threshold must not falsely pause the session.
+  let last=(await state()).currentSession.elapsedMs;
+  for (let n=0;n<12;n++) {
+    const tab=n%2 ? other : yt; await tab.bringToFront(); await sleep(120);
+    const s=(await state()).currentSession;
+    assert.equal(s.id,sessionId);assert.equal(s.phase,'active');assert(s.elapsedMs>=last);last=s.elapsedMs;
+    await expect(indicator(tab)).toHaveCount(1);
+  }
+  const awayTab=await context.newPage(); await awayTab.bringToFront(); await sleep(350);
+  const away=(await state()).currentSession.elapsedMs; await sleep(6200);
+  assert.equal((await state()).currentSession.elapsedMs,away);
+  await other.bringToFront(); await awayTab.close();
+  await expect.poll(async()=> (await state()).currentSession.elapsedMs,{timeout:6000}).toBeGreaterThan(away);
+  assert.equal((await state()).currentSession.phase,'active');
+  checks.push('Twelve rapid tab switches keep one session with monotonic time; more than six seconds in a non-YouTube tab is excluded and timing resumes automatically.');
   await stopWorker(other);
   await expect.poll(async()=> (await state()).currentSession.elapsedMs,{timeout:10000}).toBeGreaterThan(before+elapsed);
   assert.equal((await state()).currentSession.id,sessionId);
@@ -173,13 +218,15 @@ try {
   await other.reload({waitUntil:'commit'}); await expect(indicator(other)).toBeVisible();
   if (await indicator(other).locator('#restore').isVisible()) await indicator(other).locator('#restore').click();
   await indicator(other).locator('[data-action="finish"]').click();
+  await expect.poll(async()=> (await state()).currentSession.phase).toBe('finished');
+  await yt.close();
   await preferences({autoSessionIntro:false}); await other.bringToFront(); await laterVisit();
   await other.reload({waitUntil:'commit'}); await expect(indicator(other)).toHaveCount(1);
   await other.waitForTimeout(1800); await expect(modal(other)).toHaveCount(0);
   await preferences({autoSessionIntro:true}); await other.bringToFront(); await other.goto('about:blank'); await laterVisit();
   await enter(other,'https://www.youtube.com/shorts/aqz-KE-bpKQ','new visit / direct Shorts');
-  await modal(other).locator('#untimed').click(); await expect(modal(other)).toHaveCount(0);
-  checks.push('Automatic-introduction preference respected; direct Shorts introduction works; Continue without timer does not create a session.');
+  await modal(other).locator('#close').click(); await expect(modal(other)).toHaveCount(0);
+  checks.push('Automatic-introduction preference respected; direct Shorts introduction works; Closing the introduction does not create a session.');
   // Keep a real YouTube tab in Chrome's saved session and request native restore.
   await yt.close(); await context.close(); context=await launch(true);
   const restored=context.pages().find(p=>p.url().startsWith('https://www.youtube.com/'));

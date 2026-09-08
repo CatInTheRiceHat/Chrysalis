@@ -10,6 +10,7 @@ const zip = await readFile(`${stem}.zip`);
 const expected = JSON.parse(await readFile(`${stem}-build-manifest.json`, 'utf8')).sha256;
 assert.equal(hash(await readFile('release/chrysalis-0.8.0.zip')), 'a618767617e8ca50a66be7e19e89b2f218a4d24aef2011e23355aa18f38c28d9', 'Preserve 0.8.0');
 assert.equal(hash(await readFile('release/chrysalis-0.9.0.zip')), '781a8fd16c7dec02710aafd17115cd63bfb3aad1a2ec1447457efb98c65980f2', 'Preserve 0.9.0');
+assert.equal(hash(await readFile('release/chrysalis-0.9.1.zip')), 'a0e274468da4dc46ee33d67accdc8f9cf660a85277cfbdf3f79867651da34765', 'Preserve 0.9.1');
 assert.equal(hash(zip), expected, 'Upload ZIP must match its verified build manifest');
 const validation = JSON.parse(await readFile(`${stem}-validation.json`, 'utf8'));
 assert.equal(validation.zipSha256, expected);

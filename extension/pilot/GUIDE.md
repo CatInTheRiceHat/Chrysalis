@@ -1,5 +1,7 @@
 # Chrysalis voluntary testing guide
 
+**0.9.2 update: sessions require a chosen time target; type minutes directly or use a preset. At a checkpoint choose additional time, Finish, a break or dismissal that retains the target. Close/Escape remain available in the introduction; there is no explicit untimed start/continuation option.**
+
 **0.9.0 storage update:** current activity is browser-memory-only; optional completed history is password-encrypted, and unlocking never gates viewing. Browser restart/reload/update/disable clears temporary activity; earlier plaintext requires an explicit encrypt/delete choice. This supersedes older persistence/restart statements below. See [current privacy policy](../PRIVACY.md) and `docs/encrypted-history-storage.md`.
 
 This is an early desktop Chrome extension, independent of YouTube and Google.

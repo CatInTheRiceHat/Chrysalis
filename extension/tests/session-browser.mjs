@@ -117,7 +117,7 @@ try {
   await page.screenshot({ path: 'test-results/session-summary.png', fullPage: true });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
 
-  await page.locator('#time-target').selectOption('none');
+  await page.locator('#time-target').selectOption('15');
   await page.getByRole('button', { name: 'Start another session' }).click();
   await youtube.bringToFront(); await expect.poll(elapsed, { timeout: 15000 }).toBeGreaterThan(1000);
   if (process.env.LIVE_YOUTUBE === '1') {

@@ -1,5 +1,7 @@
 # Session model and timing contract
 
+**0.9.2 update: new starts/edits require a non-null time target. The continue-untimed command is removed; checkpoint dismissal retains its original target and measured overtime. Read validation still accepts earlier null targets/history. Tab activation sends a trusted worker hint, and pending observations retain the latest visibility signal for immediate follow-up.**
+
 **0.9.0 storage update:** current activity is browser-memory-only; optional completed history is password-encrypted, and unlocking never gates viewing. Browser restart/reload/update/disable clears temporary activity; earlier plaintext requires an explicit encrypt/delete choice. This supersedes older persistence/restart statements below. See [current privacy policy](PRIVACY.md) and `docs/encrypted-history-storage.md`.
 
 Implemented in `src/session/model.ts`; persistence and serialization in

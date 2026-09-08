@@ -1,4 +1,4 @@
-import { CHANNEL, isSettingsChanged, supportedUrl } from '../shared/protocol';
+import { CHANNEL, isSettingsChanged, isTabActivated, supportedUrl } from '../shared/protocol';
 import { request } from '../shared/client';
 import { createSessionDialog } from './session-dialog';
 import type { SessionCommand } from '../session/model';
@@ -41,6 +41,7 @@ if (window === window.top && supportedUrl(location.href)) {
   let contextTimer: ReturnType<typeof setTimeout> | undefined;
   let sampleTimer: ReturnType<typeof setTimeout> | undefined;
   let samplePending = false;
+  let pendingVisibility: boolean | undefined;
   let promptTimer: ReturnType<typeof setTimeout> | undefined;
   let promptPending = false;
   let displayReady = false;
@@ -108,7 +109,11 @@ if (window === window.top && supportedUrl(location.href)) {
     if (running && !wasRunning) void sample();
   }
   async function sample(visible = !document.hidden) {
-    if (disposed || extensionPaused || (pageSuspended && visible) || samplePending) return;
+    if (disposed || extensionPaused || (pageSuspended && visible)) return;
+    // Visibility/focus can change while a worker reply is in flight. Retain the
+    // newest signal and send it immediately afterward instead of dropping it and
+    // waiting another observation interval when the user returns to this tab.
+    if (samplePending) { pendingVisibility = visible; return; }
     clearTimeout(sampleTimer); sampleTimer = undefined;
     samplePending = true;
     try {
@@ -124,7 +129,9 @@ if (window === window.top && supportedUrl(location.href)) {
     }
     finally {
       samplePending = false;
-      if (!disposed && !pageSuspended && running && !document.hidden) sampleTimer = setTimeout(() => void sample(), OBSERVATION_MS);
+      const queued = pendingVisibility; pendingVisibility = undefined;
+      if (queued !== undefined && !disposed && !pageSuspended) void sample(queued);
+      else if (!disposed && !pageSuspended && running && !document.hidden) sampleTimer = setTimeout(() => void sample(), OBSERVATION_MS);
     }
   }
   async function refresh() {
@@ -150,16 +157,16 @@ if (window === window.top && supportedUrl(location.href)) {
   }
   function onMessage(value: unknown, sender: chrome.runtime.MessageSender) {
     if (!disposed && sender.id === chrome.runtime.id && !sender.tab &&
-        (!sender.url || sender.url === chrome.runtime.getURL('background.js')) &&
-        isSettingsChanged(value)) {
-      apply(value.settings, value.session, value.sequence);
+        (!sender.url || sender.url === chrome.runtime.getURL('background.js'))) {
+      if (isSettingsChanged(value)) apply(value.settings, value.session, value.sequence);
+      else if (isTabActivated(value) && !pageSuspended) { void refresh(); void sample(); void prompt(); }
     }
   }
   function onPageShow() { pageSuspended = false; mountWhenReady(); checkContext(); void refresh(); void sample(); }
   function onVisibility(event: Event) {
     if (!event.isTrusted) return;
     checkContext();
-    if (document.hidden) clearTimeout(breakTimer);
+    if (document.hidden) { clearTimeout(breakTimer); clearTimeout(sampleTimer); }
     void sample(!document.hidden);
     if (!document.hidden) { void refresh(); void prompt(); }
   }

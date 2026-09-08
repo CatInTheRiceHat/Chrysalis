@@ -1,3 +1,13 @@
+# Distribution status — Chrysalis 0.9.2
+
+Timed-session release: untimed start/continuation options are removed, minutes are directly editable in the introduction/popup/default preferences, and tab-change visibility signals are retained across pending worker requests. The close button and Escape remain available. Existing history and privacy/storage behavior are unchanged.
+
+Current artifacts use `release/chrysalis-0.9.2*`. See [release evidence](../../docs/releases/0.9.2/README.md). The verified 0.9.1 and 0.9.0 artifacts are preserved. Updated Store copy and captures accompany the new package; no Store submission is performed.
+
+---
+
+## Historical release status
+
 # Distribution status — Chrysalis 0.9.1
 
 Automatic desktop YouTube startup release. The content script starts at `document_start`, initializes through the worker immediately, and mounts the introduction when a body exists. Neither full page loading nor popup setup is required. The introduction pauses autoplay and does not start timing; users choose Start, dismissal or Continue without a timer. Active sessions, timer preferences and the existing local privacy/storage design are preserved.

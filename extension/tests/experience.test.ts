@@ -17,7 +17,7 @@ test('new preferences migrate without losing viewing choices or session data', (
   const old = { ...base, schemaVersion: 3, settings: { theme: 'dark', showIndicator: true, hideHomeRecommendations: true, hideWatchRecommendations: false, hideShortsEntries: true } };
   const result = migrate(old);
   assert.equal(result.schemaVersion, 7); assert.equal(result.settings.hideShortsEntries, true);
-  assert.equal(result.settings.defaultTargetMs, null); assert.equal(result.settings.introSeen, false);
+  assert.equal(result.settings.defaultTargetMs, 900000); assert.equal(result.settings.introSeen, false);
   assert.deepEqual(result.currentSession, old.currentSession);
 });
 test('checkpoint preference changes real transitions without revising the plan', async () => {

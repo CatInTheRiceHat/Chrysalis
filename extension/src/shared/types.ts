@@ -9,7 +9,7 @@ export type ViewingControls = typeof viewingDefaults;
 export const experienceDefaults = {
   extensionPaused: false,
   introSeen: false,
-  defaultTargetMs: null as number | null,
+  defaultTargetMs: 900000 as number | null,
   breakMinutes: 5,
   checkpointsEnabled: true,
   indicatorCollapsed: true,

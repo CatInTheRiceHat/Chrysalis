@@ -1,3 +1,7 @@
+# Current 0.9.2 captures
+
+The current package captures are in `release/chrysalis-0.9.2-screenshots/`, with five Store candidates in `release/chrysalis-0.9.2-store-preparation/screenshots/`. They show the introduction without an untimed button, visible minutes input, default settings and updated checkpoint choices. The capture report binds every image to the actual ZIP checksum. Historical captures below and the earlier release directories remain preserved.
+
 # Current 0.9.1 screenshots
 
 Run `npm run screenshots` after packaging. The current screenshots and their hash-bound provenance are in `release/chrysalis-0.9.1-screenshots/`; the five Store candidates are copied into `release/chrysalis-0.9.1-store-preparation/screenshots/`. The introduction now explains that playback pauses until dismissal/Start and timing starts only after Start. Recapture this changed surface from the actual package. No toolbar click is required to initialize the extension.

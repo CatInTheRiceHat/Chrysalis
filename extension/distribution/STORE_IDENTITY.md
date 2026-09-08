@@ -1,6 +1,6 @@
 # Installation identity and Store transition
 
-0.9.1 has no manifest `key`, Store-assigned ID or update URL. Nothing was uploaded
+0.9.2 has no manifest `key`, Store-assigned ID or update URL. Nothing was uploaded
 to create an item. Its ZIP is for Load unpacked and is not a signed Store installer.
 
 | Installation change | Settings/history outcome |

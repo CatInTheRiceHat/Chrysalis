@@ -8,7 +8,7 @@ export const checkpointMarkup = `<section id="checkpoint-controls" aria-labelled
   <label for="additional-duration">Additional foreground YouTube time</label>
   <select id="additional-duration"><option value="5">5 minutes</option><option value="15" selected>15 minutes</option><option value="30">30 minutes</option><option value="custom">Custom duration</option></select>
   <div id="additional-custom" hidden><label for="additional-minutes">Additional minutes (1–1440)</label><input id="additional-minutes" type="number" min="1" max="1440" step="1" value="10"></div>
-  <div class="actions"><button data-choice="extend">Continue with additional time</button><button data-choice="continue-untimed">Continue without a time target</button><button data-choice="dismiss-checkpoint">Dismiss checkpoint</button></div>
+  <div class="actions"><button data-choice="extend">Continue with additional time</button><button data-choice="dismiss-checkpoint">Dismiss checkpoint</button></div>
 </section>`;
 export const breakMarkup = `<div id="break-controls" class="break-controls">
   <label for="break-duration">Break duration</label><select id="break-duration"><option value="2">2 minutes</option><option value="5" selected>5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="custom">Custom duration</option></select>
@@ -36,7 +36,7 @@ export function mountChoices(root: HTMLElement | ShadowRoot, run: (command: Sess
         const input = el<HTMLInputElement>(action === 'extend' ? 'additional-minutes' : 'break-minutes');
         const durationMs = targetFromMinutes(select.value === 'custom' ? input.value : select.value);
         await run({ action, durationMs });
-      } else if (action === 'continue-untimed' || action === 'dismiss-checkpoint') await run({ action });
+      } else if (action === 'dismiss-checkpoint') await run({ action });
     } catch (e) { error(e instanceof Error ? e.message : 'Review the duration and try again.'); }
     finally { busy = false; }
   }));

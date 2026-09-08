@@ -52,6 +52,7 @@ export function createStore(adapter: StorageAdapter, environment?: { now(): numb
     }),
     updateSettings: (patch: Partial<Settings>, expectedRevision: number) => transaction((state, now) => {
       if (!settingsPatch(patch)) throw new Error('Invalid settings.');
+      if (patch.defaultTargetMs === null) throw new Error('Choose a default time target from 1 to 1440 minutes.');
       if (expectedRevision !== state.revision) throw new ConflictError('Settings changed in another window. Review the latest settings and try again.');
       if (patch.extensionPaused !== undefined) setExtensionPaused(state, patch.extensionPaused, now);
       state.settings = { ...state.settings, ...patch }; state.revision++;

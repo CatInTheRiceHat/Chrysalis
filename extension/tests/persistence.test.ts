@@ -40,7 +40,7 @@ test('default activity is memory-only; preferences alone survive browser restart
   session.data = {};
   const restarted = createStore(createPersistence(local, session).adapter);
   const fresh = await restarted.read(); assert.equal(fresh.currentSession.phase, 'idle'); assert.equal(fresh.completedSessions.length, 0); assert(fresh.settings.hideHomeRecommendations);
-  await restarted.execute({ requestId: 'new', expectedRevision: fresh.sessionRevision, expectedSessionId: null, command: { action: 'start', plan: { intention: 'no password', targetMs: null } } });
+  await restarted.execute({ requestId: 'new', expectedRevision: fresh.sessionRevision, expectedSessionId: null, command: { action: 'start', plan: { intention: 'no password', targetMs: 900000 } } });
   assert.equal((await restarted.read()).currentSession.phase, 'active'); diskIsPrivate(local);
 });
 test('explicit legacy encryption replaces the only plaintext record, retains history/archive and discards receipts', async () => {
