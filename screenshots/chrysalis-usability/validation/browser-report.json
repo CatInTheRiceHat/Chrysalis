@@ -1,0 +1,15 @@
+{
+  "browser": "153.0.8010.12",
+  "results": [
+    "Popup and options render, PING/PONG works, options opens, settings survive popup closure.",
+    "Native content-script injection, repeated initialization and SPA event leave exactly one indicator and preserve page controls.",
+    "Actual content context cannot mutate settings, request private snapshots or directly read restricted storage.",
+    "Settings synchronize across pages; indicator removes/reappears immediately, dismisses, and restores on reload.",
+    "No injection on an unrelated origin.",
+    "Worker forcibly stopped, woke through messaging, and recovered persisted settings.",
+    "Dark/light UI and narrow settings layout checked; screenshots saved.",
+    "Settings persisted through a full browser restart using the isolated test profile."
+  ],
+  "liveYouTube": false,
+  "toolbarPopover": "Popup document verified; native toolbar click not automated."
+}

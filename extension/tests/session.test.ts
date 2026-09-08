@@ -172,7 +172,7 @@ test('foundation schema upgrades retain settings and summary data without import
   let disk: unknown = { schemaVersion: 1, revision: 3, settings: { theme: 'dark', showIndicator: false }, currentSession: { phase: 'idle' }, completedSessions: [] };
   const store = createStore({ async read() { return disk; }, async write(value) { disk = value; } });
   const state = await store.read();
-  assert.equal(state.schemaVersion, 6); assert.equal(state.settings.theme, 'dark'); assert.equal(state.revision, 3);
+  assert.equal(state.schemaVersion, 7); assert.equal(state.settings.theme, 'dark'); assert.equal(state.revision, 3);
   assert.equal(state.currentSession.phase, 'idle');
 });
 test('typed protocol rejects malformed observations and session mutations before storage', () => {

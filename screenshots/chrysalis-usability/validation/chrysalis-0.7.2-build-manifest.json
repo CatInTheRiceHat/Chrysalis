@@ -1,0 +1,31 @@
+{
+  "version": "0.7.2",
+  "zip": "chrysalis-0.7.2.zip",
+  "sha256": "4422f9009431f764c2f68d3af6eeae5e96adb00b8a7fe5a910ea4cc7edcb832b",
+  "unpacked": "chrysalis-0.7.2-unpacked",
+  "files": {
+    "assets/AbrilFatface-OFL.txt": "aba8997e16b1e3888c6e855ba883c70d96bd4375bff8cb9c7ce0f097200f74b8",
+    "assets/AbrilFatface.ttf": "5971d4a3758a922a9fedc7f6fb825a96341a2e718c45a4b2c9a6b417c8c4dbe9",
+    "assets/Montserrat-OFL.txt": "8b7141c03fa4f8d44e6345d5d4931709290f0f67875e452e95ac1fd3a027802e",
+    "assets/Montserrat.ttf": "0f7b311b2f3279e4eef9b2f968bcdbab6e28f4daeb1f049f4f278a902bcd82f7",
+    "assets/logo.png": "642e4087eb769ae578007da3af80221a8fd86769624fdcd1d2f1828c386ee984",
+    "background.js": "f3513d3a3d55b124e4bcf47d7a8197b827ffedd86f1d3c1b9758afa6e0999442",
+    "content.js": "dd9f663b3f1df4a55ac73a18f88797202bbba35f4a94e46380cb11d9a7d8a9b7",
+    "icons/icon-128.png": "ce26140864c9a61c69db836828dfab1a8c7cbb2d7f395d3a9c0a1ccc9aadf591",
+    "icons/icon-16.png": "7301c27d2f0260e05bda9a7f2dbe55af0ce01d8b243a0dddc4ed65e74ac071c0",
+    "icons/icon-32.png": "b40f77cccebc3b7c7dedab3756ca97687f93bee418e6e44eb8245ad0f45748a1",
+    "icons/icon-48.png": "79eb38ca02ebfb4e73c01cbb3e22cc512d7da50c88640a8d9ba6618dcf8178f5",
+    "manifest.json": "4d982b303587a24a5677b739a172ebb95eecb44971dc0467d97a864570e7b9ef",
+    "options.html": "959639ce6af539c0cc2c0de4449ea93855ee7e1cb41d05fe6d48396ec146d6f0",
+    "page.js": "cfd5216182c460f206da6fb1d69a6ee4b6e2c3303d823663558a5d25f79f3d1d",
+    "popup.html": "1e6095db414249f13e110675068b6ffa624a8d7af610c2af7bc4c64a174ae529",
+    "privacy.html": "2a48172839ef31aade3c968212c8dee4948064c03364a7dc055ff0eb9dfbdc0e",
+    "styles.css": "f93d6b710b5f92b040f88d266d59b2162ae03a5904182f410eae39763c31e23f"
+  },
+  "toolchain": {
+    "node": "v20.17.0",
+    "python": "3.13.1"
+  },
+  "archiveFormat": "ZIP_STORED; sorted paths; fixed UTC-independent DOS date; mode 0644",
+  "verification": "Every ZIP and extracted byte matches the verified production build. Not a signature or store approval."
+}

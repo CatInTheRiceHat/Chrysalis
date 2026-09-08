@@ -8,6 +8,12 @@ import { mountHistory } from './history';
 import { mountSession } from './session';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
+// An action popup has no tab. Its initial viewport participates in Chrome's
+// auto-sizing: a 100vw maximum can trap it at the initial tiny viewport width.
+// Ordinary extension tabs/windows keep the responsive maximum for narrow/zoom use.
+if (document.body.classList.contains('popup')) {
+  void chrome.tabs.getCurrent().then(tab => { if (!tab) document.documentElement.classList.add('action-popup'); });
+}
 const sessionRoot = $('session-root');
 if (sessionRoot) mountSession(sessionRoot);
 const history = $('history') ? mountHistory($('history')!, renderSnapshot) : null;
@@ -20,7 +26,7 @@ intro.innerHTML = `<p class="eyebrow">Welcome to Chrysalis</p><h1>Your time, you
 const checks = [
   ['showIndicator', 'show-indicator'], ['hideHomeRecommendations', 'hide-home'],
   ['hideWatchRecommendations', 'hide-related'], ['hideShortsEntries', 'hide-shorts'],
-  ['indicatorCollapsed', 'indicator-collapsed'], ['checkpointsEnabled', 'checkpoints-enabled'],
+  ['autoSessionIntro', 'auto-session-intro'], ['indicatorCollapsed', 'indicator-collapsed'], ['checkpointsEnabled', 'checkpoints-enabled'],
 ] as const;
 let revision = -1, busy = false;
 let latest: Settings | null = null;
@@ -47,8 +53,9 @@ function render(settings: Settings, nextRevision: number) {
   if ($('extension-pause-description')) $('extension-pause-description')!.textContent = settings.extensionPaused
     ? 'Chrysalis is paused. YouTube has its ordinary layout and session time is stopped. Enable Chrysalis, then resume your session when ready.'
     : 'Pause timing and restore YouTube’s ordinary layout. A running break ends; your choices stay saved.';
-  intro.hidden = settings.introSeen;
-  $('experience')!.hidden = !settings.introSeen;
+  const sessionStarted = lastSnapshot && lastSnapshot.currentSession.phase !== 'idle';
+  intro.hidden = settings.introSeen || Boolean(sessionStarted);
+  $('experience')!.hidden = !intro.hidden;
   const target = $<HTMLSelectElement>('default-target');
   if (target && (!previous || previous.defaultTargetMs !== settings.defaultTargetMs)) {
     const value = settings.defaultTargetMs === null ? 'none' : String(settings.defaultTargetMs / 60000);
@@ -72,6 +79,9 @@ async function load() {
     if (!reply.ok) throw new Error(reply.error);
     if (reply.type !== 'SNAPSHOT') throw new Error('Settings unavailable. Try again.');
     renderSnapshot(reply.snapshot); status('Saved on this device.'); enabled(true);
+    if (location.hash === '#viewing' && !document.querySelector(':focus')) {
+      $('viewing-heading')?.setAttribute('tabindex', '-1'); $('viewing-heading')?.focus();
+    }
   } catch (e) { status(e instanceof Error ? e.message : 'Unable to load settings.', true); intro.hidden = false; }
 }
 async function save(patch: Partial<Settings>): Promise<boolean> {
@@ -97,11 +107,12 @@ for (const id of ['intro-start', 'intro-skip']) $(id)?.addEventListener('click',
   }
 });
 $('show-introduction')?.addEventListener('click', async () => { if (await save({ introSeen: false })) $('intro-start')?.focus(); });
-async function open(page: 'settings' | 'session' | 'history') {
+async function open(page: 'settings' | 'viewing' | 'session' | 'history') {
   try { const reply = await request({ channel: CHANNEL, type: 'OPEN_PAGE', page }); if (!reply.ok) throw new Error(reply.error); }
   catch { status('Could not open Chrysalis. Try again.', true); }
 }
-for (const id of ['open-settings', 'viewing-preferences']) $(id)?.addEventListener('click', () => void open('settings'));
+$('open-settings')?.addEventListener('click', () => void open('settings'));
+$('viewing-preferences')?.addEventListener('click', () => void open('viewing'));
 $('open-history')?.addEventListener('click', () => void open('history'));
 $('open-session')?.addEventListener('click', () => void open('session'));
 $<HTMLSelectElement>('default-target')?.addEventListener('change', e => {

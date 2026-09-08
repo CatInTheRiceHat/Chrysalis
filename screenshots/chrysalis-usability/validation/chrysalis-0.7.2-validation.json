@@ -1,0 +1,18 @@
+{
+  "version": "0.7.2",
+  "zipSha256": "4422f9009431f764c2f68d3af6eeae5e96adb00b8a7fe5a910ea4cc7edcb832b",
+  "verifiedAt": "2026-09-08T02:50:05.273Z",
+  "unpacked": "/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.7.2-unpacked",
+  "passedSuites": [
+    "browser",
+    "session-browser",
+    "viewing-browser",
+    "experience-browser",
+    "checkpoints-browser",
+    "history-browser",
+    "hardening-browser",
+    "usability-browser",
+    "usability-native"
+  ],
+  "evidence": "Real unpacked extension loaded from ZIP-extracted assets in disposable Chromium profiles. Controlled YouTube-origin fixtures; live selector evidence is separate."
+}

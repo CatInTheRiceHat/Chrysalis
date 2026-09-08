@@ -3,6 +3,7 @@ import { createHandler } from './shared/handler';
 import { createStore, STORAGE_KEY } from './shared/storage';
 import { snapshot } from './shared/validation';
 import { sessionDisplay } from './shared/types';
+import { createPrompts, type Visit } from './session/prompts';
 import type { Boundary } from './session/model';
 
 // Access restriction runs on every worker start, before any storage operation.
@@ -24,6 +25,10 @@ const store = createStore({
     return epoch;
   },
 });
+const prompt = createPrompts({
+  async read() { return (await chrome.storage.session.get('chrysalis.visit'))['chrysalis.visit'] as Visit | undefined; },
+  async write(visit) { await chrome.storage.session.set({ 'chrysalis.visit': visit }); },
+}, () => store.read());
 const handle = createHandler(store, chrome.runtime.id, chrome.runtime.getManifest().version, async sender => {
   if (sender.tab?.id === undefined) return false;
   try {
@@ -33,10 +38,11 @@ const handle = createHandler(store, chrome.runtime.id, chrome.runtime.getManifes
       tab.status !== 'loading' && window.focused && window.state !== 'minimized';
   } catch { return false; }
 }, async page => {
+  if (page === 'viewing') { await chrome.tabs.create({ url: chrome.runtime.getURL('options.html#viewing') }); return; }
   if (page === 'history') { await chrome.tabs.create({ url: chrome.runtime.getURL('options.html#history') }); return; }
   if (page === 'settings') { await chrome.runtime.openOptionsPage(); return; }
   await chrome.windows.create({ type: 'popup', url: chrome.runtime.getURL(page === 'edit' ? 'popup.html#edit' : 'popup.html'), width: 440, height: 700, focused: true });
-});
+}, prompt);
 
 function onBoundary(event: Boundary) {
   const at = Date.now();

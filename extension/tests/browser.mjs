@@ -34,7 +34,7 @@ try {
   await popup.goto(`${base}popup.html`);
   await popup.locator('#intro-skip').click();
   await popup.locator('.quick-preferences summary').click();
-  await expect(popup.getByRole('heading', { name: 'Time, on your terms.' })).toBeVisible();
+  await expect(popup.getByRole('heading', { name: 'Your YouTube session' })).toBeVisible();
   await expect(popup.locator('#connection')).toHaveText('Extension connected');
   await expect(popup.locator('#show-indicator')).toBeChecked();
   await popup.locator('#theme').selectOption('dark');
@@ -60,6 +60,7 @@ try {
   await context.route('https://www.youtube.com/**', route => route.fulfill({
     contentType: 'text/html', body: '<!doctype html><html><head><title>YouTube test fixture</title></head><body><main><h1>Controlled YouTube fixture</h1><button id="youtube-control">YouTube control</button></main></body></html>',
   }));
+  await options.locator('#auto-session-intro').uncheck();
   const youtube = await context.newPage();
   watchErrors(youtube);
   const cdp = await context.newCDPSession(youtube);
@@ -70,7 +71,7 @@ try {
   await youtube.goto('https://www.youtube.com/');
   const indicator = youtube.locator('#chrysalis-extension-indicator');
   await expect(indicator).toHaveCount(1);
-  await expect(indicator).toContainText('Chrysalis is here');
+  await expect(indicator).toContainText('Ready when you are');
   const extensionWorld = [...worlds.values()].find(world => world.origin === `chrome-extension://${extensionId}`);
   assert(extensionWorld, `Missing extension isolated world: ${JSON.stringify([...worlds.values()])}`);
   async function isolated(expression) {
@@ -100,15 +101,16 @@ try {
 
   await options.locator('#show-indicator').uncheck();
   await expect(options.locator('#save-status')).toHaveText('Saved on this device.');
-  await expect(indicator).toHaveCount(0);
+  await expect(indicator.locator('#restore')).toBeVisible();
   await expect(reopened.locator('#show-indicator')).not.toBeChecked();
   await options.locator('#show-indicator').check();
   await expect(indicator).toHaveCount(1);
-  await indicator.getByRole('button', { name: /Dismiss/ }).click();
-  await expect(indicator).toHaveCount(0);
+  await indicator.locator('#restore').click();
+  await indicator.getByRole('button', { name: /Hide timer/ }).click();
+  await expect(indicator.locator('#restore')).toBeVisible();
   await youtube.reload();
   await expect(indicator).toHaveCount(1);
-  results.push('Settings synchronize across pages; indicator removes/reappears immediately, dismisses, and restores on reload.');
+  results.push('Settings synchronize across pages; indicator minimizes/restores immediately and leaves an accessible restore tab.');
 
   await context.route('https://example.com/**', route => route.fulfill({ contentType: 'text/html', body: '<h1>Unrelated site</h1>' }));
   const other = await context.newPage();

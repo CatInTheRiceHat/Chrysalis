@@ -21,7 +21,7 @@ function v3Settings(value: unknown): boolean {
 }
 const experienceKeys = Object.keys(experienceDefaults);
 function experiencePatch(v: Record<string, unknown>): boolean {
-  return ['introSeen', 'checkpointsEnabled', 'indicatorCollapsed', 'extensionPaused'].every(key => !(key in v) || typeof v[key] === 'boolean') &&
+  return ['introSeen', 'checkpointsEnabled', 'indicatorCollapsed', 'extensionPaused', 'autoSessionIntro'].every(key => !(key in v) || typeof v[key] === 'boolean') &&
     (!('defaultTargetMs' in v) || v.defaultTargetMs === null || (natural(v.defaultTargetMs) && v.defaultTargetMs >= 60000 && v.defaultTargetMs <= 86400000 && v.defaultTargetMs % 60000 === 0)) &&
     (!('breakMinutes' in v) || (natural(v.breakMinutes) && v.breakMinutes >= 1 && v.breakMinutes <= 1440));
 }
@@ -57,12 +57,12 @@ function details(v: Record<string, unknown>): boolean {
     target(v.originalTargetMs) && target(v.targetMs);
 }
 function priorExperienceSettings(value: unknown): boolean {
-  return record(value) && !('extensionPaused' in value) && settings({ ...value, extensionPaused: false });
+  return record(value) && !('extensionPaused' in value) && settings({ autoSessionIntro: true, ...value, extensionPaused: false });
 }
-function baseSnapshot(value: unknown, version: 1 | 2 | 3 | 4 | 5 | 6): boolean {
+function baseSnapshot(value: unknown, version: 1 | 2 | 3 | 4 | 5 | 6 | 7): boolean {
   const legacy = version === 1;
   if (!record(value) || !keys(value, ['schemaVersion', 'revision', 'settings', 'currentSession', 'completedSessions', ...(legacy ? [] : ['sequence', 'sessionRevision', 'receipts', 'timing']), ...(version >= 5 ? ['historyRevision'] : [])]) ||
-      value.schemaVersion !== version || !natural(value.revision) || !(version === 6 ? settings(value.settings) : version >= 4 ? priorExperienceSettings(value.settings) : version === 3 ? v3Settings(value.settings) : legacySettings(value.settings))) return false;
+      value.schemaVersion !== version || !natural(value.revision) || !(version >= 6 ? settings(record(value.settings) && version === 6 ? { autoSessionIntro: true, ...value.settings } : value.settings) : version >= 4 ? priorExperienceSettings(value.settings) : version === 3 ? v3Settings(value.settings) : legacySettings(value.settings))) return false;
   const session = value.currentSession;
   if (!record(session)) return false;
   if (session.phase === 'idle') {
@@ -87,7 +87,7 @@ function baseSnapshot(value: unknown, version: 1 | 2 | 3 | 4 | 5 | 6): boolean {
       natural(item.finishedAt) && item.finishedAt >= Number(item.startedAt) && (version >= 5 ? historyDetails(item.history) && typeof item.reflectionPrompted === 'boolean' && reflection(item.reflection) : nullableText(item.reflection, 500)));
 }
 
-function snapshotVersion(value: unknown, version: 2 | 3 | 4 | 5 | 6): boolean {
+function snapshotVersion(value: unknown, version: 2 | 3 | 4 | 5 | 6 | 7): boolean {
   if (!baseSnapshot(value, version) || !record(value) || !natural(value.sequence) || !natural(value.sessionRevision)) return false;
   if (!Array.isArray(value.receipts) || value.receipts.length > 64 || !value.receipts.every(item => record(item) &&
       keys(item, ['id', 'signature']) && typeof item.id === 'string' && item.id.length <= 128 &&
@@ -103,7 +103,7 @@ function snapshotVersion(value: unknown, version: 2 | 3 | 4 | 5 | 6): boolean {
     record(item) && keys(item, ['documentId', 'seq']) && typeof item.documentId === 'string' && natural(item.seq));
 }
 export function snapshot(value: unknown): value is StorageSnapshot {
-  return snapshotVersion(value, 6);
+  return snapshotVersion(value, 7);
 }
 export const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 export function display(value: unknown): value is SessionDisplay {
@@ -115,14 +115,18 @@ export function display(value: unknown): value is SessionDisplay {
 }
 export function migrate(value: unknown, now = Date.now()): StorageSnapshot {
   if (snapshot(value)) return structuredClone(value);
+  if (snapshotVersion(value, 6) && record(value)) {
+    const old = structuredClone(value) as unknown as StorageSnapshot;
+    return { ...old, schemaVersion: 7, settings: { ...old.settings, autoSessionIntro: true } };
+  }
   if (snapshotVersion(value, 5) && record(value)) {
     const old = structuredClone(value) as unknown as StorageSnapshot;
-    return { ...old, schemaVersion: 6, settings: { ...old.settings, extensionPaused: false } };
+    return { ...old, schemaVersion: 7, settings: { ...old.settings, autoSessionIntro: true, extensionPaused: false } };
   }
   const valid = [2, 3, 4].some(v => snapshotVersion(value, v as 2 | 3 | 4)) || baseSnapshot(value, 1);
   if (!valid || !record(value)) throw new Error('Unsupported saved data; left unchanged.');
   const old = structuredClone(value) as unknown as StorageSnapshot;
-  const result = { ...defaultSnapshot(), ...old, historyRevision: 0, settings: { ...experienceDefaults, ...viewingDefaults, ...old.settings }, schemaVersion: 6 as const };
+  const result = { ...defaultSnapshot(), ...old, historyRevision: 0, settings: { ...experienceDefaults, ...viewingDefaults, ...old.settings }, schemaVersion: 7 as const };
   if (result.currentSession.phase !== 'idle') {
     const s = result.currentSession;
     if (value.schemaVersion === 1) {

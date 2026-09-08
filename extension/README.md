@@ -1,5 +1,9 @@
 # Chrysalis — desktop YouTube, on your terms
 
+The integrated YouTube introduction, floating timer, and check-in behavior are
+documented in [YouTube sessions](YOUTUBE_SESSION.md), including timing rules and
+browser verification commands.
+
 Chrysalis is an independent Chrome extension for `https://www.youtube.com`.
 It is not affiliated with or endorsed by YouTube or Google.
 
@@ -16,7 +20,7 @@ not block all Shorts URLs, change YouTube's algorithm, block ads or control play
 
 No server, account, API key, Node or Python is needed to use the prepared extension.
 
-1. Extract `release/chrysalis-0.7.1.zip` into a permanent folder. Do not run files
+1. Extract `release/chrysalis-0.7.2.zip` into a permanent folder. Do not run files
    from inside the ZIP. The folder you select must contain `manifest.json` directly.
 2. Open `chrome://extensions` in desktop Chrome. Turn **Developer mode** on.
 3. Choose **Load unpacked**, then select the extracted folder. Pin Chrysalis from
@@ -25,7 +29,7 @@ No server, account, API key, Node or Python is needed to use the prepared extens
    Settings → Viewing controls contains the optional layout choices.
 
 In this workspace you can load either `extension/dist/` or the verified extracted
-folder `extension/release/chrysalis-0.7.1-unpacked/`. Existing `dist/` users should
+folder `extension/release/chrysalis-0.7.2-unpacked/`. Existing `dist/` users should
 reload that installation rather than adding a second copy. Keep installation folders
 in place; refresh YouTube after an update. Keep Developer mode on for unpacked use.
 
@@ -41,14 +45,14 @@ npm run check
 npm run package
 ```
 
-`check`: 63 focused tests, TypeScript, production build and manifest/asset checks.
+`check`: 65 focused tests, TypeScript, production build and manifest/asset checks.
 `package`: production build, deterministic ZIP, extracted loadable directory,
 per-file SHA-256 manifest and archive checksum in `release/`. Exact reproducibility,
 validation, update and installation instructions: [INSTALL](INSTALL.md).
 
 ```sh
 npx playwright install chromium
-npm run test:package   # two identical builds, package guards, all seven browser suites on extracted ZIP
+npm run test:package   # two identical builds, package guards, browser suites on extracted ZIP
 npm run screenshots   # actual extension/live YouTube captures; allow about two minutes
 ```
 
@@ -59,7 +63,8 @@ npm run screenshots   # actual extension/live YouTube captures; allow about two 
   and breaks. It cannot measure attention or exact video watch time.
 - Optional targets, neutral checkpoints, extra time, untimed continuation and
   voluntary breaks. Break expiry stays paused. No playback interruption.
-- Reversible controls and an in-flow collapsible indicator, hidden in fullscreen.
+- Reversible controls, automatic session introductions and a compact floating timer.
+  Theater/fullscreen and small windows use a restore tab; check-ins stay centered.
   Unfamiliar layouts stay usable; some content may remain. Populated/signed-in Home
   and many experimental/non-English variants need further live verification.
 - Local history: latest 100 sessions, up to 100 explicit target revisions per
@@ -93,3 +98,16 @@ unsubmitted listing and policy materials.
 The original React/Python/Flutter applications remain independent. Technical contracts:
 [session model](SESSION_MODEL.md), [viewing adapter](VIEWING_CONTROLS.md),
 [history](HISTORY.md), [experience](EXPERIENCE.md), [hardening evidence](HARDENING.md).
+
+## Usability review (0.7.2)
+
+The native toolbar popup now sizes correctly; session actions and editing are easier
+to find, compact status remains visible, and recovered read errors clear separately
+from validation errors. Viewing preferences opens its own section. Session controls
+never pause video playback. “Use device setting” follows Chrome’s device color scheme;
+YouTube can use a different appearance. Select Light or Dark to match it manually.
+
+Run `npm run test:usability` for the real-extension fixture and native-popup regressions,
+and `npm run test:usability:live` for the separate signed-out live-page observations.
+See the [review report](../docs/chrysalis-usability-review.md) for evidence, remaining
+manual checks and pilot limits. Earlier 0.7.1 archives do not contain these fixes.

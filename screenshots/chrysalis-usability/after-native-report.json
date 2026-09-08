@@ -1,0 +1,13 @@
+{
+  "browser": "153.0.8010.12",
+  "checks": [
+    {
+      "targetType": "page",
+      "dimensions": {
+        "width": 390,
+        "height": 498
+      }
+    },
+    "Actual API-opened action popup: skip, start, pause, close and persisted reopen. Trusted CDP mouse input; no ordinary popup.html tab substitution. Physical toolbar positioning remains manual."
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "browser": "153.0.8010.12",
+  "checks": [
+    "Default layout untouched; all three saved controls initially off.",
+    "Popup saves/reopens controls and broadcasts to two YouTube tabs. Home hides/restores cards/shelves including late insertion; original nodes/content retained and ads/prompts untouched.",
+    "Watch and Shorts controls work independently across SPA navigation; turning off restores content; real fixture media continues playing, captions/controls, ads, queue and chat remain visible.",
+    "Search, subscriptions, playlist and direct Shorts route remain usable with all toggles on; unrelated links and unknown/ad-bearing cards fail open.",
+    "Unknown layout reports no supported items; reinjection has one observer/style/status; pagehide/pageshow cleans/restores; restore-all removes every viewing-control artifact/observer and preserves appearance."
+  ],
+  "evidence": "Controlled fixtures with real unpacked extension; not live YouTube selector evidence."
+}

@@ -1,0 +1,38 @@
+{
+  "browser": "153.0.8010.12",
+  "category": "Real unpacked extension on controlled fixtures; popup document in tab",
+  "checks": [],
+  "measurements": {
+    "nativePopup": "API opened",
+    "nativeTargets": [
+      {
+        "type": "page",
+        "url": "chrome-extension://mjahfjhkfodlgpfpnfihjibgmaongngp/popup.html"
+      },
+      {
+        "type": "page",
+        "url": "about:blank"
+      },
+      {
+        "type": "browser_ui",
+        "url": "chrome://omnibox-popup.top-chrome/omnibox_popup_aim.html"
+      },
+      {
+        "type": "browser_ui",
+        "url": "chrome://omnibox-popup.top-chrome/"
+      },
+      {
+        "type": "page",
+        "url": "chrome-extension://mjahfjhkfodlgpfpnfihjibgmaongngp/popup.html"
+      }
+    ],
+    "startButton": {
+      "x": 24,
+      "y": 595.640625,
+      "width": 342,
+      "height": 44.796875
+    },
+    "collapsedPaused": "0:00 foreground YouTube time",
+    "staleReadError": true
+  }
+}

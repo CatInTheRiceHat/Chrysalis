@@ -4,8 +4,8 @@ import { validatePlan, type Observation, type SessionMutation } from '../session
 
 export const CHANNEL = 'chrysalis/v1' as const;
 export type Request = { channel: typeof CHANNEL } & (
-  { type: 'PING' } | { type: 'GET_SETTINGS' } | { type: 'GET_SNAPSHOT' } | { type: 'GET_DISPLAY' } |
-  { type: 'OPEN_PAGE'; page: 'session' | 'edit' | 'settings' | 'history' } |
+  { type: 'PROMPT' } | { type: 'PING' } | { type: 'GET_SETTINGS' } | { type: 'GET_SNAPSHOT' } | { type: 'GET_DISPLAY' } |
+  { type: 'OPEN_PAGE'; page: 'session' | 'edit' | 'settings' | 'viewing' | 'history' } |
   { type: 'DELETE_DATA'; scope: 'history' | 'all'; expectedRevision: number; expectedSessionRevision: number; expectedHistoryRevision: number } |
   { type: 'OFFER_REFLECTION'; sessionId: string } |
   { type: 'HISTORY'; sessionId: string; expectedRevision: number; change: { action: 'delete' } | { action: 'reflect'; reflection: Reflection | null } } |
@@ -14,7 +14,7 @@ export type Request = { channel: typeof CHANNEL } & (
   { type: 'UPDATE_SETTINGS'; patch: Partial<Settings>; expectedRevision: number }
 );
 export type Reply = { ok: true } & (
-  { type: 'REFLECTION_OFFER'; offered: boolean; snapshot: StorageSnapshot } | { type: 'OPENED' } | { type: 'PONG'; version: string } |
+  { type: 'PROMPT'; prompt: 'intro' | 'checkpoint' | null } | { type: 'REFLECTION_OFFER'; offered: boolean; snapshot: StorageSnapshot } | { type: 'OPENED' } | { type: 'PONG'; version: string } |
   { type: 'SETTINGS'; settings: Settings; revision: number } |
   { type: 'DISPLAY'; settings: Settings; session: SessionDisplay; sequence: number } |
   { type: 'SNAPSHOT'; snapshot: StorageSnapshot }
@@ -56,9 +56,9 @@ export function parseRequest(value: unknown): Request | null {
     return keys(value, ['channel', 'type', 'sessionId', 'expectedRevision', 'change']) && typeof value.sessionId === 'string' && value.sessionId.length > 0 && value.sessionId.length <= 128 && natural(value.expectedRevision) && record(c) &&
       ((c.action === 'delete' && keys(c, ['action'])) || (c.action === 'reflect' && keys(c, ['action', 'reflection']) && reflection(c.reflection))) ? value as Request : null;
   }
-  if (value.type === 'OPEN_PAGE') return keys(value, ['channel', 'type', 'page']) && typeof value.page === 'string' && ['session', 'edit', 'settings', 'history'].includes(value.page) ? value as Request : null;
+  if (value.type === 'OPEN_PAGE') return keys(value, ['channel', 'type', 'page']) && typeof value.page === 'string' && ['session', 'edit', 'settings', 'viewing', 'history'].includes(value.page) ? value as Request : null;
   if (value.type === 'DELETE_DATA') return keys(value, ['channel', 'type', 'scope', 'expectedRevision', 'expectedSessionRevision', 'expectedHistoryRevision']) && typeof value.scope === 'string' && ['history', 'all'].includes(value.scope) && natural(value.expectedRevision) && natural(value.expectedSessionRevision) && natural(value.expectedHistoryRevision) ? value as Request : null;
-  if (value.type === 'SESSION_CONTROL') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) && ['pause', 'resume', 'finish', 'extend', 'break', 'continue', 'dismiss-checkpoint', 'continue-untimed', 'end-break'].includes(value.mutation.command.action) ? value as Request : null;
+  if (value.type === 'SESSION_CONTROL') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) && ['start', 'pause', 'resume', 'finish', 'extend', 'break', 'continue', 'dismiss-checkpoint', 'continue-untimed', 'end-break'].includes(value.mutation.command.action) ? value as Request : null;
   if (value.type === 'SESSION') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) ? value as Request : null;
   if (value.type === 'OBSERVE') {
     const s = value.sample;
@@ -70,13 +70,14 @@ export function parseRequest(value: unknown): Request | null {
       settingsPatch(value.patch) && natural(value.expectedRevision) ? value as Request : null;
   }
   return keys(value, ['channel', 'type']) &&
-    typeof value.type === 'string' && ['PING', 'GET_SETTINGS', 'GET_SNAPSHOT', 'GET_DISPLAY'].includes(value.type) ? value as Request : null;
+    typeof value.type === 'string' && ['PROMPT', 'PING', 'GET_SETTINGS', 'GET_SNAPSHOT', 'GET_DISPLAY'].includes(value.type) ? value as Request : null;
 }
 export function isReply(value: unknown): value is Reply {
   if (!record(value)) return false;
   if (value.ok === false) return typeof value.code === 'string' && ['INVALID', 'FORBIDDEN', 'STORAGE', 'CONFLICT'].includes(value.code) && typeof value.error === 'string';
   if (value.ok !== true) return false;
   if (value.type === 'REFLECTION_OFFER') return typeof value.offered === 'boolean' && snapshot(value.snapshot);
+  if (value.type === 'PROMPT') return [null, 'intro', 'checkpoint'].includes(value.prompt as string | null);
   if (value.type === 'OPENED') return true;
   if (value.type === 'PONG') return typeof value.version === 'string';
   if (value.type === 'SETTINGS') return settings(value.settings) && natural(value.revision);

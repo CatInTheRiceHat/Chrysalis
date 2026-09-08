@@ -41,6 +41,7 @@ try {
   await options.goto(`chrome-extension://${id}/options.html`);
   await expect(options.locator('#connection')).toHaveText('Extension connected');
   await options.locator('#intro-skip').click();
+  await options.locator('#auto-session-intro').uncheck();
   await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: fixture }));
   const youtube = await context.newPage();
   const errors = [];
@@ -158,7 +159,7 @@ try {
   await expect(options.locator('#save-status')).toHaveText('Saved on this device.');
   await visible('home-video', 'home-shorts', 'nav-shorts', 'mini-shorts');
   await expect(youtube.locator('#chrysalis-viewing-style, #chrysalis-viewing-status, html[data-chrysalis-view-page]')).toHaveCount(0);
-  assert.equal(await isolated('activeControlObservers'), 1); // Remaining session dock placement observer.
+  assert.equal(await isolated('activeControlObservers'), 0); // Floating session UI needs no placement observer.
   await youtube.evaluate(html => document.querySelector('ytd-rich-grid-renderer > #contents').insertAdjacentHTML('beforeend', html), homeCard('after-disable'));
   await youtube.waitForTimeout(600);
   await visible('after-disable');

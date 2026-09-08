@@ -1,0 +1,16 @@
+{
+  "browser": "153.0.8010.12",
+  "checks": [
+    "Settings save successfully after real fragment navigation to #viewing and #preferences.",
+    "Actual isolated content context cannot access local storage or request private session/history snapshots.",
+    "Active timing produced 6 snapshot writes across two YouTube documents in 6.5 seconds despite 1,000 synthetic visibility events; no render-frame writes.",
+    "Extension-wide pause restores both tabs, removes every owned observer/style/dock, stops writes/time, persists across popup reload, and enables saved controls without resuming the session. Narrow popup has no horizontal overflow.",
+    "A batch of 1,000 unrelated inserted nodes triggered 2 bounded document probes, with no duplicate observers.",
+    "A debugger-suspended renderer with a >5-second missing-signal gap recovers paused without crediting the gap; this is not physical OS sleep evidence.",
+    "Injected Chrome storage-write failure reports an error, preserves saved settings, and allows a successful retry without restarting the worker.",
+    "The real chrome://extensions Reload button invalidates the old idle content context: it removes its controls/observers within ten seconds. Settings/history survive; refreshing YouTube installs the new content script.",
+    "Player-only /embed documents receive no dock; controls remain accessible through the popup.",
+    "Disabling through the real chrome://extensions card restores the existing visible YouTube page without a refresh."
+  ],
+  "evidence": "Actual unpacked extension in Chromium. Controlled YouTube-origin fixtures; storage failure injected in temporary profile; renderer suspended with CDP."
+}

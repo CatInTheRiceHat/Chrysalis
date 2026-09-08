@@ -54,7 +54,7 @@ export function createViewingControls(doc: Document, win: Window) {
     const details = doc.createElement('details');
     const summary = doc.createElement('summary'); summary.textContent = 'Chrysalis · viewing controls';
     report = doc.createElement('p');
-    const hint = doc.createElement('p'); hint.textContent = 'To restore the ordinary layout, open Chrysalis and choose Restore ordinary layout.';
+    const hint = doc.createElement('p'); hint.textContent = 'To restore the ordinary layout, open Chrysalis → Viewing preferences → Restore ordinary layout.';
     details.append(summary, report, hint); shadow.append(sheet, details); release = dock(doc, host);
     observer = new MutationObserver(records => { if (affectsControls(records)) schedule(); });
     observer.observe(doc.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'page-subtype', 'href', 'title', 'is-shorts'] });

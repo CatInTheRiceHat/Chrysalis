@@ -16,7 +16,7 @@ test('new preferences migrate without losing viewing choices or session data', (
   const { historyRevision: _historyRevision, ...base } = defaultSnapshot();
   const old = { ...base, schemaVersion: 3, settings: { theme: 'dark', showIndicator: true, hideHomeRecommendations: true, hideWatchRecommendations: false, hideShortsEntries: true } };
   const result = migrate(old);
-  assert.equal(result.schemaVersion, 6); assert.equal(result.settings.hideShortsEntries, true);
+  assert.equal(result.schemaVersion, 7); assert.equal(result.settings.hideShortsEntries, true);
   assert.equal(result.settings.defaultTargetMs, null); assert.equal(result.settings.introSeen, false);
   assert.deepEqual(result.currentSession, old.currentSession);
 });
@@ -57,7 +57,7 @@ test('only constrained session actions reach content; data and arbitrary plan mu
   const allowed = await handle({ channel: CHANNEL, type: 'SESSION_CONTROL', mutation: { requestId: 'pause', expectedRevision: state.sessionRevision, expectedSessionId: 'start', command: { action: 'pause' } } }, sender);
   assert.equal(allowed.ok && allowed.type, 'DISPLAY');
   assert.equal('snapshot' in allowed, false);
-  assert.equal(parseRequest({ channel: CHANNEL, type: 'SESSION_CONTROL', mutation: start }), null);
+  assert.ok(parseRequest({ channel: CHANNEL, type: 'SESSION_CONTROL', mutation: start }));
   const denied = await handle({ channel: CHANNEL, type: 'DELETE_DATA', scope: 'all', expectedRevision: 0, expectedSessionRevision: 2, expectedHistoryRevision: 0 }, sender);
   assert.equal(!denied.ok && denied.code, 'FORBIDDEN');
 });

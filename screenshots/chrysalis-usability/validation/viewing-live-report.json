@@ -1,0 +1,18 @@
+{
+  "browser": "153.0.8010.12",
+  "date": "2026-09-08T02:42:08.422Z",
+  "signedIn": false,
+  "checks": [
+    "Live expanded guide: English Shorts entry without href hides and restores; other navigation remains.",
+    "Live watch page: current yt-lockup-view-model recommendations hide/restore. Player node, playback controls and caption control preserved.",
+    "Live watch Shorts shelf hides/restores independently of ordinary related videos.",
+    "Actual YouTube video time advances with related-video hiding enabled.",
+    "Real search submitted with all controls on; native SPA navigation retains document and search results remain visible.",
+    "Live subscriptions navigation/page remains available with all toggles on; signed-out prompt preserved.",
+    "Restore ordinary layout removes control style/status and restores live guide entry after SPA navigation."
+  ],
+  "limitations": [
+    "Signed-out homepage has an empty-feed prompt; populated homepage card/shelf selectors remain fixture-only verification. Prompt remains visible, correctly reports no supported items.",
+    "Authenticated subscription feed, populated signed-in homepage, playlist playback, live-chat, ads within recommendation cards, non-English href-less Shorts labels and all experimental layouts not live-verified."
+  ]
+}

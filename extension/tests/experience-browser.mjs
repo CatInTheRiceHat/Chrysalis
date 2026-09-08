@@ -23,6 +23,7 @@ try {
  checks.push('Introduction is short, skippable, persisted, and restores focus to the unrestricted start form.');
  const optionsPromise = context.waitForEvent('page'); await popup.locator('#viewing-preferences').click(); const options = await optionsPromise;
  await expect(options.locator('#preferences-heading')).toBeVisible();
+ await options.locator('#indicator-collapsed').uncheck();
  await options.locator('#default-target').selectOption('15'); await expect(options.locator('#save-status')).toHaveText('Saved on this device.');
  await options.locator('#break-preference').fill('7'); await options.locator('#save-break-preference').click(); await expect(options.locator('#save-status')).toHaveText('Saved on this device.');
  await options.locator('#checkpoints-enabled').uncheck(); await expect(options.locator('#save-status')).toHaveText('Saved on this device.');
@@ -41,24 +42,24 @@ try {
  const yt = await context.newPage(); await yt.goto('https://www.youtube.com/watch?v=fixture');
  const indicator = yt.locator('#chrysalis-extension-indicator'); await expect(indicator).toBeVisible();
  await expect(indicator.locator('#intention')).toHaveText(intention);
- const ib = await indicator.boundingBox(), pb = await yt.locator('#player').boundingBox(); assert(ib.y >= pb.y+pb.height);
+ const ib = await indicator.boundingBox(), pb = await yt.locator('#player').boundingBox(); assert(ib.x >= 0 && ib.x + ib.width <= 1100);
  assert.equal(await indicator.locator('#time').getAttribute('aria-live'),'off');
  await indicator.getByRole('button',{name:'Collapse',exact:true}).click(); await expect(indicator.locator('#details')).toBeHidden();
  await indicator.getByRole('button',{name:'Expand',exact:true}).click(); await expect(indicator.locator('#details')).toBeVisible();
  // DOM-generated clicks must not invoke privileged session actions.
- await indicator.getByRole('button',{name:'Pause',exact:true}).evaluate(b=>b.click()); assert.equal((await state()).currentSession.phase,'active');
- await indicator.getByRole('button',{name:'Pause',exact:true}).click(); await expect(indicator.getByRole('button',{name:'Resume',exact:true})).toBeFocused();
+ await indicator.getByRole('button',{name:'Pause session',exact:true}).evaluate(b=>b.click()); assert.equal((await state()).currentSession.phase,'active');
+ await indicator.getByRole('button',{name:'Pause session',exact:true}).click(); await expect(indicator.getByRole('button',{name:'Resume session',exact:true})).toBeFocused();
  assert.equal((await state()).currentSession.phase,'paused');
- await indicator.getByRole('button',{name:'Resume',exact:true}).click(); await expect(indicator.getByRole('button',{name:'Pause',exact:true})).toBeVisible();
+ await indicator.getByRole('button',{name:'Resume session',exact:true}).click(); await expect(indicator.getByRole('button',{name:'Pause session',exact:true})).toBeVisible();
  const editPromise = context.waitForEvent('page'); await indicator.getByRole('button',{name:'Edit plan',exact:true}).click(); const edit = await editPromise;
  await expect(edit.locator('#submit-plan')).toHaveText('Save plan'); await expect(edit.locator('#intention')).toBeFocused();
  await edit.locator('#intention').selectOption('Studying'); await edit.locator('#submit-plan').click();
  await expect(indicator.locator('#intention')).toHaveText('Studying'); await edit.close();
  await yt.screenshot({path:'test-results/experience-indicator.png',fullPage:true});
  await yt.locator('#player').evaluate(async e=> { const b=document.createElement('button'); b.id='go-full'; b.textContent='Fullscreen'; b.onclick=()=>e.requestFullscreen(); e.append(b); });
- await yt.locator('#go-full').click(); await expect.poll(()=>yt.evaluate(()=>Boolean(document.fullscreenElement))).toBe(true); await expect(indicator).toBeHidden();
+ await yt.locator('#go-full').click(); await expect.poll(()=>yt.evaluate(()=>Boolean(document.fullscreenElement))).toBe(true); await expect(indicator.locator('#restore')).toBeVisible();
  await yt.evaluate(()=>document.exitFullscreen()); await expect(indicator).toBeVisible();
- checks.push('Indicator is in flow below the player, shows plan/foreground time, collapses, ignores synthetic clicks, pauses/resumes/edits through real actions, and hides in fullscreen.');
+ checks.push('Indicator floats within viewport bounds, shows plan/foreground time, collapses, ignores synthetic clicks, pauses/resumes/edits through real actions, and reduces to a restore tab in fullscreen.');
  await options.locator('#theme').selectOption('dark'); await expect(indicator).toHaveAttribute('data-theme','dark');
  await popup.screenshot({path:'test-results/experience-session-dark.png',fullPage:true});
  await options.emulateMedia({reducedMotion:'reduce'}); await options.setViewportSize({width:375,height:850});
@@ -71,7 +72,7 @@ try {
  assert.equal(await options.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  await worker.evaluate(async id=>chrome.tabs.setZoom(id,1),tabId);
  checks.push('Light/dark surfaces and 375px settings checked; actual Chrome tab zoom at 200% has no horizontal overflow; reduced-motion setting exercised.');
- await indicator.getByRole('button',{name:'Finish',exact:true}).click(); await expect(popup.locator('#session-phase')).toHaveText('Finished');
+ await indicator.getByRole('button',{name:'Finish session',exact:true}).click(); await expect(popup.locator('#session-phase')).toHaveText('Finished');
  await expect(options.locator('#history-count')).toContainText('1 completed session');
  await options.locator('#clear-history').click(); await expect(options.locator('#cancel-delete')).toBeFocused();
  await options.keyboard.press('Escape'); await expect(options.locator('#clear-history')).toBeFocused();

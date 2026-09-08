@@ -1,135 +1,109 @@
 # Chrysalis Chrome extension — implementation status
 
-Updated: 2026-09-07 · Extension 0.7.1 · Branch `main`
+Updated: 2026-09-07 PDT · Extension **0.7.2** · Branch `main`
 
 ## Current stage
 
-Production packaging, personal-installation instructions and volunteer pilot materials
-prepared in the additive `extension/` package. Existing applications and earlier
-uncommitted work were preserved. No telemetry, extra permissions, backend, database,
-account, deployment, external publication or production-data changes.
+Usability, visual and functional review of `7f98c69faa8c6210d530cee86e26d3919a8a84fa`
+completed with focused fixes and production packaging. Current changes are uncommitted.
+Earlier applications, data and the original root review document are preserved.
+YouTube-only; no Instagram, backend, accounts, analytics, migrations or publication.
 
-## Completed product flow
+## Completed features
 
-- Skippable introduction, session-first popup, intention/custom intention and optional
-  target setup/editing; no time target and ordinary YouTube layout are defaults.
-- Authoritative serialized foreground timeline; native tab/window signals, persisted
-  receipts/revisions, one counted tab, restart recovery and conservative gap handling.
-- Independent reversible Home/related/Shorts controls. In-flow, collapsible session
-  indicator outside the player; hides in fullscreen and on player-only embed pages.
-- One checkpoint per armed target: additional time, untimed continuation, Finish or
-  voluntary break. Dismissal leaves the target unchanged; explicit target revisions
-  rearm. Disabled prompts retain timing. Break deadlines survive restart and expire
-  paused; no automatic playback/session resumption.
-- Optional one-time reflection offer: Yes/Partly/No, note or Skip (missing data).
-  Real local history shows original/revised targets, foreground duration, separate
-  break duration and reflection. Add/Edit/Cancel/Clear reflection work.
-- Delete one, Clear history and separate Reset all; open views/drafts update and
-  stale operations cannot recreate deleted summaries. Latest 100 summaries retained.
-- Accessible labels/focus states, safe text rendering, responsive light/dark styles,
-  reduced-motion support and timers without repeated live announcements.
+- Skippable introduction; session setup/editing with optional targets, custom intentions,
+  entertainment/exploration presets and unrestricted defaults.
+- One authoritative serialized foreground timeline, native tab/window boundaries,
+  persisted revisions/receipts, restart recovery and conservative gap handling.
+- Independent reversible Home/related/Shorts-entry controls; unfamiliar layouts fail
+  open. In-flow indicator outside the player, collapsed state and fullscreen hiding.
+- One checkpoint per target; add time, untimed continuation, dismiss, finish or break.
+  Dismissal keeps the target; explicit target revisions rearm. Disabled prompts retain
+  timing. Break countdown uses wall time and expires paused, including after restart.
+- Optional one-time reflection (Yes/Partly/No/Skip); notes; real local history with
+  original/revised targets, foreground time and separate break time. No scores.
+- Delete one, clear history and separate reset-all; updates propagate and stale saves
+  cannot recreate records. Extension-wide pause restores layout and stops timing.
+- Local fonts/butterfly branding, light/dark themes, focus states, reduced-motion
+  support and quiet timer updates. README/privacy/install/pilot materials maintained.
 
-## Hardening fixes
+## This review's fixes
 
-- Trusted options/popup sender checks accept document fragments, fixing settings
-  mutations after section-link navigation while retaining origin/document checks.
-- Extension-wide **Pause Chrysalis** restores layout, removes owned UI/observers,
-  stops observations, pauses the session and ends a running break with its measured
-  wall-clock total. Choices stay saved. Enable restores controls; Resume is separate.
-  Both changes invalidate stale session commands. Edit/Finish remain available.
-- Synthetic page visibility events no longer trigger timing observations.
-- Visible old content contexts detect extension invalidation locally about every
-  five seconds and clean up without worker messages. Reload/disable cleanup verified
-  with actual `chrome://extensions` controls; refresh installs the updated script.
-- Player-only `/embed` documents receive no dock. Unknown layouts remain usable.
+- Actual native action popup no longer collapses to 62px in Chrome auto-sizing;
+  measured 390px width. Responsive ordinary extension windows remain supported.
+- High-zoom YouTube columns no longer clip the dock horizontally. Shared placement
+  bounds only extension-owned width/margin; no host/player modifications.
+- Collapsed indicator retains phase/checkpoint status and break countdown without
+  forcing expansion. Existing Take a break action was retained, not newly invented.
+- Session-specific Pause/Resume/Finish labels explain effects on timing and summaries.
+- Read recovery clears its own error; successful polling retains unrelated validation
+  errors. Existing stale-operation safeguards are preserved.
+- Session-first popup, clearer navigation spacing, focused edit form, compact timer
+  explanation and better-spaced break controls.
+- Viewing preferences opens/focuses `options.html#viewing`; restore instructions give
+  the full path. Message destinations remain a strict local enum.
+- Unchanged targets display once; stored originals and explicit revisions remain intact.
+  History-delete cancellation restores focus to its invoking button when possible.
 
-## Distribution preparation
+## Measurement and privacy contract (unchanged)
 
-- Version 0.7.1 adds a linked offline privacy page, corrected version footer and
-  standard 16/32/48/128px exports of the existing butterfly. No session/schema change.
-- Strict 17-file build allowlist, deterministic ZIP metadata, extracted unpacked
-  folder, SHA-256 checksums/inventory and ZIP-bound browser validation report.
-  Only runtime assets and required font licenses ship; no tests/docs/user profiles.
-- Two clean builds generated the identical 968,790-byte ZIP. All seven lifecycle
-  suites passed again using its extracted contents; 63 Node tests/types/build pass.
-- Seven actual screenshots captured, including a live one-minute checkpoint and
-  the real automated session's history. Four are 1280×800 store candidates; three
-  are raw popup-document references. These are engineering evidence, not research.
-- README, exact install/update/troubleshooting guide, full privacy explanation,
-  voluntary guide/questionnaire and a case-study outline with unfilled findings.
-  Store listing, permission/privacy drafts, promotional tile and official-policy
-  review prepared. Nothing submitted or sent to participants.
-
-## Data and measurement decisions
-
-- MV3, TypeScript/HTML/CSS/esbuild, no runtime dependencies. Only `storage` plus
-  static top-frame `https://www.youtube.com/*` access; no extra permissions/services.
+- MV3, TypeScript/HTML/CSS/esbuild, no runtime dependencies. `storage` only; isolated
+  static top-frame access to `https://www.youtube.com/*`. No API key or remote service.
 - Foreground YouTube time includes browsing/playback only in the active tab of the
   focused window. Excludes hidden/unfocused tabs, pauses and breaks. About two-second
-  observations; gaps over five seconds are discarded and may require Resume.
-  This is not exact watch time, attention or productivity. Breaks use wall-clock time.
-- Schema **6** preserves valid schemas 1–5. Schema 5 gains the pause default without
-  losing history. Older missing revision/break details stay explicitly incomplete.
-  Unknown/corrupt data is preserved and errors shown; no silent repair/reset.
-- Retention: latest **100 completed sessions**, latest **100 target revisions** each
-  with omitted-entry counts; intentions max 80 characters, notes max 500. No age expiry.
-- All data is local. No video titles/URLs/searches/transcripts/account IDs, analytics,
-  remote logging, sync or export. Page structure is read for controls without storing
-  browsing history. Current intention is visible in YouTube's DOM; notes/history stay
-  in trusted extension pages. Local data has no Chrysalis encryption.
+  observations; gaps over five seconds are discarded and may require Resume. Not exact
+  watch time, attention or productivity. No background interval as the source of truth.
+- Schema **6** preserves valid earlier schemas; missing old revision/break data remains
+  marked incomplete. Unknown/corrupt data is preserved with an error, not silently reset.
+- Latest **100 summaries**, **100 target revisions** each with omitted counts;
+  intentions max 80 characters, notes max 500; no age expiry. Local, no app encryption.
+- No video titles/URLs/searches/transcripts/account identities, telemetry, remote logs,
+  cloud sync or export. Page structure is accessed for controls without storing browsing
+  history. Expanded intention is visible on YouTube; reflections/history remain in trusted
+  extension pages. No newly requested permissions or unsafe user-text HTML insertion.
 
-## Validation
+## Validation and artifacts
 
-- Existing checks ran first: **58 Node tests**, strict TypeScript, production build,
-  generated manifest/assets/CSP/permission checks and all six original browser suites
-  passed before fixes.
-- After fixes: **63 Node tests**, strict TypeScript and production build pass. Added
-  pause/break/stale-operation, fragment-sender, schema-5 preservation and write-bound
-  tests. Existing target, concurrency, timing, retention/deletion and recovery tests pass.
-- Seven real unpacked-extension browser suites pass in Chromium **153.0.8010.12**:
-  foundation, session, viewing, experience, checkpoints, history and hardening. Coverage
-  includes onboarding through deletion, native focus/tab changes, refresh, actual
-  worker stop/wake, full browser restart, fullscreen, keyboard/focus and 200% zoom.
-- Hardening browser checks verify trusted-storage denial from content, section-link
-  saves, two-tab pause/cleanup, no writes while paused, injected Chrome write failure
-  and retry, debugger-induced missing signals, and actual Extensions-page reload/disable.
-  Six bounded snapshot writes across two visible test documents in 6.5 seconds despite
-  1,000 synthetic visibility events; only one foreground owner counted. A batch of
-  1,000 inserted nodes triggered two adapter document probes; pause left zero observers.
-- Fresh live signed-out YouTube: related-video/Shorts hide/restore, actual video progress,
-  player/caption controls, native SPA search/subscriptions, ordinary-layout restoration,
-  and watch/Home indicator placement passed. Home was empty; populated Home remains
-  fixture-only. No claim of exhaustive signed-in, captions, ad or layout coverage.
-- Narrow dark popup screenshot visually inspected. Current reports/screenshots are in
-  ignored `extension/test-results/`; no normal-web preview substituted for an extension.
-- Source/package inspection found no remote-request code, dynamic untrusted HTML,
-  exposed storage, unnecessary permissions or data-bearing debug logs. Known secret
-  signature scan: no matches. `npm audit --json`: zero known vulnerabilities.
+- Baseline checks first: **63 Node tests**, typecheck/build and all **7** existing
+  extension-enabled browser suites passed.
+- Current checks: **65 Node tests**, strict TypeScript, production build, 17-file
+  allowlist/14 local references. New fixture/native-popup regressions cover corrected
+  geometry, compact phases, read/validation separation, deep links and focus.
+- Real Chromium **153.0.8010.12**, disposable profiles: lifecycle suites exercise
+  tab/window changes, worker termination/restart, browser relaunch, renderer signal gaps,
+  storage faults, deletion barriers and actual Extensions-page Reload/Disable cleanup.
+- Live signed-out YouTube: related/Shorts hiding and restoration, actual video progress
+  with related hiding, SPA search/subscriptions, standard/theater/fullscreen, one-minute
+  checkpoint and untimed continuation, theme mismatch, narrow 200% zoom, direct Shorts,
+  refresh/back/forward. Populated Home remains fixture-only. A later live break/playback
+  check was blocked by YouTube's pre-existing playback error; fixture break tests pass.
+- Actual action-popup target captured/tested (390×498), distinct from extension pages
+  in tabs. Physical toolbar positioning and human screen-reader behavior remain manual.
+- Before/after screenshots and reports: `screenshots/chrysalis-usability/`. No static
+  preview or mock browser API is substituted for live/native extension evidence.
+- Version **0.7.2** build: `extension/dist/`; ZIP and unpacked directory:
+  `extension/release/chrysalis-0.7.2.zip`, `extension/release/chrysalis-0.7.2-unpacked/`.
+  Reproducibility checks and all nine suites on extracted bytes are documented in
+  `extension/release/chrysalis-0.7.2-validation.json`. Previous 0.7.1 archives/screenshots
+  remain historical; they exclude these fixes. No external distribution performed.
 
-Exact commands, evidence boundaries, ranked limitations and a manual checklist:
-[hardening report](../extension/HARDENING.md). Contracts:
-[history](../extension/HISTORY.md), [experience](../extension/EXPERIENCE.md),
+## Try it and next stage
+
+From `extension/`: `npm ci`, `npm run check`, `npm run test:usability`,
+`npm run test:package`. Load `extension/dist/` or the 0.7.2 unpacked folder via
+`chrome://extensions` → Developer mode → Load unpacked. Reload an existing installation
+instead of adding a second copy; refresh YouTube. Use a disposable profile for test data.
+
+Personal testing is supported. A small, supervised **YouTube usability pilot is
+conditional on participant-environment preflight**; this is not broad-release or Store
+readiness. Remaining checks, by impact: actual populated/signed-in/experimental layouts
+and media variants; physical sleep/wake; screen readers/physical toolbar interaction;
+older Chrome and non-English navigation. Optional forms still scroll vertically.
+Store preparation blockers from the previous stage remain; no Store submission here.
+
+Next: complete that manual preflight and collect voluntary feedback without telemetry
+or required viewing-history/note disclosure. Detailed findings/evidence/test matrix:
+[usability review](chrysalis-usability-review.md). Existing contracts:
 [timing](../extension/SESSION_MODEL.md), [viewing](../extension/VIEWING_CONTROLS.md),
-[repository audit](youtube-extension-transition.md).
-
-## Try it, readiness and next stage
-
-From `extension/`: `npm ci`, `npm run check`, `npm run package`.
-Load `extension/release/chrysalis-0.7.1-unpacked` in `chrome://extensions` with Developer
-mode enabled, then refresh YouTube. Existing `extension/dist` users should reload
-that same installation. ZIP: `extension/release/chrysalis-0.7.1.zip`.
-`npm run test:package` verifies reproducibility and all seven suites on the extracted
-ZIP. `npm run screenshots` captures real extension/live YouTube surfaces.
-
-**Ready for personal installation; pilot materials prepared, volunteer launch
-conditional on manual preflight. Not ready for Store submission.** Manual gaps:
-native Chrome toolbar, intended populated/signed-in/experimental layouts, physical
-sleep and screen readers, older Chrome and full ad/player variants. Store blockers:
-hosted privacy/contact, publisher/account setup, final artwork/metadata review and
-resolution of the official FAQ's at-rest encryption language for this unencrypted
-local-storage design. Unpacked-to-Store data migration is not implemented.
-
-Exact paths, checksums, validation, remaining blockers and official sources:
-[distribution status](../extension/distribution/STATUS.md),
-[installation](../extension/INSTALL.md), [store draft](../extension/distribution/STORE_DRAFT.md),
-[pilot guide](../extension/pilot/GUIDE.md). Follow the next prompt's scope.
+[history](../extension/HISTORY.md), [installation](../extension/INSTALL.md),
+[pilot guide](../extension/pilot/GUIDE.md), [transition audit](youtube-extension-transition.md).

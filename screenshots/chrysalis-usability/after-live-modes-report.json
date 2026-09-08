@@ -1,0 +1,61 @@
+{
+  "browser": "153.0.8010.12",
+  "category": "Live signed-out YouTube with real unpacked extension; no mocked responses or seeded timing",
+  "results": [
+    {
+      "name": "Standard player / indicator geometry",
+      "status": "Pass"
+    },
+    {
+      "name": "Theater mode and in-flow indicator",
+      "status": "Pass"
+    },
+    {
+      "name": "Live fullscreen hides dock and preserves fullscreen",
+      "status": "Pass"
+    },
+    {
+      "name": "Observed host appearance",
+      "status": "Pass",
+      "detail": {
+        "youtubeDark": false,
+        "deviceDark": true
+      }
+    },
+    {
+      "name": "Device-dark extension on independently light YouTube",
+      "status": "Pass"
+    },
+    {
+      "name": "Explicit light appearance / narrow window / 200% zoom",
+      "status": "Pass"
+    },
+    {
+      "name": "Real one-minute target, collapsed checkpoint and untimed continuation",
+      "status": "Pass"
+    },
+    {
+      "name": "Live break countdown, early ending and video stays playing",
+      "status": "Blocked",
+      "detail": "Error: BASELINE_UNAVAILABLE {\"paused\":true,\"readyState\":0,\"networkState\":0}"
+    },
+    {
+      "name": "Live miniplayer",
+      "status": "Not tested",
+      "detail": "YouTube did not expose a visible miniplayer button on this video."
+    },
+    {
+      "name": "Actual rendered captions / ads / playlist queue / live chat",
+      "status": "Not tested",
+      "detail": "No usable caption track, active ad, playlist queue or chat supplied in this observed video; node-preservation fixtures are separate evidence."
+    },
+    {
+      "name": "Direct Shorts URL remains available",
+      "status": "Pass"
+    },
+    {
+      "name": "Live refresh and back/forward avoid duplicate mounts",
+      "status": "Pass"
+    }
+  ]
+}

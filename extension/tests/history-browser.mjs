@@ -83,7 +83,7 @@ try {
   const staleRevision = (await state()).historyRevision;
   const row = history.locator(`.history-entry[data-session-id="${skippedId}"]`);
   await row.getByRole('button', { name: 'Delete session', exact: true }).click();
-  await history.locator('#history dialog [data-cancel]').click(); await expect(row).toBeVisible();
+  await history.locator('#history dialog [data-cancel]').click(); await expect(row).toBeVisible(); await expect(row.getByRole('button', { name: 'Delete session', exact: true })).toBeFocused();
   await row.getByRole('button', { name: 'Delete session', exact: true }).click(); await history.locator('#history dialog [data-confirm]').click();
   await expect(other.locator('#history-reflection')).toBeHidden(); await expect(other.locator('#history-reflection textarea')).toHaveValue('');
   await expect(popup.locator('#session-phase')).toHaveText('Idle');

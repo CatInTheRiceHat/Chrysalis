@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 6 as const;
+export const SCHEMA_VERSION = 7 as const;
 export type Theme = 'system' | 'light' | 'dark';
 export const viewingDefaults = {
   hideHomeRecommendations: false,
@@ -12,12 +12,13 @@ export const experienceDefaults = {
   defaultTargetMs: null as number | null,
   breakMinutes: 5,
   checkpointsEnabled: true,
-  indicatorCollapsed: false,
+  indicatorCollapsed: true,
+  autoSessionIntro: true,
 };
 export interface Settings extends ViewingControls {
   showIndicator: boolean; theme: Theme; extensionPaused: boolean;
   introSeen: boolean; defaultTargetMs: number | null; breakMinutes: number;
-  checkpointsEnabled: boolean; indicatorCollapsed: boolean;
+  checkpointsEnabled: boolean; indicatorCollapsed: boolean; autoSessionIntro: boolean;
 }
 export type SessionPhase = 'idle' | 'active' | 'paused' | 'checkpoint' | 'break' | 'finished';
 export const HISTORY_LIMIT = 100;

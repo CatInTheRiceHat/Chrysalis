@@ -1,0 +1,10 @@
+{
+  "browser": "153.0.8010.12",
+  "checks": [
+    "Live watch indicator reserves normal page flow inside #below, geometrically below the player; current intention/foreground time, Pause and collapse work.",
+    "Live Home indicator reserves flow space below the masthead without covering search/navigation; YouTube page content retained."
+  ],
+  "limitations": [
+    "Signed-out desktop layouts only. Native toolbar popover and physical screen-reader behavior not exercised. Fullscreen and 200% zoom covered by the separate real-browser fixture suite."
+  ]
+}

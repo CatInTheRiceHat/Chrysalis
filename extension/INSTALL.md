@@ -1,4 +1,4 @@
-# Build, install and troubleshoot Chrysalis 0.7.1
+# Build, install and troubleshoot Chrysalis 0.7.2
 
 ## Personal installation / volunteer files
 
@@ -8,7 +8,7 @@ onto Chrome or select the repository/source folder.
 
 1. Read the [privacy explanation](PRIVACY.md) and [pilot guide](pilot/GUIDE.md) first.
    Participation and every control are optional. You can stop and delete data.
-2. Extract `chrysalis-0.7.1.zip` using your normal archive tool. Place the extracted
+2. Extract `chrysalis-0.7.2.zip` using your normal archive tool. Place the extracted
    files in a stable folder you control, for example `Documents/Chrysalis-extension`.
    Opening that folder must show `manifest.json`, `popup.html`, `background.js`, etc.
 3. Open `chrome://extensions` in desktop Chrome and turn **Developer mode** on.
@@ -28,10 +28,10 @@ sessions and history and distinguishes browser restart from background-worker wa
 Exact paths in this workspace:
 
 - Development production build: `/Users/elaine/Documents/Chrysalis/extension/dist`
-- Extracted distribution: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.7.1-unpacked`
-- ZIP: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.7.1.zip`
-- Checksums and per-file inventory: `release/chrysalis-0.7.1.sha256` and
-  `release/chrysalis-0.7.1-build-manifest.json`
+- Extracted distribution: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.7.2-unpacked`
+- ZIP: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.7.2.zip`
+- Checksums and per-file inventory: `release/chrysalis-0.7.2.sha256` and
+  `release/chrysalis-0.7.2-build-manifest.json`
 
 ## Reproducible production build
 
@@ -67,15 +67,15 @@ npm run test:package
 ```
 
 This builds twice, requires byte-identical ZIPs, rejects a deliberately introduced
-development file/missing script in a temporary copy, and runs all seven extension
+development file/missing script in a temporary copy, and runs all nine extension
 browser suites against the ZIP-extracted directory. It writes a validation record
 bound to the ZIP SHA-256. Tests use disposable profiles; fixtures are not live-layout
 proof. Node/Python versions can change bytes; equivalence across untested toolchains
 is not promised. Re-run this command after changing inputs.
 
 To verify a received checksum (from `release/`): macOS `shasum -a 256 -c
-chrysalis-0.7.1.sha256`; Linux `sha256sum -c chrysalis-0.7.1.sha256`. On Windows,
-`Get-FileHash .\chrysalis-0.7.1.zip -Algorithm SHA256` in PowerShell and compare with
+chrysalis-0.7.2.sha256`; Linux `sha256sum -c chrysalis-0.7.2.sha256`. On Windows,
+`Get-FileHash .\chrysalis-0.7.2.zip -Algorithm SHA256` in PowerShell and compare with
 the checksum text. A checksum detects differing bytes; it does not authenticate an
 unknown sender. Obtain the files and expected checksum through a trusted source.
 

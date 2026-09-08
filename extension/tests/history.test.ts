@@ -111,7 +111,7 @@ test('v4 recovery preserves text and missing reflection without inventing revisi
   const old = { ...base, settings: oldSettings, schemaVersion: 4, currentSession: { phase: 'idle' }, completedSessions: [{ id: 'old', intention: '<script>unsafe()</script>', startedAt: 10, finishedAt: 100, originalTargetMs: 60000, targetMs: 120000, elapsedMs: 70, reflection: '<b>legacy note</b>' }] };
   const upgraded = migrate(old);
   const s = upgraded.completedSessions[0]!;
-  assert.equal(upgraded.schemaVersion, 6); assert.equal(s.history.complete, false);
+  assert.equal(upgraded.schemaVersion, 7); assert.equal(s.history.complete, false);
   assert.deepEqual(s.history.targetRevisions, []); assert.equal(s.reflectionPrompted, true);
   assert.deepEqual(s.reflection, { answer: null, note: '<b>legacy note</b>' });
   assert(summaryRows(s).some(([, value]) => value === 'Not recorded in the earlier version'));
@@ -136,5 +136,22 @@ test('history protocol rejects arbitrary fields and forbids content access to re
   const sender = { id: 'own', frameId: 0, url: 'https://www.youtube.com/', tab: { id: 1 } } as chrome.runtime.MessageSender;
   for (const request of [message, { channel: CHANNEL, type: 'OFFER_REFLECTION', sessionId: 's' }]) {
     const r = await handle(request, sender); assert.equal(!r.ok && r.code, 'FORBIDDEN');
+  }
+});
+
+test('unchanged summary targets display once; different final targets remain explicit', async () => {
+  const f = fixture(); await f.start();
+  const unchanged = (await f.command({ action: 'finish' })).completedSessions[0]!;
+  assert.deepEqual(summaryRows(unchanged).filter(([label]) => label.includes('target')), [['Original time target', '1 minute']]);
+  await f.command({ action: 'reset' }); await f.start();
+  await f.command({ action: 'edit', plan: { intention: 'Entertainment', targetMs: null } });
+  const revised = (await f.command({ action: 'finish' })).completedSessions.find(item => item.id !== unchanged.id)!;
+  assert.deepEqual(summaryRows(revised).filter(([label]) => label.includes('target')), [['Original time target', '1 minute'], ['Final time target', 'No time target']]);
+});
+
+test('viewing deep link remains enumerated and rejects arbitrary destinations', () => {
+  assert(parseRequest({ channel: CHANNEL, type: 'OPEN_PAGE', page: 'viewing' }));
+  for (const page of ['https://example.com', 'options.html#viewing', 'instagram']) {
+    assert.equal(parseRequest({ channel: CHANNEL, type: 'OPEN_PAGE', page }), null);
   }
 });

@@ -1,0 +1,43 @@
+{
+  "browser": "153.0.8010.12",
+  "category": "Real unpacked extension on controlled fixtures; popup document in tab",
+  "checks": [
+    "Read recovery clears its error; validation survives polling and clears on cancel; edit focus restores.",
+    "Collapsed target crossing keeps status visible without expansion; keyboard expand/collapse preserves focus and dismissal stays quiet without changing the target.",
+    "A wide, left-offset host column at a narrow viewport keeps the indicator inside the viewport.",
+    "Viewing deep link focuses its section; settings at 375px and real 200% zoom has no horizontal overflow."
+  ],
+  "measurements": {
+    "nativePopup": "API opened",
+    "nativeTargets": [
+      {
+        "type": "page",
+        "url": "chrome-extension://gkmgojnjhhbfkodcacnkonfickegeakl/popup.html"
+      },
+      {
+        "type": "page",
+        "url": "about:blank"
+      },
+      {
+        "type": "browser_ui",
+        "url": "chrome://omnibox-popup.top-chrome/omnibox_popup_aim.html"
+      },
+      {
+        "type": "browser_ui",
+        "url": "chrome://omnibox-popup.top-chrome/"
+      },
+      {
+        "type": "page",
+        "url": "chrome-extension://gkmgojnjhhbfkodcacnkonfickegeakl/popup.html"
+      }
+    ],
+    "startButton": {
+      "x": 24,
+      "y": 384.3125,
+      "width": 342,
+      "height": 44.796875
+    },
+    "collapsedPaused": "0:00 foreground YouTube time",
+    "staleReadError": false
+  }
+}

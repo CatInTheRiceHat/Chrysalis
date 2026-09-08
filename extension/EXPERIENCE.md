@@ -1,10 +1,13 @@
-# User experience contract — 0.7.0
+# User experience contract
 
 ## Surfaces and choices
 
-- **Introduction:** a short, skippable explanation of desktop YouTube scope,
+- **Extension welcome:** a short, skippable explanation of desktop YouTube scope,
   optional planning/controls, local storage and in-page intention visibility.
   Get started and Skip both dismiss it without starting a session or hiding content.
+- **YouTube arrival:** a centered duration selector and optional intention, with
+  Start, Continue without a timer and Close. Automatic prompts are enabled by default
+  and shared across tabs; see [YouTube sessions](YOUTUBE_SESSION.md).
 - **Popup:** session first. Idle shows intention and an optional target; active,
   paused, checkpoint, break and finished states expose their working actions.
   Viewing preferences opens settings. Appearance/indicator controls are secondary.
@@ -26,19 +29,16 @@ font resources on YouTube. No new dependencies or permissions.
 
 ## Placement and accessibility
 
-The indicator and viewing-status disclosure reserve normal page flow. On watch
-pages their dock is inside `#below`, beneath the player. On Home it occupies a full
-row in the rich grid's content area, below the sticky filter row; it is not a
-recommendation card. Other recognized browse/search roots use normal flow. Unknown
-real YouTube app layouts without an anchor show no dock; the toolbar popup remains
-available. These choices avoid a floating overlay on captions, search or navigation.
+The session introduction and target check-in use centered native dialogs. The
+session indicator floats near the right edge, with a restore tab for hiding,
+small windows, theater mode and fullscreen. See [YouTube sessions](YOUTUBE_SESSION.md)
+for the current session interface and automatic introduction rules.
 
-Both docks hide whenever the document enters fullscreen and return afterward.
-They share one filtered placement observer; viewing-control support diagnostics
-retain their separate observer. Each observer inspects a bounded batch and schedules
-one refresh. Disposal/reinjection/page suspension release ownership, observers,
-listeners and pending work. Collapse is local to the document, initially taken
-from the saved preference; dismissal lasts until reload or indicator off/on.
+The separate viewing-status disclosure still reserves normal page flow and hides
+in fullscreen. Its filtered placement observer and viewing-support observer remain;
+the floating timer adds no mutation observer. Disposal, reinjection and page
+suspension release listeners, modal inertness and pending work. Collapse/minimize
+are local to the document, initially taken from saved display preferences.
 
 Labels, native buttons/selects/details/dialog, visible focus styles and wrapping
 support keyboard use and narrow/zoomed windows. Editing, cancellation, state actions
@@ -51,11 +51,11 @@ animations; reduced-motion preferences are respected.
 **The current intention is now intentionally visible in the YouTube page.** This
 supersedes the earlier foundation's timing-only display decision, as requested for
 this stage. A shadow root isolates styles, not secrets. Avoid private details in an
-intention; turn the indicator off to remove its page UI. Collapsing is a visual
+intention; hide the indicator to leave only its restore tab. Collapsing is a visual
 choice, not a privacy boundary. Completed history/reflections remain extension-only.
 
 The content script receives current display data, session ID and revision. It may
-send only constrained session actions, including validated additional/break
+send only constrained session actions, including validated session starts and additional/break
 durations, or request a fixed extension surface. Native trusted clicks are required
 by its UI;
 synthetic page clicks are ignored. No webpage messaging bridge, external messaging,
@@ -68,9 +68,9 @@ it does not require the `tabs` permission or raise the Chrome minimum for
 `action.openPopup`. [Chrome windows API](https://developer.chrome.com/docs/extensions/reference/api/windows),
 [Chrome action API](https://developer.chrome.com/docs/extensions/reference/api/action).
 
-Schema **6** upgrades valid schemas 1–5 while preserving plans, recorded revisions,
-break time, reflections and viewing choices. The new extension-pause default is
-false. Unknown/corrupt records are preserved.
+Schema **7** upgrades valid schemas 1–6 while preserving plans, recorded revisions,
+break time, reflections and viewing choices. Extension pause defaults to false; automatic session introductions default to
+true. Existing collapse preferences are retained. Unknown/corrupt records are preserved.
 Clear history removes completed summaries and recent command receipts; it also
 clears a finished current record, but keeps unfinished sessions and preferences.
 Delete all clears plans/summaries/receipts, stops the session, restores default

@@ -19,6 +19,7 @@ try {
   const route = () => context.route('https://www.youtube.com/**', r => r.fulfill({ contentType: 'text/html', body: fixture }));
   await route();
   popup = await context.newPage(); await popup.goto(`${base}popup.html`); await popup.locator('#intro-skip').click();
+  await popup.evaluate(async () => { const r = await chrome.runtime.sendMessage({ channel: 'chrysalis/v1', type: 'GET_SETTINGS' }); await chrome.runtime.sendMessage({ channel: 'chrysalis/v1', type: 'UPDATE_SETTINGS', expectedRevision: r.revision, patch: { indicatorCollapsed: false } }); });
   const state = () => popup.evaluate(async () => {
     const reply = await chrome.runtime.sendMessage({ channel: 'chrysalis/v1', type: 'GET_SNAPSHOT' });
     if (!reply.ok) throw new Error(reply.error); return reply.snapshot;
@@ -33,16 +34,17 @@ try {
   await popup.locator('#submit-plan').click();
   const yt = await context.newPage(); await yt.goto('https://www.youtube.com/watch?v=checkpoint');
   const indicator = yt.locator('#chrysalis-extension-indicator');
+  const checkpoint = yt.locator('#chrysalis-session-dialog');
   await expect(indicator).toBeVisible();
-  await yt.locator('#fullscreen').click(); await expect(indicator).toBeHidden();
+  await yt.locator('#fullscreen').click(); await expect(indicator.locator('#restore')).toBeVisible();
   await seedNearTarget(); await yt.bringToFront();
   await expect.poll(async () => (await state()).currentSession.phase, { timeout: 15000 }).toBe('checkpoint');
   assert.equal(await yt.evaluate(() => Boolean(document.fullscreenElement)), true);
-  await expect(indicator).toBeHidden();
+  await expect(indicator.locator('#restore')).toBeVisible();
   await yt.evaluate(() => document.exitFullscreen());
   await expect(indicator.locator('#checkpoint-copy')).toHaveText('You planned 1 minute. What would you like to do next?');
   const playerBox = await yt.locator('#player').boundingBox(), box = await indicator.boundingBox();
-  assert(box.y >= playerBox.y + playerBox.height);
+  assert(box.x >= 0 && box.x + box.width <= 1100);
   const videoTime = await yt.locator('video').evaluate(v => v.currentTime);
   await expect.poll(() => yt.locator('video').evaluate(v => v.currentTime)).toBeGreaterThan(videoTime);
   assert.equal(await yt.locator('video').evaluate(v => v.paused), false);
@@ -50,7 +52,7 @@ try {
   await popup.setViewportSize({ width: 375, height: 780 });
   await popup.screenshot({ path: 'test-results/checkpoint-popup.png', fullPage: true });
   assert.equal(await popup.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-  checks.push('Real foreground pulses cross a seeded target during fullscreen; no forced exit, player obstruction or playback interruption; choices render afterward and at 375px.');
+  checks.push('Real foreground pulses cross a seeded target during fullscreen; a centered check-in without forced exit or playback interruption; choices render afterward and at 375px.');
 
   // Force the worker to stop while the one persisted checkpoint is pending.
   const cdp = await context.newCDPSession(popup), versions = new Map(), stopped = new Set();
@@ -63,9 +65,9 @@ try {
   await expect.poll(() => stopped.has(version.versionId)).toBe(true);
   assert.equal((await state()).sessionRevision, checkpointRevision);
   worker = context.serviceWorkers().find(w => w.url() === `${base}background.js`) ?? await context.waitForEvent('serviceworker');
-  await indicator.locator('[data-choice="dismiss-checkpoint"]').click();
+  await checkpoint.locator('[data-choice="dismiss-checkpoint"]').click();
   await expect(indicator.locator('#checkpoint-controls')).toBeHidden();
-  await expect(indicator.locator('#phase')).toContainText('No additional time chosen');
+  await expect(indicator.locator('#phase')).toContainText('Target reached');
   assert.equal((await state()).currentSession.targetMs, 60000);
   const second = await context.newPage(); await second.goto('https://www.youtube.com/watch?v=other');
   await expect(second.locator('#checkpoint-controls')).toBeHidden();
@@ -76,13 +78,13 @@ try {
   // Explicit target changes rearm; choose an additional duration in the indicator.
   await popup.bringToFront(); await popup.locator('#edit-plan').click(); await popup.locator('#custom-minutes').fill('2'); await popup.locator('#submit-plan').click();
   await popup.locator('#edit-plan').click(); await popup.locator('#custom-minutes').fill('1'); await popup.locator('#submit-plan').click();
-  await yt.bringToFront(); await expect(indicator.locator('#checkpoint-controls')).toBeVisible();
-  await indicator.locator('[data-choice="extend"]').evaluate(b => b.click());
+  await yt.bringToFront(); await expect(checkpoint.locator('#checkpoint-controls')).toBeVisible();
+  await checkpoint.locator('[data-choice="extend"]').evaluate(b => b.click());
   assert.equal((await state()).currentSession.targetMs, 60000, 'synthetic webpage clicks cannot extend the target');
-  await indicator.locator('#additional-duration').selectOption('custom'); await indicator.locator('#additional-minutes').fill('0');
-  await indicator.locator('[data-choice="extend"]').click(); await expect(indicator.locator('#error')).toBeVisible();
+  await checkpoint.locator('#additional-duration').selectOption('custom'); await checkpoint.locator('#additional-minutes').fill('0');
+  await checkpoint.locator('[data-choice="extend"]').click(); await expect(checkpoint.locator('#dialog-error')).toBeVisible();
   assert.equal((await state()).currentSession.phase, 'checkpoint');
-  await indicator.locator('#additional-minutes').fill('1'); await indicator.locator('[data-choice="extend"]').click();
+  await checkpoint.locator('#additional-minutes').fill('1'); await checkpoint.locator('[data-choice="extend"]').click();
   await expect(indicator.locator('#checkpoint-controls')).toBeHidden();
   let s = await state(); assert.equal(s.currentSession.originalTargetMs, 60000);
   assert(s.currentSession.targetMs >= s.currentSession.elapsedMs + 57000);
@@ -93,14 +95,14 @@ try {
   await expect(popup.locator('#session-intention')).toHaveText('Studying');
   assert.equal((await state()).currentSession.targetMs, extendedTarget);
   await seedNearTarget(); await yt.bringToFront();
-  await expect(indicator.locator('#checkpoint-controls')).toBeVisible({ timeout: 15000 });
-  await indicator.locator('[data-choice="continue-untimed"]').click();
+  await expect(checkpoint.locator('#checkpoint-controls')).toBeVisible({ timeout: 15000 });
+  await checkpoint.locator('[data-choice="continue-untimed"]').click();
   assert.equal((await state()).currentSession.targetMs, null);
   checks.push('Explicit target revisions rearm; custom validation rejects zero; additional time starts at measured decision time; next checkpoint can continue untimed while retaining original target.');
 
   await indicator.locator('#break-duration').selectOption('custom'); await indicator.locator('#break-minutes').fill('2');
   await indicator.locator('[data-choice="break"]').click();
-  await expect(indicator.locator('#break-countdown')).toContainText('wall-clock break time');
+  await expect(indicator.locator('#break-countdown')).toContainText('wall-clock break');
   const beforeBreak = (await state()).currentSession.elapsedMs;
   const initialCountdown = await indicator.locator('#break-countdown').textContent();
   await expect.poll(() => indicator.locator('#break-countdown').textContent()).not.toBe(initialCountdown);
@@ -109,7 +111,7 @@ try {
   await indicator.getByRole('button', { name: 'End break', exact: true }).click();
   assert.equal((await state()).currentSession.phase, 'paused');
   await indicator.locator('[data-choice="break"]').click();
-  await indicator.getByRole('button', { name: 'Resume session now', exact: true }).click();
+  await indicator.getByRole('button', { name: 'Resume session', exact: true }).click();
   assert.equal((await state()).currentSession.phase, 'active');
   await indicator.locator('[data-choice="break"]').click();
   const deadline = (await state()).currentSession.breakUntil, breakElapsed = (await state()).currentSession.elapsedMs;
@@ -145,12 +147,13 @@ try {
   const disabledPage = await context.newPage(); await disabledPage.goto('https://www.youtube.com/watch?v=disabled');
   await expect.poll(async () => (await state()).currentSession.elapsedMs, { timeout: 15000 }).toBeGreaterThanOrEqual(60000);
   assert.equal((await state()).currentSession.phase, 'active');
-  await expect(disabledPage.locator('#checkpoint-controls')).toBeHidden();
+  await expect(disabledPage.locator('#chrysalis-extension-indicator #checkpoint-controls')).toBeHidden();
   await options.locator('#checkpoints-enabled').check();
-  await expect(disabledPage.locator('#checkpoint-controls')).toBeVisible();
-  await disabledPage.locator('#chrysalis-extension-indicator #dismiss').click();
-  await expect(disabledPage.locator('#checkpoint-controls')).toBeHidden();
-  await disabledPage.reload(); await expect(disabledPage.locator('#checkpoint-controls')).toBeHidden();
+  await disabledPage.bringToFront();
+  await expect(disabledPage.locator('#chrysalis-session-dialog #checkpoint-controls')).toBeVisible();
+  await disabledPage.locator('#chrysalis-session-dialog #close').click();
+  await expect(disabledPage.locator('#chrysalis-extension-indicator #checkpoint-controls')).toBeHidden();
+  await disabledPage.reload(); await expect(disabledPage.locator('#chrysalis-extension-indicator #checkpoint-controls')).toBeHidden();
   checks.push('Disabling prompts leaves foreground timing active; reenabling offers the previously unacknowledged target once; the close button dismisses it persistently and leaves the timer.');
   assert.deepEqual(errors, []);
   await writeFile('test-results/checkpoints-browser-report.json', JSON.stringify({ browser: context.browser().version(), checks,

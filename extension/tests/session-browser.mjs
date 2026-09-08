@@ -68,11 +68,11 @@ try {
   await second.close();
   checks.push('Tab switching does not double-count; refresh re-establishes document ownership; another tab can close safely.');
 
-  await page.bringToFront(); await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.bringToFront(); await page.getByRole('button', { name: 'Pause session', exact: true }).click();
   await expect(page.locator('#session-phase')).toHaveText('Paused');
   const paused = await elapsed(); await youtube.bringToFront(); await pause(3000);
   assert.equal(await elapsed(), paused);
-  await page.bringToFront(); await page.getByRole('button', { name: 'Resume', exact: true }).click();
+  await page.bringToFront(); await page.getByRole('button', { name: 'Resume session', exact: true }).click();
   await youtube.bringToFront(); await expect.poll(elapsed, { timeout: 15000 }).toBeGreaterThan(paused);
   checks.push('Explicit pause excludes time on YouTube; Resume re-enables counting.');
 

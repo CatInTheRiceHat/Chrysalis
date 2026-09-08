@@ -7,7 +7,8 @@ import { mountReflection } from './reflection';
 const target = (ms: number | null) => ms === null ? 'No time target' : durationText(ms);
 export function summaryRows(s: CompletedSessionSummary): [string, string][] {
   return [['Date', new Date(s.startedAt).toLocaleString()], ['Intention', s.intention ?? 'No intention recorded'],
-    ['Original time target', target(s.originalTargetMs)], ['Final time target', target(s.targetMs)],
+    ['Original time target', target(s.originalTargetMs)],
+    ...(s.targetMs === s.originalTargetMs ? [] : [['Final time target', target(s.targetMs)] as [string, string]]),
     ['Foreground YouTube time', clockText(s.elapsedMs)],
     [s.history.complete ? 'Break time (wall-clock)' : 'Recorded break time since update', !s.history.complete && !s.history.breakMs ? 'Not recorded in the earlier version' : clockText(s.history.breakMs)]];
 }
@@ -18,14 +19,14 @@ export function mountHistory(root: HTMLElement, update: (state: StorageSnapshot)
   const heading = root.querySelector<HTMLElement>('h2')!;
   const status = root.querySelector<HTMLElement>('#history-status')!;
   const editor = mountReflection(root.querySelector<HTMLElement>('#history-reflection')!, s => { update(s); heading.focus(); });
-  let state: StorageSnapshot | null = null, lastRevision = -1, deleting: { id: string; revision: number } | null = null, busy = false;
+  let state: StorageSnapshot | null = null, lastRevision = -1, deleting: { id: string; revision: number; trigger: HTMLElement } | null = null, busy = false;
   const dialog = document.createElement('dialog');
   dialog.setAttribute('aria-label', 'Delete one session');
   dialog.innerHTML = `<h2>Delete this session?</h2><p>This removes its plan, reflection and note from this device. This cannot be undone.</p><div class="session-actions"><button data-cancel class="secondary">Keep session</button><button data-confirm class="primary">Delete session</button></div><p role="status"></p>`;
   root.append(dialog);
   dialog.querySelector('[data-cancel]')!.addEventListener('click', () => dialog.close());
   dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
-  dialog.addEventListener('close', () => { deleting = null; heading.focus(); });
+  dialog.addEventListener('close', () => { const trigger = deleting?.trigger; deleting = null; (trigger?.isConnected ? trigger : heading).focus(); });
   dialog.querySelector('[data-confirm]')!.addEventListener('click', async () => {
     if (!deleting || busy) return;
     busy = true; dialog.querySelectorAll<HTMLButtonElement>('button').forEach(b => { b.disabled = true; });
@@ -66,7 +67,7 @@ export function mountHistory(root: HTMLElement, update: (state: StorageSnapshot)
       const reflect = document.createElement('button'); reflect.className = 'secondary'; reflect.textContent = s.reflection ? 'Edit reflection' : 'Add reflection';
       reflect.addEventListener('click', () => { if (state) editor.open(state, s.id); });
       const remove = document.createElement('button'); remove.className = 'secondary'; remove.textContent = 'Delete session';
-      remove.addEventListener('click', () => { if (!state) return; deleting = { id: s.id, revision: state.historyRevision }; dialog.querySelector('[role="status"]')!.textContent = ''; dialog.showModal(); dialog.querySelector<HTMLButtonElement>('[data-cancel]')!.focus(); });
+      remove.addEventListener('click', () => { if (!state) return; deleting = { id: s.id, revision: state.historyRevision, trigger: remove }; dialog.querySelector('[role="status"]')!.textContent = ''; dialog.showModal(); dialog.querySelector<HTMLButtonElement>('[data-cancel]')!.focus(); });
       actions.append(reflect, remove); article.append(actions); list.append(article);
     }
     if (focusedInList) heading.focus();

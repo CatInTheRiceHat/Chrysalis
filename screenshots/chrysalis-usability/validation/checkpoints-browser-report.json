@@ -1,0 +1,12 @@
+{
+  "browser": "153.0.8010.12",
+  "checks": [
+    "Real foreground pulses cross a seeded target during fullscreen; no forced exit, player obstruction or playback interruption; choices render afterward and at 375px.",
+    "Worker stop/restart retains one pending checkpoint; dismissal synchronizes across another tab and refresh without revising or reopening the target.",
+    "Explicit target revisions rearm; custom validation rejects zero; additional time starts at measured decision time; next checkpoint can continue untimed while retaining original target.",
+    "Custom break duration and wall-clock countdown work in-page; refresh preserves break, End break stays paused, and explicit Resume returns to active.",
+    "Actual browser restart preserves an unexpired break deadline; expiry reconciles to paused without crediting time; finishing a break saves one summary.",
+    "Disabling prompts leaves foreground timing active; reenabling offers the previously unacknowledged target once; the close button dismisses it persistently and leaves the timer."
+  ],
+  "note": "Actual unpacked extension on controlled YouTube-origin fixtures; near-target elapsed values and expiry proximity seeded only in temporary profile. No live YouTube checkpoint verification."
+}

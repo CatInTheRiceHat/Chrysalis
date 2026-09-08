@@ -133,3 +133,21 @@ input:not([type='checkbox']), select, .secondary, #session-root input,
 #session-root .reflection-answers input, .reflection-answers input { width: auto; margin: 0; }
 textarea { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; color: inherit; background: transparent; border: 1px solid var(--control-line); border-radius: 6px; padding: 10px; }
 textarea:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+/* Keep the session above auxiliary preferences in Chrome's bounded popup. */
+.popup .popup-title { font-size: 24px; margin-top: 20px; }
+.popup #session-root { margin: 12px 0; padding: 14px 0; }
+.popup-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 12px; }
+.extension-pause-controls { padding: 12px 0; }
+.extension-pause-controls .note { margin: 8px 0 0; }
+#session-plan > .note { margin: 4px 0 8px; }
+.action-help { margin: 10px 0; }
+.timer-contract summary { font-size: 11px; padding: 6px 0; }
+
+.action-popup .popup { width: 390px; max-width: none; }
+
+#session-root #break-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+#session-root #break-controls > label, #session-root #break-controls > div, #session-root #break-controls > p { grid-column: 1 / -1; }
+#session-root #break-controls > select { max-width: 100%; width: 100%; }
+#session-root #break-controls > button { grid-column: auto; margin: 0; }
+#session-root #break-controls > .note { margin: 0; }

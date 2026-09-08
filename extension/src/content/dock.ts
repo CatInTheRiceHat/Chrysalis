@@ -9,10 +9,17 @@ export function dock(doc: Document, host: HTMLElement): () => void {
     function place() {
       clearTimeout(pending); pending = undefined;
       const target = indicatorAnchor(doc);
+      // YouTube can keep a wide, left-offset watch column at high zoom. Reserve
+      // flow space inside the viewport without changing any host-page layout.
+      const left = target?.getBoundingClientRect().left ?? 0;
+      const inset = Math.max(0, 16 - left);
+      const available = Math.max(0, (doc.defaultView?.innerWidth ?? 0) - Math.max(16, left) - 16);
       for (const el of hosts) {
         if (el.hidden !== Boolean(doc.fullscreenElement)) el.hidden = Boolean(doc.fullscreenElement);
         if (target && el.parentElement !== target) target.prepend(el);
         else if (!target) el.remove();
+        el.style.marginLeft = `${inset}px`;
+        el.style.maxWidth = `${available}px`;
       }
     }
     function schedule() { if (!pending) pending = setTimeout(place, 150); }

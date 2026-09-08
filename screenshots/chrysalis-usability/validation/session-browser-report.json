@@ -1,0 +1,14 @@
+{
+  "browser": "153.0.8010.12",
+  "checks": [
+    "Start via popup; Chrome-confirmed focused YouTube browsing accumulates foreground time.",
+    "Visible YouTube in an unfocused window contributes no time; focusing it resumes observation.",
+    "Tab switching does not double-count; refresh re-establishes document ownership; another tab can close safely.",
+    "Explicit pause excludes time on YouTube; Resume re-enables counting.",
+    "Custom intention and validated custom target update through UI; original target remains intact.",
+    "Real pulses cross a seeded near-target state; Dismissal, voluntary break, early end and duplicate-safe Finish work.",
+    "Full browser restart restores an unfinished session paused, preserves observed time and completed summary."
+  ],
+  "liveYouTube": false,
+  "note": "Actual extension/Chrome events on origin fixtures; target proximity seeded in temporary profile."
+}

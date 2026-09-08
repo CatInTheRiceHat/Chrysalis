@@ -1,0 +1,13 @@
+{
+  "baselineRevision": "7f98c69faa8c6210d530cee86e26d3919a8a84fa",
+  "reviewVersion": "0.7.2",
+  "baselineNodeTests": 63,
+  "finalNodeTests": 65,
+  "baselineBrowserSuites": 7,
+  "finalPackagedBrowserSuites": 9,
+  "node": "20.17.0",
+  "npm": "10.8.2",
+  "browser": "153.0.8010.12",
+  "zipSha256": "4422f9009431f764c2f68d3af6eeae5e96adb00b8a7fe5a910ea4cc7edcb832b",
+  "evidence": "See review report for native/live/fixture distinctions and blocked manual scenarios."
+}

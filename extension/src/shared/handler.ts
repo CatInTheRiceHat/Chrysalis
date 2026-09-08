@@ -5,17 +5,22 @@ import { sessionDisplay } from './types';
 
 export function createHandler(store: Store, extensionId: string, version: string,
   isForeground: (sender: chrome.runtime.MessageSender) => Promise<boolean> = async () => false,
-  openPage: (page: 'session' | 'edit' | 'settings' | 'history') => Promise<void> = async () => { throw new Error('Page opening unavailable'); }) {
+  openPage: (page: 'session' | 'edit' | 'settings' | 'viewing' | 'history') => Promise<void> = async () => { throw new Error('Page opening unavailable'); },
+  prompt: (foreground: () => Promise<boolean>) => Promise<'intro' | 'checkpoint' | null> = async () => null) {
   return async (value: unknown, sender: chrome.runtime.MessageSender): Promise<Reply> => {
     const role = senderRole(sender, extensionId);
     if (!role) return { ok: false, code: 'FORBIDDEN', error: 'This sender is not allowed.' };
     const request = parseRequest(value);
     if (!request) return { ok: false, code: 'INVALID', error: 'Invalid Chrysalis message.' };
-    if (role === 'content' && !['PING', 'GET_SETTINGS', 'GET_DISPLAY', 'OBSERVE', 'SESSION_CONTROL', 'OPEN_PAGE'].includes(request.type)) {
+    if (role === 'content' && !['PROMPT', 'PING', 'GET_SETTINGS', 'GET_DISPLAY', 'OBSERVE', 'SESSION_CONTROL', 'OPEN_PAGE'].includes(request.type)) {
       return { ok: false, code: 'FORBIDDEN', error: 'Only Chrysalis pages can change settings or read session data.' };
     }
     try {
       switch (request.type) {
+        case 'PROMPT': {
+          if (role !== 'content' || !sender.documentId || (sender.documentLifecycle && sender.documentLifecycle !== 'active')) return { ok: false, code: 'FORBIDDEN', error: 'An active YouTube document is required.' };
+          return { ok: true, type: 'PROMPT', prompt: await prompt(() => isForeground(sender)) };
+        }
         case 'OFFER_REFLECTION': return { ok: true, type: 'REFLECTION_OFFER', ...await store.offerReflection(request.sessionId) };
         case 'HISTORY': return { ok: true, type: 'SNAPSHOT', snapshot: await store.changeHistory(request.sessionId, request.expectedRevision, request.change) };
         case 'OPEN_PAGE': await openPage(request.page); return { ok: true, type: 'OPENED' };

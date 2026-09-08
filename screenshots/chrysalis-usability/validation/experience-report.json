@@ -1,0 +1,11 @@
+{
+  "browser": "153.0.8010.12",
+  "checks": [
+    "Introduction is short, skippable, persisted, and restores focus to the unrestricted start form.",
+    "Session preferences fill new plans and break controls; long custom intention/no target works; edit cancellation restores focus.",
+    "Indicator is in flow below the player, shows plan/foreground time, collapses, ignores synthetic clicks, pauses/resumes/edits through real actions, and hides in fullscreen.",
+    "Light/dark surfaces and 375px settings checked; actual Chrome tab zoom at 200% has no horizontal overflow; reduced-motion setting exercised.",
+    "Finish saves a real summary; deletion dialog supports Escape/focus restoration; clear history and delete all remove the appropriate local data and reset defaults.",
+    "Delete-all clears unsaved plan fields too; invalid saved data stays untouched and first-use retry remains accessible."
+  ]
+}

@@ -5,7 +5,10 @@ Implemented in `src/session/model.ts`; persistence and serialization in
 
 ## User choices and states
 
-Planning starts explicitly from the popup or settings page. Intentions include
+Planning can start from the automatic centered YouTube introduction, popup or settings page.
+See [Integrated YouTube sessions](YOUTUBE_SESSION.md) for introduction suppression,
+floating timer behavior and verification. The introduction accepts an optional
+intention and uses “Your session” when it is empty. Intentions include
 Studying, Watching a specific video, Entertainment, Exploring, and a custom single
 line of 1–80 characters. No video URL is collected. Targets offer 5/15/30/60-minute
 presets, custom whole minutes from 1 to 1440, or **No time target** (the default).
@@ -72,11 +75,11 @@ also has the existing 1440-minute maximum. Validation failures leave the plan
 unchanged and offer less additional time or untimed continuation. Original target
 and final target remain separate; target labels round subsecond precision upward.
 
-Fullscreen hides the existing dock; the pending checkpoint waits there until the
-user exits fullscreen, unless handled in the popup. A collapsed/disabled indicator
-is never forced open. Collapsing an open checkpoint dismisses it; the explicit
-Dismiss button and its close icon keep the quiet timer. Whole-indicator dismissal
-outside a checkpoint retains its existing page-local behavior.
+Fullscreen reduces the floating timer to an accessible restore tab. A reached
+target offers one centered check-in in the foreground document, including fullscreen.
+Collapsing or hiding the timer does not change the session. Explicitly dismissing
+the check-in keeps counting without another automatic interruption for that target
+revision. See [YouTube sessions](YOUTUBE_SESSION.md) for prompt ownership rules.
 
 Break suggestions are 2/5/10/15 minutes, plus custom 1–1440 minutes. The saved break
 preference fills the choice. There is no “optimal” duration or session-matching
@@ -185,7 +188,7 @@ user can still finish. Elapsed duration remains separately measured.
   recent sequence ledger for atomic accounting. They are not video/account IDs,
   contain no URL/title/search, are absent from summaries, and clear on restart or
   finish. No document ledger is retained while idle or newly observed while paused.
-- Schema 6 upgrades only this extension's valid schema-1/2/3/4/5 data at the existing
+- Schema 7 upgrades only this extension's valid schema-1/2/3/4/5/6 data at the existing
   `chrysalis.extension.v1` key, preserving display settings and any reserved records.
   Unfinished reserved records upgrade paused. Legacy website/Flutter data is untouched.
 - The latest 100 completed summaries remain local; receipt metadata also contains
