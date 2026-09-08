@@ -1,7 +1,8 @@
 # Distribution status — Chrysalis 0.8.0
 
-Prepared local developer preview. No upload, Store submission, publication, volunteer
-invitation or public deployment occurred. See the current transition record at
+Verified developer preview; Store upload/submission/publication has not occurred.
+The website was already deployed before launch preparation; see
+`../../deployment/launch-cutover.md`. See the current transition record at
 `../../docs/extension-public-site-transition.md` for actual check results.
 
 ## Reproducible artifact
@@ -33,13 +34,14 @@ layouts, physical sleep/wake, screen readers, older Chrome and physical toolbar 
 need relevant manual preflight before recruiting testers. Do not present fixture coverage
 as proof for every YouTube layout or as evidence of reduced scrolling time.
 
-Store submission still needs a publicly hosted policy URL, verified publisher/account
-and dashboard declarations, review of local unencrypted data handling against current
-policy, final metadata/artwork, and an installation/update identity decision. Public
+Policy/support pages are now verified at https://thechrysalisproject.vercel.app/privacy
+and /contact. Store submission still needs verified publisher/account and dashboard
+declarations plus the storage product decision in `../../docs/launch-storage-policy.md`.
+Identity guidance is in `STORE_IDENTITY.md`; cross-ID migration is not implemented. Public
 support Issues is verified and repository email is documented. Eight versioned captures
 were generated from the verified ZIP in `release/chrysalis-0.8.0-screenshots/`, including
 five Store-sized candidates and a real one-minute live checkpoint. Review the capture
 report and final artwork before submitting. Old 0.7.1 images remain historical.
 
-The public-site build and local privacy pages are ready for review, not already published.
+The launch branch has a Vercel preview; unauthenticated inspection is blocked by Vercel protection. Production already serves the public site. See the launch record for current evidence.
 See `STORE_DRAFT.md` for prepared copy and remaining owner decisions.

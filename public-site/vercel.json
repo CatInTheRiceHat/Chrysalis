@@ -1,0 +1,63 @@
+{
+  "framework": null,
+  "installCommand": "npm ci --omit=dev",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/install",
+      "destination": "/install/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy/index.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact/index.html"
+    },
+    {
+      "source": "/legacy",
+      "destination": "/legacy/index.html"
+    },
+    {
+      "source": "/legacy-account",
+      "destination": "/legacy-account/index.html"
+    },
+    {
+      "source": "/:page(algorithm|reels|home|community|challenges|saved|search|inbox)",
+      "destination": "/legacy/index.html"
+    },
+    {
+      "source": "/:page(login|signup|forgot-password|reset-password|diagnostic|study|profile)",
+      "destination": "/legacy-account/index.html"
+    },
+    {
+      "source": "/profile/edit",
+      "destination": "/legacy-account/index.html"
+    },
+    {
+      "source": "/u/:username",
+      "destination": "/legacy/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "origin": "https://thechrysalisproject.vercel.app",
+  "checkedAt": "2026-09-08T05:01:45.409Z",
+  "passed": true,
+  "routes": [
+    {
+      "route": "/",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/install",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/privacy",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/contact",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/legacy",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/legacy-account",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/algorithm",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/reels",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/home",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/community",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/challenges",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/saved",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/search",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/inbox",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/u/launch-check",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/login",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/signup",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/forgot-password",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/reset-password",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/diagnostic",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/study",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/profile",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/profile/edit",
+      "status": 200,
+      "refresh": true
+    },
+    {
+      "route": "/missing-launch-check",
+      "status": 404,
+      "refresh": true
+    }
+  ],
+  "assets": [
+    {
+      "asset": "logo.png",
+      "sha256": "642e4087eb769ae578007da3af80221a8fd86769624fdcd1d2f1828c386ee984"
+    },
+    {
+      "asset": "Montserrat.ttf",
+      "sha256": "0f7b311b2f3279e4eef9b2f968bcdbab6e28f4daeb1f049f4f278a902bcd82f7"
+    },
+    {
+      "asset": "AbrilFatface.ttf",
+      "sha256": "5971d4a3758a922a9fedc7f6fb825a96341a2e718c45a4b2c9a6b417c8c4dbe9"
+    },
+    {
+      "asset": "site.css",
+      "sha256": "5cc379173cc0e0153b05e14ce884a0b266502c2f2004d7d4607624192a716a09"
+    },
+    {
+      "asset": "site.js",
+      "sha256": "a7057675ce8e8dbd5900f036d0b1b360c79d0f7091a299ed3b04ea531cc1afac"
+    }
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "browser": "153.0.8010.12"
+}

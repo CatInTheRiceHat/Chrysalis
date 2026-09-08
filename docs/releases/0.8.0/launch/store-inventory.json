@@ -1,0 +1,104 @@
+{
+  "version": "0.8.0",
+  "zipSha256": "a618767617e8ca50a66be7e19e89b2f218a4d24aef2011e23355aa18f38c28d9",
+  "sourceRevision": "74740a3e609df82479b9a58d1a7e5f7a68abfbcc",
+  "storageDecision": "Pending product choice; not cleared for Store certification",
+  "files": [
+    {
+      "file": "chrysalis-0.8.0.zip",
+      "sha256": "a618767617e8ca50a66be7e19e89b2f218a4d24aef2011e23355aa18f38c28d9"
+    },
+    {
+      "file": "chrysalis-0.8.0.sha256",
+      "sha256": "a71f6e784255934993a516a35948202b339a053ae21a1bbda4b716dad0a024d0"
+    },
+    {
+      "file": "build-manifest.json",
+      "sha256": "08dd60c44c15bbe553a86429514ac7a4c0afa0c22336e9128880b11cdea19c8b"
+    },
+    {
+      "file": "validation.json",
+      "sha256": "1d9d7cb6f4a8633ac29f8e538616863232f9f408eb06717c3b1fb4fca1ba48e0"
+    },
+    {
+      "file": "capture-report.json",
+      "sha256": "70bf595c9c60e57a1ba820b19ac97e9e411ed49ce7cfda9dab946d0a26421496"
+    },
+    {
+      "file": "screenshots/01-viewing-settings.png",
+      "sha256": "546961820bf5062d3651d3e1298fc1e17dae26963d01b37b0e02089613c0d83c",
+      "dimensions": [
+        1280,
+        800
+      ]
+    },
+    {
+      "file": "screenshots/00-live-session-introduction.png",
+      "sha256": "aac09aa3dd681f524a4e85d5f7bac2bdb5a8981ee725845a1137b7a128de32e0",
+      "dimensions": [
+        1280,
+        800
+      ]
+    },
+    {
+      "file": "screenshots/02-live-youtube-session.png",
+      "sha256": "7fc914064f42a9a018ddff4feba9b993d3cbb5eb19325d790ea3a87fb4fbdd48",
+      "dimensions": [
+        1280,
+        800
+      ]
+    },
+    {
+      "file": "screenshots/03-live-checkpoint.png",
+      "sha256": "617fe83b74991e313ed0ff851604aa82ffcbbf1d2aace5f7ab616a160ee51ed8",
+      "dimensions": [
+        1280,
+        800
+      ]
+    },
+    {
+      "file": "screenshots/04-local-history.png",
+      "sha256": "9e495d912e6910a13956452c1420c7a14c8430e5f9a5247057fd84b7813f14d7",
+      "dimensions": [
+        1280,
+        800
+      ]
+    },
+    {
+      "file": "icon-128.png",
+      "sha256": "ce26140864c9a61c69db836828dfab1a8c7cbb2d7f395d3a9c0a1ccc9aadf591",
+      "dimensions": [
+        128,
+        128
+      ]
+    },
+    {
+      "file": "promo-440x280.png",
+      "sha256": "b11e5ea2fb53b8d76a19b43f59bcf42ecd895439805cb666dcb5bd469b4ed477",
+      "dimensions": [
+        440,
+        280
+      ]
+    },
+    {
+      "file": "STORE_DRAFT.md",
+      "sha256": "77c33a2e8c2b5dfb693e0018ef0fa5953f172050b7d8088220128cc4f34364ce"
+    },
+    {
+      "file": "STORE_IDENTITY.md",
+      "sha256": "e0017c6b676a926344b47113ecc37b7a1171a2409fda73a7f1a0e84f00744ece"
+    },
+    {
+      "file": "STORAGE_DECISION.md",
+      "sha256": "ea574149c8b9beabfac7367c4627cc0bd12e4010f36b8a934720f7d1db5b0a9a"
+    },
+    {
+      "file": "PRIVACY.md",
+      "sha256": "6010909505bf96d90b2e902203ee5cf93553a9af23012ddda53311ad97c2291d"
+    },
+    {
+      "file": "LISTING.md",
+      "sha256": "3cf74aec10d92c082a91e0d180c4b3993405d431d91b7b992e3f7cf10fabcca4"
+    }
+  ]
+}

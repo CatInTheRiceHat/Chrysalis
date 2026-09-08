@@ -1,0 +1,13 @@
+{
+  "origin": "https://chrysaylis-fl5q0q5rk-catinthericehat.vercel.app",
+  "checkedAt": "2026-09-08T05:01:46.377Z",
+  "passed": false,
+  "routes": [],
+  "assets": [],
+  "errors": [],
+  "externalRequests": [
+    "https://vercel.com",
+    "https://accounts.google.com"
+  ],
+  "failure": "Deployment protection prevents anonymous page inspection"
+}

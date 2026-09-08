@@ -33,3 +33,16 @@ until pushed, so the site links to the repository rather than an unpublished tag
 Root `vercel.json` targets this build but preserves Python API routing and schedules.
 Old account/study UI becomes notices on deployment: consumer checks must precede
 production cutover. See `../deployment/README.md`. Nothing has been deployed publicly.
+
+## Hosted verification and separate hosting
+
+Run `npm run build`, then
+`CHRYSALIS_SITE_URL=https://YOUR-DEPLOYMENT node tests/hosted.mjs` from this directory.
+It checks actual routing/refreshes, HTTPS, headers, mobile/desktop, links and asset hashes;
+it never visits API or cron paths. A protection/login response fails explicitly.
+Reports/screenshots go to `test-results/hosted-HOST/`.
+
+`vercel.json` here supports a separate static project without APIs, crons or legacy
+secrets. Root `../vercel.json` still preserves existing services. See
+`../deployment/launch-cutover.md` for the current production state and safe hosting steps;
+the original not-deployed statements above describe the earlier transition only.

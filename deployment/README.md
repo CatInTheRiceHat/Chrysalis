@@ -1,6 +1,10 @@
 # Public-site cutover and separate service retirement
 
-## Prepared, not deployed
+## Historical transition preparation
+
+**Launch update:** production had already deployed before launch preparation began.
+See [the current cutover/recovery runbook](launch-cutover.md) for observed hosting,
+access gaps and exact rollback steps. The following records the earlier preparation.
 
 Root `vercel.json` builds `public-site/` into `public-site/dist/`; `.vercelignore`
 excludes the original React/Flutter/extension source and historical assets from that
