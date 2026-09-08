@@ -1,0 +1,18 @@
+{
+  "browser": "153.0.8010.12",
+  "passed": true,
+  "routes": 5,
+  "checks": [
+    "375/760/1440px without horizontal overflow",
+    "keyboard skip link and menu/Escape",
+    "persistent light/dark themes",
+    "install source disclosure",
+    "contact destinations",
+    "404 recovery",
+    "zero external page requests"
+  ],
+  "limitations": [
+    "Email link verified against repository and markup, not delivery.",
+    "No human screen-reader test."
+  ]
+}

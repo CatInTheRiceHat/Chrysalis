@@ -36,9 +36,10 @@ as proof for every YouTube layout or as evidence of reduced scrolling time.
 Store submission still needs a publicly hosted policy URL, verified publisher/account
 and dashboard declarations, review of local unencrypted data handling against current
 policy, final metadata/artwork, and an installation/update identity decision. Public
-support Issues is verified and repository email is documented. The versioned screenshot command writes to `release/chrysalis-0.8.0-screenshots/`;
-review its capture report and final artwork before submitting. Old 0.7.1 images remain
-historical.
+support Issues is verified and repository email is documented. Eight versioned captures
+were generated from the verified ZIP in `release/chrysalis-0.8.0-screenshots/`, including
+five Store-sized candidates and a real one-minute live checkpoint. Review the capture
+report and final artwork before submitting. Old 0.7.1 images remain historical.
 
 The public-site build and local privacy pages are ready for review, not already published.
 See `STORE_DRAFT.md` for prepared copy and remaining owner decisions.

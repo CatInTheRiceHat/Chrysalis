@@ -1,0 +1,15 @@
+{
+  "browser": "153.0.8010.12",
+  "kind": "Unpacked extension on controlled YouTube fixtures",
+  "checks": [
+    "First visit opens one centered introduction; native focus containment, Escape, restored interaction and refresh suppression verified.",
+    "Page start and popup agree; SPA/refresh retain ID; multiple tabs do not double-count; time away/manual pause excluded; hidden timer keeps counting and restores.",
+    "Dark mode, reduced motion and 375px widget bounds checked; fixture theater, fullscreen restore and real 200% Chrome zoom checked.",
+    "Real pulses trigger centered check-ins; deliberate extension rearms; break ends paused; resume and finish sync to popup; disabled auto-intro stays off.",
+    "Continue without a timer creates no session; optional empty intention and Enter submission work; scripted submit is ignored; centered Finish saves the session."
+  ],
+  "errors": [],
+  "limitations": [
+    "No physical screen reader or native toolbar-popup usability test."
+  ]
+}
