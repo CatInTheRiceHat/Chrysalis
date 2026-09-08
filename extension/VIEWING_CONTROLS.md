@@ -67,7 +67,8 @@ private page JavaScript or recommendation data.
   potentially remaining. It does not claim complete coverage. This status remains
   available while controls are enabled even if the separate session indicator is off.
 
-Schema **4** retains the three boolean viewing preferences and adds experience defaults. Valid extension schemas 1/2/3 upgrade
+Schema **6** retains the three boolean viewing preferences and experience defaults,
+and adds extension-wide pause (default off). Valid extension schemas 1–5 upgrade
 without losing settings, sessions, summaries, timing or receipts; unknown/malformed
 records remain untouched. Existing serialized/revision-checked settings messages
 and sender restrictions are reused. No new permissions, telemetry, browsing records,
@@ -89,8 +90,10 @@ backend, player API or page-to-extension privileged messaging was added.
   captions rendering, playlist playback, fullscreen/theater/miniplayer variants and
   every YouTube experiment were not exhaustively exercised.
 - Extension reload/disable can invalidate old scripts without a final callback.
-  Refresh existing YouTube tabs for guaranteed cleanup; Restore ordinary layout
-  before disabling also removes enabled controls from connected tabs.
+  Visible old contexts now check validity locally about every five seconds and
+  remove their UI/observers. Hidden or frozen pages may defer this until visible.
+  Refresh installs the new content script; Pause Chrysalis immediately restores
+  ordinary layout across connected tabs without losing the saved control choices.
 
 ## Checks and manual verification
 
@@ -98,7 +101,7 @@ From `extension/`:
 
 ```sh
 npm ci
-npm run check                 # 40 Node tests, types, build, generated-file checks
+npm run check                 # 63 Node tests, types, build, generated-file checks
 npx playwright install chromium
 npm run test:browser          # foundation, session, viewing and experience suites
 npm run test:viewing          # viewing fixtures only, real unpacked extension

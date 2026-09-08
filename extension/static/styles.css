@@ -116,3 +116,20 @@ h1 { overflow-wrap: anywhere; }
 @media (prefers-color-scheme: dark) { :root[data-theme='system'] { --control-line: #9583a5; } }
 input:not([type='checkbox']), select, .secondary, #session-root input,
 #session-root button:not(.primary) { border-color: var(--control-line); }
+
+#checkpoint-controls { border: 1px solid var(--control-line); border-radius: 10px; padding: 14px; margin: 14px 0; }
+#checkpoint-copy { font-weight: 600; }
+#checkpoint-controls .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+#break-controls { display: block; }
+#break-controls button { margin-top: 10px; }
+
+.history-entry { border-top: 1px solid var(--control-line); padding: 20px 0; overflow-wrap: anywhere; }
+.history-entry dl { margin: 12px 0; } .history-entry dt { font-size: .8rem; opacity: .85; margin-top: 10px; }
+.history-entry dd { margin: 3px 0; } .target-revisions { padding-left: 20px; font-size: .85rem; }
+.reflection-note { white-space: pre-wrap; overflow-wrap: anywhere; }
+.reflection-form { margin: 16px 0; } .reflection-form fieldset { min-width: 0; border: 1px solid var(--control-line); border-radius: 10px; padding: 14px; }
+.reflection-form legend { font-weight: 600; } .reflection-answers { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0; }
+.reflection-answers label { display: inline-flex; align-items: center; gap: 6px; }
+#session-root .reflection-answers input, .reflection-answers input { width: auto; margin: 0; }
+textarea { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; color: inherit; background: transparent; border: 1px solid var(--control-line); border-radius: 6px; padding: 10px; }
+textarea:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }

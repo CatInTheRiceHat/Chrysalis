@@ -1,4 +1,4 @@
-import type { StorageSnapshot } from '../shared/types';
+import { emptyHistoryDetails, HISTORY_LIMIT, REVISION_LIMIT, type StorageSnapshot, type CurrentSession } from '../shared/types';
 
 export const MAX_GAP_MS = 5_000;
 export const OBSERVATION_MS = 2_000;
@@ -6,8 +6,8 @@ export const INTENTIONS = ['Studying', 'Watching a specific video', 'Entertainme
 export interface Plan { intention: string; targetMs: number | null }
 export type SessionCommand =
   { action: 'start' | 'edit'; plan: Plan } |
-  { action: 'break'; durationMs: number } |
-  { action: 'pause' | 'resume' | 'continue' | 'end-break' | 'finish' | 'reset' };
+  { action: 'break' | 'extend'; durationMs: number } |
+  { action: 'pause' | 'resume' | 'continue' | 'dismiss-checkpoint' | 'continue-untimed' | 'end-break' | 'finish' | 'reset' };
 export interface SessionMutation {
   requestId: string;
   expectedRevision: number;
@@ -33,12 +33,12 @@ export function validatePlan(plan: Plan): Plan {
   if (plan.targetMs !== null && (!Number.isSafeInteger(plan.targetMs) || plan.targetMs < 60_000 || plan.targetMs > 86_400_000 || plan.targetMs % 60_000 !== 0)) throw new SessionError('Choose a whole number of minutes from 1 to 1440, or no time target.');
   return { intention, targetMs: plan.targetMs };
 }
-export const counting = (state: StorageSnapshot) => ['active', 'checkpoint'].includes(state.currentSession.phase);
+export const counting = (state: StorageSnapshot) => !state.settings.extensionPaused && ['active', 'checkpoint'].includes(state.currentSession.phase);
 export const unfinished = (state: StorageSnapshot) => !['idle', 'finished'].includes(state.currentSession.phase);
 
 export function checkTarget(state: StorageSnapshot) {
   const s = state.currentSession;
-  if (state.settings.checkpointsEnabled && s.phase === 'active' && s.targetMs !== null && s.elapsedMs >= s.targetMs && !s.goalAcknowledged) {
+  if (!state.settings.extensionPaused && state.settings.checkpointsEnabled && s.phase === 'active' && s.targetMs !== null && s.elapsedMs >= s.targetMs && !s.goalAcknowledged) {
     s.phase = 'checkpoint'; s.goalAcknowledged = true; state.sessionRevision++;
   }
 }
@@ -51,16 +51,28 @@ function recover(state: StorageSnapshot, reason: 'browser-restart' | 'signal-gap
   }
   state.timing.anchor = null;
 }
+function endBreak(s: Exclude<CurrentSession, { phase: 'idle' }>, now: number) {
+  if (s.breakStartedAt !== null && s.breakUntil !== null) s.history.breakMs += Math.max(0, Math.min(now, s.breakUntil) - s.breakStartedAt);
+  s.breakStartedAt = null; s.breakUntil = null;
+}
+function reviseTarget(s: Exclude<CurrentSession, { phase: 'idle' }>, toMs: number | null, kind: 'edit' | 'extend' | 'untimed', now: number) {
+  if (s.targetMs === toMs) return;
+  s.history.targetRevisions.push({ at: Math.max(now, s.startedAt), fromMs: s.targetMs, toMs, kind });
+  if (s.history.targetRevisions.length > REVISION_LIMIT) { s.history.targetRevisions.shift(); s.history.omittedRevisions++; }
+  s.targetMs = toMs;
+}
 export function reconcile(state: StorageSnapshot, now: number, epoch: string) {
   if (state.timing.browserEpoch !== epoch) {
-    recover(state, 'browser-restart');
+    // A voluntary break retains its wall-clock deadline, but never resumes viewing.
+    if (state.currentSession.phase !== 'break') recover(state, 'browser-restart');
+    else state.sessionRevision++; // Reject commands left over from the previous browser epoch.
     state.timing = { browserEpoch: epoch, anchor: null, signals: [] };
   }
   const a = state.timing.anchor;
   if (a && (now < a.at || now - a.at > MAX_GAP_MS)) recover(state, 'signal-gap');
   const s = state.currentSession;
   if (s.phase === 'break' && s.breakUntil !== null && now >= s.breakUntil) {
-    s.phase = 'paused'; s.breakUntil = null; state.sessionRevision++;
+    endBreak(s, now); s.phase = 'paused'; state.sessionRevision++;
   }
 }
 // Only a short, observed interval may be credited. No start-to-now extrapolation.
@@ -102,6 +114,21 @@ export function boundary(state: StorageSnapshot, event: Boundary, now: number) {
   if (ends) { settle(state, now); state.timing.anchor = null; }
 }
 
+export function setExtensionPaused(state: StorageSnapshot, paused: boolean, now: number) {
+  if (paused === state.settings.extensionPaused) return;
+  if (paused) {
+    settle(state, now);
+    const s = state.currentSession;
+    if (s.phase !== 'idle' && s.phase !== 'finished') {
+      if (s.phase === 'break') endBreak(s, now);
+      s.phase = 'paused'; s.recoveryReason = null;
+    }
+    state.timing.anchor = null; state.timing.signals = [];
+  }
+  state.settings.extensionPaused = paused;
+  state.sessionRevision++; // Earlier commands stay stale even after re-enabling.
+}
+
 export function applyCommand(state: StorageSnapshot, mutation: SessionMutation, now: number) {
   const signature = JSON.stringify(mutation);
   const receipt = state.receipts.find(item => item.id === mutation.requestId);
@@ -114,45 +141,57 @@ export function applyCommand(state: StorageSnapshot, mutation: SessionMutation, 
     throw new StaleSessionError('Your session changed in another view. Review the latest state and try again.');
   }
   const command = mutation.command;
+  if (state.settings.extensionPaused && !['finish', 'reset', 'edit', 'pause'].includes(command.action)) throw new SessionError('Chrysalis is paused. Enable it before starting or resuming a session.');
   // Validate before modifying any state; failed requests cannot partially apply.
-  const plan = command.action === 'start' || command.action === 'edit' ? validatePlan(command.plan) : null;
-  if (command.action === 'break' && (!Number.isSafeInteger(command.durationMs) || command.durationMs < 60_000 || command.durationMs > 86_400_000 || command.durationMs % 60_000)) throw new SessionError('Choose a break of 1 to 1440 whole minutes.');
+  const unchangedTarget = command.action === 'edit' && s.phase !== 'idle' && command.plan.targetMs === s.targetMs;
+  const plan = command.action === 'start' || command.action === 'edit'
+    ? { ...validatePlan({ ...command.plan, targetMs: unchangedTarget ? null : command.plan.targetMs }), targetMs: command.plan.targetMs } : null;
+  if ((command.action === 'break' || command.action === 'extend') && (!Number.isSafeInteger(command.durationMs) || command.durationMs < 60_000 || command.durationMs > 86_400_000 || command.durationMs % 60_000)) throw new SessionError('Choose 1 to 1440 whole minutes.');
   const allowed: Record<SessionCommand['action'], string[]> = {
     start: ['idle', 'finished'], edit: ['active', 'paused', 'checkpoint', 'break'],
-    pause: ['active', 'checkpoint'], resume: ['paused'], continue: ['checkpoint'],
+    pause: ['active', 'checkpoint'], resume: ['paused', 'break'], continue: ['checkpoint'], 'dismiss-checkpoint': ['checkpoint'],
+    extend: ['checkpoint', 'active'], 'continue-untimed': ['checkpoint', 'active'],
     break: ['active', 'paused', 'checkpoint'], 'end-break': ['break'],
     finish: ['active', 'paused', 'checkpoint', 'break'], reset: ['finished'],
   };
   if (!allowed[command.action].includes(s.phase)) throw new StaleSessionError('This action is not available in the current session state.');
+  // Continuation is offered only for an already reached target, including a dismissed prompt.
+  if (['extend', 'continue-untimed'].includes(command.action) && (s.phase === 'idle' || s.targetMs === null || s.elapsedMs < s.targetMs)) throw new SessionError('This target has not been reached. Edit the plan to change it.');
+  if (command.action === 'extend' && s.phase !== 'idle' && s.elapsedMs + command.durationMs + Math.max(0, state.timing.anchor ? now - state.timing.anchor.at : 0) > 86_400_000) throw new SessionError('The revised total target must be at most 1440 minutes. Choose less additional time or continue without a target.');
   settle(state, now);
   state.timing.anchor = null;
   switch (command.action) {
     case 'start':
       state.currentSession = { phase: 'active', id: mutation.requestId, ...plan!, startedAt: now,
-        originalTargetMs: plan!.targetMs, elapsedMs: 0, goalAcknowledged: false, breakUntil: null,
+        originalTargetMs: plan!.targetMs, elapsedMs: 0, history: emptyHistoryDetails(), breakStartedAt: null, goalAcknowledged: false, breakUntil: null,
         finishedAt: null, recoveryReason: null };
       break;
     case 'reset': state.currentSession = { phase: 'idle' }; break;
     default:
       if (s.phase === 'idle') throw new SessionError('No session is open.');
       s.recoveryReason = null;
+      if (s.phase === 'break' && ['end-break', 'resume', 'finish'].includes(command.action)) endBreak(s, now);
       if (command.action === 'edit') {
         s.intention = plan!.intention;
         if (s.targetMs !== plan!.targetMs) {
-          s.targetMs = plan!.targetMs; s.goalAcknowledged = false;
+          reviseTarget(s, plan!.targetMs, 'edit', now); s.goalAcknowledged = false;
           if (s.phase === 'checkpoint') s.phase = 'active';
         }
       } else if (command.action === 'pause' || command.action === 'end-break') {
         s.phase = 'paused'; s.breakUntil = null;
-      } else if (command.action === 'resume' || command.action === 'continue') {
-        s.phase = 'active';
+      } else if (command.action === 'resume' || command.action === 'continue' || command.action === 'dismiss-checkpoint') {
+        s.phase = 'active'; s.breakUntil = null;
+      } else if (command.action === 'extend' || command.action === 'continue-untimed') {
+        reviseTarget(s, command.action === 'extend' ? s.elapsedMs + command.durationMs : null, command.action === 'extend' ? 'extend' : 'untimed', now);
+        s.goalAcknowledged = false; s.phase = 'active';
       } else if (command.action === 'break') {
-        s.phase = 'break'; s.breakUntil = now + command.durationMs;
+        s.phase = 'break'; s.breakStartedAt = now; s.breakUntil = now + command.durationMs;
       } else if (command.action === 'finish') {
         s.phase = 'finished'; s.finishedAt = Math.max(now, s.startedAt); s.breakUntil = null;
         state.completedSessions = [{ id: s.id, intention: s.intention, startedAt: s.startedAt,
           originalTargetMs: s.originalTargetMs, targetMs: s.targetMs, elapsedMs: s.elapsedMs,
-          finishedAt: s.finishedAt, reflection: null }, ...state.completedSessions].slice(0, 100);
+          finishedAt: s.finishedAt, history: structuredClone(s.history), reflection: null, reflectionPrompted: false }, ...state.completedSessions].slice(0, HISTORY_LIMIT);
+        state.historyRevision++;
       }
   }
   state.sessionRevision++;
@@ -164,4 +203,13 @@ export function applyCommand(state: StorageSnapshot, mutation: SessionMutation, 
 export function clockText(ms: number) {
   const seconds = Math.floor(ms / 1000);
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+export function durationText(ms: number): string {
+  const seconds = Math.ceil(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  return seconds % 60 === 0 ? `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}` : `${minutes} min ${seconds % 60} sec`;
+}
+export function breakCountdown(until: number, now = Date.now()): string {
+  return clockText(Math.ceil(Math.max(0, until - now) / 1000) * 1000);
 }

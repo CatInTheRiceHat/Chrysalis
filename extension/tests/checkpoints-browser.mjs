@@ -1,0 +1,159 @@
+import { chromium, expect } from '@playwright/test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+const profile = await mkdtemp(path.join(tmpdir(), 'chrysalis-checkpoints-'));
+const extension = path.resolve(process.env.CHRYSALIS_EXTENSION_PATH ?? 'dist'), checks = [], errors = [];
+const launch = () => chromium.launchPersistentContext(profile, { channel: 'chromium', headless: true,
+  viewport: { width: 1100, height: 900 }, args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`] });
+const fixture = `<!doctype html><style>body{margin:0;font:16px system-ui}ytd-app,ytd-watch-flexy{display:block}header{height:60px}#player{height:300px;background:#222}video{height:250px}#below{max-width:800px;margin:auto}</style><ytd-app><header><input placeholder="Search"></header><ytd-watch-flexy><div id="player"><video controls muted></video><button id="fullscreen">Fullscreen</button></div><div id="below"><h1>Video title</h1></div></ytd-watch-flexy></ytd-app><script>document.querySelector('#fullscreen').onclick=()=>document.querySelector('#player').requestFullscreen(); const canvas=document.createElement('canvas'); canvas.width=160;canvas.height=90; const c=canvas.getContext('2d');setInterval(()=>{c.fillStyle='teal';c.fillRect(0,0,160,90)},100);document.querySelector('video').srcObject=canvas.captureStream(10);document.querySelector('video').play();</script>`;
+let context, worker, popup;
+try {
+  await mkdir('test-results', { recursive: true });
+  context = await launch();
+  context.on('page', p => p.on('pageerror', e => errors.push(e.message)));
+  worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
+  const base = `chrome-extension://${new URL(worker.url()).hostname}/`;
+  const route = () => context.route('https://www.youtube.com/**', r => r.fulfill({ contentType: 'text/html', body: fixture }));
+  await route();
+  popup = await context.newPage(); await popup.goto(`${base}popup.html`); await popup.locator('#intro-skip').click();
+  const state = () => popup.evaluate(async () => {
+    const reply = await chrome.runtime.sendMessage({ channel: 'chrysalis/v1', type: 'GET_SNAPSHOT' });
+    if (!reply.ok) throw new Error(reply.error); return reply.snapshot;
+  });
+  const seedNearTarget = () => worker.evaluate(async () => {
+    const key = 'chrysalis.extension.v1', s = (await chrome.storage.local.get(key))[key];
+    s.currentSession.elapsedMs = s.currentSession.targetMs - 500;
+    s.timing.anchor = null; s.sequence++;
+    await chrome.storage.local.set({ [key]: s });
+  });
+  await popup.locator('#time-target').selectOption('custom'); await popup.locator('#custom-minutes').fill('1');
+  await popup.locator('#submit-plan').click();
+  const yt = await context.newPage(); await yt.goto('https://www.youtube.com/watch?v=checkpoint');
+  const indicator = yt.locator('#chrysalis-extension-indicator');
+  await expect(indicator).toBeVisible();
+  await yt.locator('#fullscreen').click(); await expect(indicator).toBeHidden();
+  await seedNearTarget(); await yt.bringToFront();
+  await expect.poll(async () => (await state()).currentSession.phase, { timeout: 15000 }).toBe('checkpoint');
+  assert.equal(await yt.evaluate(() => Boolean(document.fullscreenElement)), true);
+  await expect(indicator).toBeHidden();
+  await yt.evaluate(() => document.exitFullscreen());
+  await expect(indicator.locator('#checkpoint-copy')).toHaveText('You planned 1 minute. What would you like to do next?');
+  const playerBox = await yt.locator('#player').boundingBox(), box = await indicator.boundingBox();
+  assert(box.y >= playerBox.y + playerBox.height);
+  const videoTime = await yt.locator('video').evaluate(v => v.currentTime);
+  await expect.poll(() => yt.locator('video').evaluate(v => v.currentTime)).toBeGreaterThan(videoTime);
+  assert.equal(await yt.locator('video').evaluate(v => v.paused), false);
+  await yt.screenshot({ path: 'test-results/checkpoint-indicator.png', fullPage: true });
+  await popup.setViewportSize({ width: 375, height: 780 });
+  await popup.screenshot({ path: 'test-results/checkpoint-popup.png', fullPage: true });
+  assert.equal(await popup.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  checks.push('Real foreground pulses cross a seeded target during fullscreen; no forced exit, player obstruction or playback interruption; choices render afterward and at 375px.');
+
+  // Force the worker to stop while the one persisted checkpoint is pending.
+  const cdp = await context.newCDPSession(popup), versions = new Map(), stopped = new Set();
+  cdp.on('ServiceWorker.workerVersionUpdated', ({ versions: list }) => list.forEach(v => { versions.set(v.versionId, v); if (v.runningStatus === 'stopped') stopped.add(v.versionId); }));
+  await cdp.send('ServiceWorker.enable');
+  await expect.poll(() => [...versions.values()].some(v => v.scriptURL === `${base}background.js`)).toBe(true);
+  const version = [...versions.values()].find(v => v.scriptURL === `${base}background.js`);
+  const checkpointRevision = (await state()).sessionRevision;
+  await cdp.send('ServiceWorker.stopWorker', { versionId: version.versionId });
+  await expect.poll(() => stopped.has(version.versionId)).toBe(true);
+  assert.equal((await state()).sessionRevision, checkpointRevision);
+  worker = context.serviceWorkers().find(w => w.url() === `${base}background.js`) ?? await context.waitForEvent('serviceworker');
+  await indicator.locator('[data-choice="dismiss-checkpoint"]').click();
+  await expect(indicator.locator('#checkpoint-controls')).toBeHidden();
+  await expect(indicator.locator('#phase')).toContainText('No additional time chosen');
+  assert.equal((await state()).currentSession.targetMs, 60000);
+  const second = await context.newPage(); await second.goto('https://www.youtube.com/watch?v=other');
+  await expect(second.locator('#checkpoint-controls')).toBeHidden();
+  await yt.reload(); await expect(indicator.locator('#checkpoint-controls')).toBeHidden();
+  await expect(indicator).toHaveCount(1); await second.close();
+  checks.push('Worker stop/restart retains one pending checkpoint; dismissal synchronizes across another tab and refresh without revising or reopening the target.');
+
+  // Explicit target changes rearm; choose an additional duration in the indicator.
+  await popup.bringToFront(); await popup.locator('#edit-plan').click(); await popup.locator('#custom-minutes').fill('2'); await popup.locator('#submit-plan').click();
+  await popup.locator('#edit-plan').click(); await popup.locator('#custom-minutes').fill('1'); await popup.locator('#submit-plan').click();
+  await yt.bringToFront(); await expect(indicator.locator('#checkpoint-controls')).toBeVisible();
+  await indicator.locator('[data-choice="extend"]').evaluate(b => b.click());
+  assert.equal((await state()).currentSession.targetMs, 60000, 'synthetic webpage clicks cannot extend the target');
+  await indicator.locator('#additional-duration').selectOption('custom'); await indicator.locator('#additional-minutes').fill('0');
+  await indicator.locator('[data-choice="extend"]').click(); await expect(indicator.locator('#error')).toBeVisible();
+  assert.equal((await state()).currentSession.phase, 'checkpoint');
+  await indicator.locator('#additional-minutes').fill('1'); await indicator.locator('[data-choice="extend"]').click();
+  await expect(indicator.locator('#checkpoint-controls')).toBeHidden();
+  let s = await state(); assert.equal(s.currentSession.originalTargetMs, 60000);
+  assert(s.currentSession.targetMs >= s.currentSession.elapsedMs + 57000);
+  assert.equal(s.currentSession.goalAcknowledged, false);
+  const extendedTarget = s.currentSession.targetMs;
+  await popup.bringToFront(); await popup.locator('#edit-plan').click();
+  await popup.locator('#intention').selectOption('Studying'); await popup.locator('#submit-plan').click();
+  await expect(popup.locator('#session-intention')).toHaveText('Studying');
+  assert.equal((await state()).currentSession.targetMs, extendedTarget);
+  await seedNearTarget(); await yt.bringToFront();
+  await expect(indicator.locator('#checkpoint-controls')).toBeVisible({ timeout: 15000 });
+  await indicator.locator('[data-choice="continue-untimed"]').click();
+  assert.equal((await state()).currentSession.targetMs, null);
+  checks.push('Explicit target revisions rearm; custom validation rejects zero; additional time starts at measured decision time; next checkpoint can continue untimed while retaining original target.');
+
+  await indicator.locator('#break-duration').selectOption('custom'); await indicator.locator('#break-minutes').fill('2');
+  await indicator.locator('[data-choice="break"]').click();
+  await expect(indicator.locator('#break-countdown')).toContainText('wall-clock break time');
+  const beforeBreak = (await state()).currentSession.elapsedMs;
+  const initialCountdown = await indicator.locator('#break-countdown').textContent();
+  await expect.poll(() => indicator.locator('#break-countdown').textContent()).not.toBe(initialCountdown);
+  assert.equal((await state()).currentSession.elapsedMs, beforeBreak);
+  await yt.reload(); await expect(indicator.locator('#break-countdown')).toBeVisible();
+  await indicator.getByRole('button', { name: 'End break', exact: true }).click();
+  assert.equal((await state()).currentSession.phase, 'paused');
+  await indicator.locator('[data-choice="break"]').click();
+  await indicator.getByRole('button', { name: 'Resume session now', exact: true }).click();
+  assert.equal((await state()).currentSession.phase, 'active');
+  await indicator.locator('[data-choice="break"]').click();
+  const deadline = (await state()).currentSession.breakUntil, breakElapsed = (await state()).currentSession.elapsedMs;
+  await yt.screenshot({ path: 'test-results/break-indicator.png', fullPage: true });
+  checks.push('Custom break duration and wall-clock countdown work in-page; refresh preserves break, End break stays paused, and explicit Resume returns to active.');
+
+  await context.close(); context = await launch(); await route();
+  worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
+  popup = await context.newPage(); await popup.goto(`${base}popup.html`); await popup.bringToFront();
+  await expect.poll(() => popup.evaluate(() => document.hidden)).toBe(false);
+  await expect(popup.locator('#session-phase')).toHaveText('Break');
+  assert.equal((await state()).currentSession.breakUntil, deadline);
+  assert.equal((await state()).currentSession.elapsedMs, breakElapsed);
+  // Only seed the deadline proximity; normal reads reconcile its actual expiry.
+  await worker.evaluate(async () => {
+    const key = 'chrysalis.extension.v1', s = (await chrome.storage.local.get(key))[key];
+    s.currentSession.breakUntil = Date.now() + 1500; s.sequence++; await chrome.storage.local.set({ [key]: s });
+  });
+  await expect(popup.locator('#session-phase')).toHaveText('Paused', { timeout: 10000 }).catch(async error => {
+    console.log('Expiry diagnostic', { visible: await popup.evaluate(() => !document.hidden), now: Date.now(), saved: await state() }); throw error;
+  });
+  assert.equal((await state()).currentSession.elapsedMs, breakElapsed);
+  await popup.locator('[data-choice="break"]').click(); await popup.locator('[data-action="finish"]').click();
+  await expect(popup.locator('#session-phase')).toHaveText('Finished');
+  assert.equal((await state()).completedSessions.length, 1);
+  checks.push('Actual browser restart preserves an unexpired break deadline; expiry reconciles to paused without crediting time; finishing a break saves one summary.');
+  const options = await context.newPage(); await options.goto(`${base}options.html`);
+  await options.locator('#checkpoints-enabled').uncheck();
+  await expect(options.locator('#save-status')).toHaveText('Saved on this device.');
+  await popup.bringToFront(); await popup.locator('#time-target').selectOption('custom'); await popup.locator('#custom-minutes').fill('1');
+  await popup.locator('#submit-plan').click(); await expect(popup.locator('#session-phase')).toHaveText('Active');
+  assert.equal((await state()).settings.checkpointsEnabled, false); await seedNearTarget();
+  const disabledPage = await context.newPage(); await disabledPage.goto('https://www.youtube.com/watch?v=disabled');
+  await expect.poll(async () => (await state()).currentSession.elapsedMs, { timeout: 15000 }).toBeGreaterThanOrEqual(60000);
+  assert.equal((await state()).currentSession.phase, 'active');
+  await expect(disabledPage.locator('#checkpoint-controls')).toBeHidden();
+  await options.locator('#checkpoints-enabled').check();
+  await expect(disabledPage.locator('#checkpoint-controls')).toBeVisible();
+  await disabledPage.locator('#chrysalis-extension-indicator #dismiss').click();
+  await expect(disabledPage.locator('#checkpoint-controls')).toBeHidden();
+  await disabledPage.reload(); await expect(disabledPage.locator('#checkpoint-controls')).toBeHidden();
+  checks.push('Disabling prompts leaves foreground timing active; reenabling offers the previously unacknowledged target once; the close button dismisses it persistently and leaves the timer.');
+  assert.deepEqual(errors, []);
+  await writeFile('test-results/checkpoints-browser-report.json', JSON.stringify({ browser: context.browser().version(), checks,
+    note: 'Actual unpacked extension on controlled YouTube-origin fixtures; near-target elapsed values and expiry proximity seeded only in temporary profile. No live YouTube checkpoint verification.' }, null, 2));
+  console.log(checks.join('\n'));
+} finally { await context?.close(); await rm(profile, { recursive: true, force: true }); }

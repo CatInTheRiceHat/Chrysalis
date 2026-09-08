@@ -1,18 +1,20 @@
-import type { SessionDisplay, Settings, StorageSnapshot } from './types';
-import { display, finite, keys, natural, record, settings, settingsPatch, snapshot } from './validation';
+import type { Reflection, SessionDisplay, Settings, StorageSnapshot } from './types';
+import { display, finite, keys, natural, record, reflection, settings, settingsPatch, snapshot } from './validation';
 import { validatePlan, type Observation, type SessionMutation } from '../session/model';
 
 export const CHANNEL = 'chrysalis/v1' as const;
 export type Request = { channel: typeof CHANNEL } & (
   { type: 'PING' } | { type: 'GET_SETTINGS' } | { type: 'GET_SNAPSHOT' } | { type: 'GET_DISPLAY' } |
-  { type: 'OPEN_PAGE'; page: 'session' | 'edit' | 'settings' } |
-  { type: 'DELETE_DATA'; scope: 'history' | 'all'; expectedRevision: number; expectedSessionRevision: number } |
+  { type: 'OPEN_PAGE'; page: 'session' | 'edit' | 'settings' | 'history' } |
+  { type: 'DELETE_DATA'; scope: 'history' | 'all'; expectedRevision: number; expectedSessionRevision: number; expectedHistoryRevision: number } |
+  { type: 'OFFER_REFLECTION'; sessionId: string } |
+  { type: 'HISTORY'; sessionId: string; expectedRevision: number; change: { action: 'delete' } | { action: 'reflect'; reflection: Reflection | null } } |
   { type: 'SESSION_CONTROL'; mutation: SessionMutation } |
   { type: 'SESSION'; mutation: SessionMutation } | { type: 'OBSERVE'; sample: Observation } |
   { type: 'UPDATE_SETTINGS'; patch: Partial<Settings>; expectedRevision: number }
 );
 export type Reply = { ok: true } & (
-  { type: 'OPENED' } | { type: 'PONG'; version: string } |
+  { type: 'REFLECTION_OFFER'; offered: boolean; snapshot: StorageSnapshot } | { type: 'OPENED' } | { type: 'PONG'; version: string } |
   { type: 'SETTINGS'; settings: Settings; revision: number } |
   { type: 'DISPLAY'; settings: Settings; session: SessionDisplay; sequence: number } |
   { type: 'SNAPSHOT'; snapshot: StorageSnapshot }
@@ -34,17 +36,29 @@ function mutation(value: unknown): value is SessionMutation {
   if (c.action === 'start' || c.action === 'edit') {
     if (!keys(c, ['action', 'plan']) || !record(c.plan) || !keys(c.plan, ['intention', 'targetMs']) ||
         typeof c.plan.intention !== 'string' || !(c.plan.targetMs === null || natural(c.plan.targetMs))) return false;
-    try { validatePlan({ intention: c.plan.intention, targetMs: c.plan.targetMs }); return true; } catch { return false; }
+    try {
+      // Edits may retain a millisecond-precise extended target; the model validates
+      // newly chosen targets as whole minutes against the authoritative plan.
+      validatePlan({ intention: c.plan.intention, targetMs: c.action === 'edit' ? null : c.plan.targetMs });
+      if (c.action === 'edit' && c.plan.targetMs !== null && (c.plan.targetMs < 1 || c.plan.targetMs > 86400000)) return false;
+      return true;
+    } catch { return false; }
   }
-  if (c.action === 'break') return keys(c, ['action', 'durationMs']) && natural(c.durationMs) &&
+  if (c.action === 'break' || c.action === 'extend') return keys(c, ['action', 'durationMs']) && natural(c.durationMs) &&
     c.durationMs >= 60_000 && c.durationMs <= 86_400_000 && c.durationMs % 60_000 === 0;
-  return keys(c, ['action']) && typeof c.action === 'string' && ['pause', 'resume', 'continue', 'end-break', 'finish', 'reset'].includes(c.action);
+  return keys(c, ['action']) && typeof c.action === 'string' && ['pause', 'resume', 'continue', 'dismiss-checkpoint', 'continue-untimed', 'end-break', 'finish', 'reset'].includes(c.action);
 }
 export function parseRequest(value: unknown): Request | null {
   if (!record(value) || value.channel !== CHANNEL) return null;
-  if (value.type === 'OPEN_PAGE') return keys(value, ['channel', 'type', 'page']) && typeof value.page === 'string' && ['session', 'edit', 'settings'].includes(value.page) ? value as Request : null;
-  if (value.type === 'DELETE_DATA') return keys(value, ['channel', 'type', 'scope', 'expectedRevision', 'expectedSessionRevision']) && typeof value.scope === 'string' && ['history', 'all'].includes(value.scope) && natural(value.expectedRevision) && natural(value.expectedSessionRevision) ? value as Request : null;
-  if (value.type === 'SESSION_CONTROL') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) && ['pause', 'resume', 'finish', 'continue', 'end-break'].includes(value.mutation.command.action) ? value as Request : null;
+  if (value.type === 'OFFER_REFLECTION') return keys(value, ['channel', 'type', 'sessionId']) && typeof value.sessionId === 'string' && value.sessionId.length > 0 && value.sessionId.length <= 128 ? value as Request : null;
+  if (value.type === 'HISTORY') {
+    const c = value.change;
+    return keys(value, ['channel', 'type', 'sessionId', 'expectedRevision', 'change']) && typeof value.sessionId === 'string' && value.sessionId.length > 0 && value.sessionId.length <= 128 && natural(value.expectedRevision) && record(c) &&
+      ((c.action === 'delete' && keys(c, ['action'])) || (c.action === 'reflect' && keys(c, ['action', 'reflection']) && reflection(c.reflection))) ? value as Request : null;
+  }
+  if (value.type === 'OPEN_PAGE') return keys(value, ['channel', 'type', 'page']) && typeof value.page === 'string' && ['session', 'edit', 'settings', 'history'].includes(value.page) ? value as Request : null;
+  if (value.type === 'DELETE_DATA') return keys(value, ['channel', 'type', 'scope', 'expectedRevision', 'expectedSessionRevision', 'expectedHistoryRevision']) && typeof value.scope === 'string' && ['history', 'all'].includes(value.scope) && natural(value.expectedRevision) && natural(value.expectedSessionRevision) && natural(value.expectedHistoryRevision) ? value as Request : null;
+  if (value.type === 'SESSION_CONTROL') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) && ['pause', 'resume', 'finish', 'extend', 'break', 'continue', 'dismiss-checkpoint', 'continue-untimed', 'end-break'].includes(value.mutation.command.action) ? value as Request : null;
   if (value.type === 'SESSION') return keys(value, ['channel', 'type', 'mutation']) && mutation(value.mutation) ? value as Request : null;
   if (value.type === 'OBSERVE') {
     const s = value.sample;
@@ -62,6 +76,7 @@ export function isReply(value: unknown): value is Reply {
   if (!record(value)) return false;
   if (value.ok === false) return typeof value.code === 'string' && ['INVALID', 'FORBIDDEN', 'STORAGE', 'CONFLICT'].includes(value.code) && typeof value.error === 'string';
   if (value.ok !== true) return false;
+  if (value.type === 'REFLECTION_OFFER') return typeof value.offered === 'boolean' && snapshot(value.snapshot);
   if (value.type === 'OPENED') return true;
   if (value.type === 'PONG') return typeof value.version === 'string';
   if (value.type === 'SETTINGS') return settings(value.settings) && natural(value.revision);
@@ -78,9 +93,13 @@ export function supportedUrl(url: string | undefined): boolean {
 export type SenderRole = 'page' | 'content' | null;
 export function senderRole(sender: chrome.runtime.MessageSender, extensionId: string): SenderRole {
   if (sender.id !== extensionId) return null;
-  const base = `chrome-extension://${extensionId}/`;
-  if ([`${base}popup.html`, `${base}options.html`, `${base}popup.html#edit`].includes(sender.url ?? '') &&
-      (sender.frameId === undefined || sender.frameId === 0)) return 'page';
+  try {
+    const url = new URL(sender.url ?? '');
+    // Fragments navigate within these same trusted documents, including settings
+    // section anchors. They do not grant a new document access to state.
+    if (url.protocol === 'chrome-extension:' && url.hostname === extensionId && url.search === '' &&
+        ['/popup.html', '/options.html'].includes(url.pathname) && (sender.frameId === undefined || sender.frameId === 0)) return 'page';
+  } catch { /* Not an extension-page URL. */ }
   if (sender.tab?.id !== undefined && sender.frameId === 0 && supportedUrl(sender.url) &&
       (!sender.origin || sender.origin === 'https://www.youtube.com')) return 'content';
   return null;

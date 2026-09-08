@@ -2,7 +2,7 @@ import {chromium,expect} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';import path from 'node:path';
-const profile=await mkdtemp(path.join(tmpdir(),'chrysalis-experience-live-'));const ext=path.resolve('dist');let context;const checks=[];
+const profile=await mkdtemp(path.join(tmpdir(),'chrysalis-experience-live-'));const ext=path.resolve(process.env.CHRYSALIS_EXTENSION_PATH ?? 'dist');let context;const checks=[];
 await mkdir('test-results',{recursive:true});
 try {
  context=await chromium.launchPersistentContext(profile,{channel:'chromium',headless:true,viewport:{width:1440,height:1000},args:[`--disable-extensions-except=${ext}`,`--load-extension=${ext}`]});

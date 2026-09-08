@@ -5,7 +5,7 @@ import { sessionDisplay } from './types';
 
 export function createHandler(store: Store, extensionId: string, version: string,
   isForeground: (sender: chrome.runtime.MessageSender) => Promise<boolean> = async () => false,
-  openPage: (page: 'session' | 'edit' | 'settings') => Promise<void> = async () => { throw new Error('Page opening unavailable'); }) {
+  openPage: (page: 'session' | 'edit' | 'settings' | 'history') => Promise<void> = async () => { throw new Error('Page opening unavailable'); }) {
   return async (value: unknown, sender: chrome.runtime.MessageSender): Promise<Reply> => {
     const role = senderRole(sender, extensionId);
     if (!role) return { ok: false, code: 'FORBIDDEN', error: 'This sender is not allowed.' };
@@ -16,8 +16,10 @@ export function createHandler(store: Store, extensionId: string, version: string
     }
     try {
       switch (request.type) {
+        case 'OFFER_REFLECTION': return { ok: true, type: 'REFLECTION_OFFER', ...await store.offerReflection(request.sessionId) };
+        case 'HISTORY': return { ok: true, type: 'SNAPSHOT', snapshot: await store.changeHistory(request.sessionId, request.expectedRevision, request.change) };
         case 'OPEN_PAGE': await openPage(request.page); return { ok: true, type: 'OPENED' };
-        case 'DELETE_DATA': return { ok: true, type: 'SNAPSHOT', snapshot: await store.deleteData(request.scope, request.expectedRevision, request.expectedSessionRevision) };
+        case 'DELETE_DATA': return { ok: true, type: 'SNAPSHOT', snapshot: await store.deleteData(request.scope, request.expectedRevision, request.expectedSessionRevision, request.expectedHistoryRevision) };
         case 'SESSION_CONTROL': {
           const state = await store.execute(request.mutation);
           return { ok: true, type: 'DISPLAY', settings: state.settings, session: sessionDisplay(state), sequence: state.sequence };

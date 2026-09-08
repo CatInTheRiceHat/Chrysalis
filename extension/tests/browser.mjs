@@ -7,7 +7,7 @@ import path from 'node:path';
 // Real unpacked extension + real Chrome APIs, isolated temporary browser profile.
 // Default uses a controlled page at the supported origin; LIVE_YOUTUBE=1 also
 // checks the actual public YouTube website, without signing in.
-const extensionPath = path.resolve('dist');
+const extensionPath = path.resolve(process.env.CHRYSALIS_EXTENSION_PATH ?? 'dist');
 const profile = await mkdtemp(path.join(tmpdir(), 'chrysalis-extension-test-'));
 const results = [];
 const errors = [];
@@ -78,7 +78,7 @@ try {
     assert.equal(result.exceptionDetails, undefined, JSON.stringify(result.exceptionDetails));
     return result.result.value;
   }
-  const bundle = await readFile('dist/content.js', 'utf8');
+  const bundle = await readFile(path.join(extensionPath, 'content.js'), 'utf8');
   await isolated(bundle);
   await isolated(bundle);
   await expect(indicator).toHaveCount(1);

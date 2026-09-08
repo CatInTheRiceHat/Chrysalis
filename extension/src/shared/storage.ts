@@ -1,6 +1,6 @@
-import { defaultSnapshot, type Settings, type StorageSnapshot } from './types';
-import { migrate, settingsPatch, snapshot } from './validation';
-import { applyCommand, boundary, observe, reconcile, checkTarget, type Boundary, type Observation, type Observer, type SessionMutation } from '../session/model';
+import { defaultSnapshot, type Reflection, type Settings, type StorageSnapshot } from './types';
+import { migrate, reflection, settingsPatch, snapshot } from './validation';
+import { applyCommand, boundary, observe, reconcile, checkTarget, setExtensionPaused, type Boundary, type Observation, type Observer, type SessionMutation } from '../session/model';
 
 export const STORAGE_KEY = 'chrysalis.extension.v1';
 export interface StorageAdapter {
@@ -19,7 +19,7 @@ export function createStore(adapter: StorageAdapter, environment?: { now(): numb
   }
   async function read(now = environment?.now() ?? Date.now()): Promise<StorageSnapshot> {
     const value = await adapter.read();
-    const state = value === undefined ? defaultSnapshot() : migrate(value);
+    const state = value === undefined ? defaultSnapshot() : migrate(value, now);
     if (environment) reconcile(state, now, await environment.epoch());
     if (value !== undefined && JSON.stringify(value) !== JSON.stringify(state)) {
       state.sequence++; await adapter.write(state);
@@ -49,29 +49,50 @@ export function createStore(adapter: StorageAdapter, environment?: { now(): numb
       if (existing === undefined) await adapter.write(await read());
       else await read();
     }),
-    updateSettings: (patch: Partial<Settings>, expectedRevision: number) => serialize(async () => {
+    updateSettings: (patch: Partial<Settings>, expectedRevision: number) => transaction((state, now) => {
       if (!settingsPatch(patch)) throw new Error('Invalid settings.');
-      const current = await read();
-      if (expectedRevision !== current.revision) throw new ConflictError('Settings changed in another window. Review the latest settings and try again.');
-      const next = { ...current, revision: current.revision + 1, sequence: current.sequence + 1, settings: { ...current.settings, ...patch } };
-      if (patch.checkpointsEnabled === false && next.currentSession.phase === 'checkpoint') { next.currentSession.phase = 'active'; next.sessionRevision++; }
-      checkTarget(next);
-      if (!snapshot(next)) throw new Error('Cannot save invalid data.');
-      await adapter.write(next);
-      return next;
+      if (expectedRevision !== state.revision) throw new ConflictError('Settings changed in another window. Review the latest settings and try again.');
+      if (patch.extensionPaused !== undefined) setExtensionPaused(state, patch.extensionPaused, now);
+      state.settings = { ...state.settings, ...patch }; state.revision++;
+      if (patch.checkpointsEnabled === false && state.currentSession.phase === 'checkpoint') { state.currentSession.phase = 'active'; state.sessionRevision++; }
+      checkTarget(state);
     }),
-    deleteData: (scope: 'history' | 'all', expectedRevision: number, expectedSessionRevision: number) => transaction(state => {
-      if (state.revision !== expectedRevision || state.sessionRevision !== expectedSessionRevision) throw new ConflictError('Chrysalis changed in another view. Review the latest state before deleting.');
+    deleteData: (scope: 'history' | 'all', expectedRevision: number, expectedSessionRevision: number, expectedHistoryRevision?: number) => transaction(state => {
+      if (state.revision !== expectedRevision || state.sessionRevision !== expectedSessionRevision || (expectedHistoryRevision !== undefined && state.historyRevision !== expectedHistoryRevision)) throw new ConflictError('Chrysalis changed in another view. Review the latest state before deleting.');
       if (scope === 'all') {
         // Keep monotonic, non-personal counters to reject old in-flight writes.
         const next = defaultSnapshot();
         next.revision = state.revision + 1; next.sessionRevision = state.sessionRevision + 1;
-        next.sequence = state.sequence;
+        next.sequence = state.sequence; next.historyRevision = state.historyRevision + 1;
         Object.assign(state, next);
       } else {
-        state.completedSessions = []; state.receipts = []; state.sessionRevision++;
+        state.completedSessions = []; state.receipts = []; state.sessionRevision++; state.historyRevision++;
         if (state.currentSession.phase === 'finished') state.currentSession = { phase: 'idle' };
       }
+    }),
+    offerReflection: (sessionId: string) => serialize(async () => {
+      const state = await read();
+      const summary = state.completedSessions.find(s => s.id === sessionId);
+      if (!summary || summary.reflectionPrompted || state.currentSession.phase !== 'finished' || state.currentSession.id !== sessionId) return { snapshot: state, offered: false };
+      summary.reflectionPrompted = true; state.historyRevision++; state.sequence++;
+      await adapter.write(state);
+      return { snapshot: state, offered: true };
+    }),
+    changeHistory: (sessionId: string, expectedRevision: number, change: { action: 'delete' } | { action: 'reflect'; reflection: Reflection | null }) => transaction(state => {
+      if (state.historyRevision !== expectedRevision) throw new ConflictError('History changed in another view. Review the latest record and try again.');
+      const summary = state.completedSessions.find(s => s.id === sessionId);
+      if (!summary) throw new ConflictError('This session is no longer in your history.');
+      if (change.action === 'delete') {
+        state.completedSessions = state.completedSessions.filter(s => s.id !== sessionId);
+        state.receipts = []; state.sessionRevision++;
+        if (state.currentSession.phase === 'finished' && state.currentSession.id === sessionId) state.currentSession = { phase: 'idle' };
+      } else {
+        if (!reflection(change.reflection)) throw new Error('Invalid reflection.');
+        summary.reflection = change.reflection === null ? null : { answer: change.reflection.answer, note: change.reflection.note?.trim() || null };
+        if (summary.reflection?.answer === null && summary.reflection.note === null) summary.reflection = null;
+        summary.reflectionPrompted = true;
+      }
+      state.historyRevision++;
     }),
     execute: (mutation: SessionMutation) => transaction((state, now) => applyCommand(state, mutation, now)),
     observe: (sample: Observation, observer: Observer, eligible: () => Promise<boolean>) =>

@@ -7,19 +7,21 @@ import { CHANNEL, parseRequest } from '../src/shared/protocol';
 import { detectPage } from '../src/content/youtube-adapter';
 
 test('v2 upgrade preserves sessions, timing, receipts and preferences; controls default off', () => {
-  const old = { ...defaultSnapshot(), schemaVersion: 2, settings: { showIndicator: false, theme: 'dark' }, revision: 5 };
-  old.currentSession = { phase: 'paused', id: 'kept', intention: 'Explore', startedAt: 100,
+  const { historyRevision: _historyRevision, currentSession: _current, completedSessions: _completed, ...base } = defaultSnapshot();
+  const old = { ...base, schemaVersion: 2, settings: { showIndicator: false, theme: 'dark' }, revision: 5, currentSession: { phase: 'paused', id: 'kept', intention: 'Explore', startedAt: 100,
     originalTargetMs: 300000, targetMs: null, elapsedMs: 400, goalAcknowledged: false,
-    breakUntil: null, finishedAt: null, recoveryReason: null };
-  old.completedSessions = [{ id: 'finished', intention: 'Study', startedAt: 10, finishedAt: 90,
-    originalTargetMs: null, targetMs: null, elapsedMs: 70, reflection: 'Kept' }];
+    breakUntil: null, finishedAt: null, recoveryReason: null }, completedSessions: [{ id: 'finished', intention: 'Study', startedAt: 10, finishedAt: 90,
+    originalTargetMs: null, targetMs: null, elapsedMs: 70, reflection: 'Kept' }] };
   old.receipts = [{ id: 'request', signature: 'signature' }];
   old.timing.browserEpoch = 'existing';
   const before = structuredClone(old);
   const updated = migrate(old);
   assert.equal(snapshot(updated), true);
   assert.deepEqual(updated.settings, { ...defaultSnapshot().settings, showIndicator: false, theme: 'dark' });
-  for (const key of ['currentSession', 'completedSessions', 'timing', 'receipts', 'revision'] as const) assert.deepEqual(updated[key], old[key]);
+  assert.equal(updated.completedSessions[0]!.reflection?.note, 'Kept');
+  assert.equal(updated.completedSessions[0]!.reflection?.answer, null);
+  assert.equal(updated.currentSession.phase, 'paused');
+  for (const key of ['timing', 'receipts', 'revision'] as const) assert.deepEqual(updated[key], old[key]);
   assert.deepEqual(old, before);
   assert.throws(() => migrate({ ...old, settings: { ...old.settings, hideShortsEntries: 'true' } }));
 });

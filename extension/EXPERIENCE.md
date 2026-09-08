@@ -1,4 +1,4 @@
-# User experience contract — 0.4.0
+# User experience contract — 0.7.0
 
 ## Surfaces and choices
 
@@ -12,8 +12,8 @@
   saved default target fills future plans; each plan can override it. Editing
   preserves the original target. Custom intentions accept up to 80 characters.
 - **Indicator:** intention, committed foreground YouTube time, optional target,
-  phase, collapse/expand, pause/resume, checkpoint continuation, end break, edit and
-  finish. Edit opens a focused extension window using the same session UI.
+  phase, wall-clock break countdown, collapse/expand, pause/resume, checkpoint
+  choices, voluntary breaks, early break ending, edit and finish. Edit opens a focused extension window using the same session UI.
   Finish ends accounting; it does not stop YouTube playback.
 - **Settings:** real navigation to Viewing, Sessions, Checkpoints and Your data.
   Session preferences cover the default target, break length, indicator, initial
@@ -55,8 +55,9 @@ intention; turn the indicator off to remove its page UI. Collapsing is a visual
 choice, not a privacy boundary. Completed history/reflections remain extension-only.
 
 The content script receives current display data, session ID and revision. It may
-send only constrained session actions (pause/resume/continue/end-break/finish) or
-request a fixed extension surface. Native trusted clicks are required by its UI;
+send only constrained session actions, including validated additional/break
+durations, or request a fixed extension surface. Native trusted clicks are required
+by its UI;
 synthetic page clicks are ignored. No webpage messaging bridge, external messaging,
 arbitrary URL/window target or arbitrary plan/data mutation is accepted. Worker
 sender checks, schema validation, request receipts and revision checks still apply.
@@ -67,8 +68,9 @@ it does not require the `tabs` permission or raise the Chrome minimum for
 `action.openPopup`. [Chrome windows API](https://developer.chrome.com/docs/extensions/reference/api/windows),
 [Chrome action API](https://developer.chrome.com/docs/extensions/reference/api/action).
 
-Schema **4** upgrades valid schemas 1/2/3 and adds experience preferences without
-losing existing plans or viewing choices. Unknown/corrupt records are preserved.
+Schema **6** upgrades valid schemas 1–5 while preserving plans, recorded revisions,
+break time, reflections and viewing choices. The new extension-pause default is
+false. Unknown/corrupt records are preserved.
 Clear history removes completed summaries and recent command receipts; it also
 clears a finished current record, but keeps unfinished sessions and preferences.
 Delete all clears plans/summaries/receipts, stops the session, restores default
@@ -98,4 +100,20 @@ Native installed-Chrome toolbar popup interaction, physical screen readers, olde
 Chrome 111, signed-in accounts and all theater/miniplayer/experimental layouts
 remain manual checks. Fullscreen and 200% zoom tests are actual browser behavior on
 controlled pages, not claims of exhaustive YouTube-layout support. Reflection and
-history browsing remain later-stage work; deletion and real local counts work now.
+history browsing are implemented; see [the local history contract](HISTORY.md).
+
+The checkpoint/break stage adds shared controls in `src/ui/choices.ts`. Dismissal
+is persisted separately from target revision through the acknowledged-target state;
+the exact behavior and allowed transitions are in [SESSION_MODEL](SESSION_MODEL.md).
+The break deadline survives restart, while expiry leaves the session paused.
+`npm run test:checkpoints` verifies these controls and lifecycle behavior on real
+Chromium with controlled pages; it does not claim new live YouTube verification.
+
+## Hardening additions
+
+Popup/settings offer extension-wide pause with an explicit explanation that a
+running break ends. Enable restores choices but requires a separate session Resume.
+The control has the same labeled, keyboard-operable button and focus restoration as
+other settings. Player-only `/embed` documents receive no dock. All settings section
+fragments retain trusted-document permissions. See [HARDENING](HARDENING.md) for
+actual browser evidence and the remaining native-toolbar/accessibility checks.

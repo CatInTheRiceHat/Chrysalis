@@ -9,13 +9,13 @@ declare global { interface Window { __chrysalisFoundation?: { dispose(): void } 
 
 if (window === window.top && supportedUrl(location.href)) {
   window.__chrysalisFoundation?.dispose();
-  const indicator = createIndicator(document, async (action, session) => {
+  const indicator = createIndicator(document, async (action, session, durationMs) => {
     if (action === 'edit' || action === 'session') {
       const reply = await request({ channel: CHANNEL, type: 'OPEN_PAGE', page: action });
       if (!reply.ok) throw new Error(reply.error);
     } else {
       const reply = await request({ channel: CHANNEL, type: 'SESSION_CONTROL', mutation: {
-        requestId: crypto.randomUUID(), expectedRevision: session.revision, expectedSessionId: session.id, command: { action },
+        requestId: crypto.randomUUID(), expectedRevision: session.revision, expectedSessionId: session.id, command: action === 'extend' || action === 'break' ? { action, durationMs: durationMs! } : { action },
       } });
       if (!reply.ok) { void refresh(); throw new Error(reply.error); }
       if (reply.type === 'DISPLAY') apply(reply.settings, reply.session, reply.sequence);
@@ -26,20 +26,30 @@ if (window === window.top && supportedUrl(location.href)) {
   let pageSuspended = false;
   let revision = -1;
   let running = false;
+  let extensionPaused = false;
+  let contextTimer: ReturnType<typeof setTimeout> | undefined;
   let sampleTimer: ReturnType<typeof setTimeout> | undefined;
   let samplePending = false;
+  let breakTimer: ReturnType<typeof setTimeout> | undefined;
   function apply(settings: Settings, session: SessionDisplay, sequence: number) {
     if (disposed || pageSuspended || sequence < revision) return;
     revision = sequence;
     const wasRunning = running;
+    extensionPaused = settings.extensionPaused;
+    if (extensionPaused) {
+      running = false; clearTimeout(sampleTimer); clearTimeout(breakTimer);
+      indicator.remove(); controls.dispose(); return;
+    }
     running = session.phase === 'active' || session.phase === 'checkpoint';
     indicator.render(settings, session);
+    clearTimeout(breakTimer); breakTimer = undefined;
+    if (session.phase === 'break' && !document.hidden) breakTimer = setTimeout(() => void refresh(), 1000); // Deadline display/reconciliation only.
     controls.apply(settings);
     if (!running) { clearTimeout(sampleTimer); sampleTimer = undefined; }
     if (running && !wasRunning) void sample();
   }
   async function sample(visible = !document.hidden) {
-    if (disposed || (pageSuspended && visible) || samplePending) return;
+    if (disposed || extensionPaused || (pageSuspended && visible) || samplePending) return;
     clearTimeout(sampleTimer); sampleTimer = undefined;
     samplePending = true;
     try {
@@ -76,30 +86,43 @@ if (window === window.top && supportedUrl(location.href)) {
       apply(value.settings, value.session, value.sequence);
     }
   }
-  function onPageShow() { pageSuspended = false; void refresh(); void sample(); }
-  function onVisibility() {
+  function onPageShow() { pageSuspended = false; checkContext(); void refresh(); void sample(); }
+  function onVisibility(event: Event) {
+    if (!event.isTrusted) return;
+    checkContext();
+    if (document.hidden) clearTimeout(breakTimer);
     void sample(!document.hidden);
     if (!document.hidden) void refresh();
   }
   function onPageHide(event: PageTransitionEvent) {
-    pageSuspended = true;
-    clearTimeout(sampleTimer);
+    pageSuspended = true; clearTimeout(contextTimer);
+    clearTimeout(sampleTimer); clearTimeout(breakTimer);
     void sample(false);
     indicator.remove();
     controls.dispose();
     if (!event.persisted) dispose();
   }
   function dispose() {
-    disposed = true;
-    clearTimeout(sampleTimer);
+    disposed = true; clearTimeout(contextTimer);
+    clearTimeout(sampleTimer); clearTimeout(breakTimer);
     indicator.remove();
     controls.dispose();
-    chrome.runtime.onMessage.removeListener(onMessage);
+    try { chrome.runtime.onMessage.removeListener(onMessage); } catch { /* Extension context was invalidated. */ }
     window.removeEventListener('pageshow', onPageShow);
     window.removeEventListener('pagehide', onPageHide);
     document.removeEventListener('visibilitychange', onVisibility);
     document.removeEventListener('yt-navigate-finish', refresh);
   }
+  // No worker messages or writes: invalidated old contexts remove their own UI
+  // after reload/disable, including idle sessions with no observation pulses.
+  function checkContext() {
+    clearTimeout(contextTimer);
+    if (disposed || pageSuspended) return;
+    try { if (!chrome.runtime.id) { dispose(); return; } }
+    catch { dispose(); return; }
+    if (!document.hidden) contextTimer = setTimeout(checkContext, 5000);
+  }
+  checkContext();
   window.__chrysalisFoundation = { dispose };
   chrome.runtime.onMessage.addListener(onMessage);
   window.addEventListener('pageshow', onPageShow);

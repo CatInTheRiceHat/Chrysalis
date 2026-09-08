@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 const profile = await mkdtemp(path.join(tmpdir(), 'chrysalis-session-test-'));
-const extensionPath = path.resolve('dist');
+const extensionPath = path.resolve(process.env.CHRYSALIS_EXTENSION_PATH ?? 'dist');
 const launch = () => chromium.launchPersistentContext(profile, {
   channel: 'chromium', headless: true, viewport: { width: 1100, height: 900 },
   args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
@@ -99,7 +99,7 @@ try {
   await expect.poll(async () => (await state()).currentSession.phase, { timeout: 15000 }).toBe('checkpoint');
   await expect(youtube.locator('#chrysalis-extension-indicator')).toContainText('Time target reached');
   await page.bringToFront(); await expect(page.locator('#checkpoint-copy')).toBeVisible();
-  await page.getByRole('button', { name: 'Continue viewing' }).click();
+  await page.getByRole('button', { name: 'Dismiss checkpoint' }).click();
   await expect(page.locator('#session-phase')).toHaveText('Active');
   await page.getByRole('button', { name: 'Take a break' }).click();
   await expect(page.locator('#session-phase')).toHaveText('Break');
@@ -111,7 +111,7 @@ try {
   await expect(page.locator('#session-summary')).toBeVisible();
   s = await state(); assert.equal(s.completedSessions.length, 1);
   assert.equal(s.completedSessions[0].originalTargetMs, 300000); assert.equal(s.completedSessions[0].targetMs, 60000);
-  checks.push('Real pulses cross a seeded near-target state; Continue, voluntary break, early end and duplicate-safe Finish work.');
+  checks.push('Real pulses cross a seeded near-target state; Dismissal, voluntary break, early end and duplicate-safe Finish work.');
   await mkdir('test-results', { recursive: true });
   await page.setViewportSize({ width: 375, height: 720 });
   await page.screenshot({ path: 'test-results/session-summary.png', fullPage: true });

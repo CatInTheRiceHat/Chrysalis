@@ -1,0 +1,71 @@
+{
+  "version": "0.7.1",
+  "browser": "153.0.8010.12",
+  "capturedAt": "2026-09-08T01:03:16.675Z",
+  "source": "/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.7.1-unpacked",
+  "captures": [
+    {
+      "file": "onboarding.png",
+      "description": "Actual popup document at 375px, opened as an extension page; native toolbar chrome is not depicted.",
+      "storeCandidate": false,
+      "width": 375,
+      "height": 850,
+      "sha256": "26308863b3e582a13a38ae5a3a9854e445f5bc7932a79b44fe2582d2c0e49175"
+    },
+    {
+      "file": "01-viewing-settings.png",
+      "description": "Actual viewing preferences with Shorts entry-point hiding chosen during this capture.",
+      "storeCandidate": true,
+      "width": 1280,
+      "height": 800,
+      "sha256": "7aa43b4eff91a716ee267f3e1e12881b821724c278e5a23fb5ff8fa3ba9dcb34"
+    },
+    {
+      "file": "02-live-youtube-session.png",
+      "description": "Actual signed-out YouTube homepage with a live foreground session; no YouTube page content was substituted.",
+      "storeCandidate": true,
+      "width": 1280,
+      "height": 800,
+      "sha256": "50136c1a0ef9053f5b33580ff5ad5a2dba2ea19500e86e79e0a9bef7846097b5"
+    },
+    {
+      "file": "03-live-checkpoint.png",
+      "description": "Actual checkpoint reached after one measured minute; elapsed state was not seeded or fabricated.",
+      "storeCandidate": true,
+      "width": 1280,
+      "height": 800,
+      "sha256": "8e2958e6fb1ac3b1d1aa8af1bbdf4019a41e0f50804c0b726b7ddad9e4167b5a"
+    },
+    {
+      "file": "break-popup.png",
+      "description": "Actual voluntary break in the popup document, opened as a page; excluded from store-sized screenshots.",
+      "storeCandidate": false,
+      "width": 375,
+      "height": 850,
+      "sha256": "978decbb91acfe6e1c8d5fcf8e8c0a1462e2fdbf4a9fe7f55f1ed23606d386c1"
+    },
+    {
+      "file": "reflection-popup.png",
+      "description": "Actual optional reflection after this automated test session; no answer, note or participant finding is invented.",
+      "storeCandidate": false,
+      "width": 375,
+      "height": 850,
+      "sha256": "7428d2005eae589fc50b2258b9e394884385e6340b786010124c8d9b419ac20a"
+    },
+    {
+      "file": "04-local-history.png",
+      "description": "A real record created by the preceding automated session actions; not participant data or research evidence.",
+      "storeCandidate": true,
+      "width": 1280,
+      "height": 800,
+      "sha256": "813bcefc2991dc80bd6c8004669fa71cd9b95c144c02fb80812e3845d6e29368"
+    }
+  ],
+  "checks": [
+    "The packaged privacy page opens from settings and renders the actual local-data explanation.",
+    "Real foreground pulses reached a checkpoint on live YouTube; UI target revisions, added time, voluntary break, finish and Skip produced the photographed history record."
+  ],
+  "limitations": [
+    "Signed-out Home only; native toolbar popover, authenticated feeds and all experimental layouts are not established by these captures."
+  ]
+}

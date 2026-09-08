@@ -58,3 +58,14 @@ test('extension pages can persist settings and stale messages return a typed con
   if (!repeat.ok) assert.equal(repeat.code, 'CONFLICT');
   assert.equal((await handle({ channel: CHANNEL, type: 'GET_SNAPSHOT' }, page)).ok, true);
 });
+
+test('trusted settings section fragments permit settings changes while other documents remain forbidden', async () => {
+  for (const hash of ['#viewing', '#preferences', '#checkpoints', '#history', '#data', '#edit']) {
+    const { handle } = setup();
+    const sender = { ...page, url: `chrome-extension://${id}/options.html${hash}`, frameId: 0 };
+    assert.equal(senderRole(sender, id), 'page');
+    assert.equal((await handle({ channel: CHANNEL, type: 'UPDATE_SETTINGS', patch: { extensionPaused: true }, expectedRevision: 0 }, sender)).ok, true);
+  }
+  for (const url of [`chrome-extension://${id}/options.html?external=1#data`, `https://${id}/options.html#data`, `chrome-extension://other/options.html#data`, `chrome-extension://${id}/unexpected.html#data`]) assert.equal(senderRole({ ...page, url }, id), null);
+  assert.equal(senderRole({ ...page, frameId: 2 }, id), null);
+});

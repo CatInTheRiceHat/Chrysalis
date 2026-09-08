@@ -81,6 +81,8 @@ export function affectsControls(records: MutationRecord[]): boolean {
 // In-flow placement only: no viewport overlay, search/guide/player ancestor or
 // player-sized spacer. Unknown real YouTube layouts fall back to the popup.
 export function indicatorAnchor(doc: Document): Element | null {
+  // Player-only documents have no safe surrounding surface for a dock.
+  if (/^\/embed(?:\/|$)/.test(doc.location.pathname)) return null;
   const page = detectPage(doc.location.href);
   if (page === 'watch') {
     const below = doc.querySelector('ytd-watch-flexy:not([hidden]) #below');

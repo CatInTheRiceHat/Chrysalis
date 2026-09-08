@@ -1,129 +1,95 @@
-# Chrysalis Chrome extension
+# Chrysalis — desktop YouTube, on your terms
 
-A local Manifest V3 extension for intentional desktop YouTube sessions. Start with
-an intention, leave time open or choose a target, revise the plan, pause, continue,
-take a break or finish. Optional viewing controls hide supported recommendation
-surfaces. Entertainment and exploration are valid choices.
+Chrysalis is an independent Chrome extension for `https://www.youtube.com`.
+It is not affiliated with or endorsed by YouTube or Google.
 
-The skippable introduction explains scope and privacy. The popup shows your session;
-settings organize viewing controls, session defaults, checkpoints and data deletion.
-The collapsible YouTube indicator shows the current intention and **foreground
-YouTube time**, with session actions, outside the player. Reflection and history
-browsing remain later-stage work; local summaries and deletion are implemented.
+Choose an intention, optionally choose a time target, and revise either whenever you
+want. Notice **foreground YouTube time**; pause, continue, take a voluntary break or
+finish. Optional reflection and local history help you review your own choices,
+without a score. Entertainment and exploration are valid intentions.
 
-## Install, check, build and load
+Optional controls hide recognized Home recommendations, related-video recommendations
+beside watch pages, and supported Shorts shelves/navigation. All start off. They do
+not block all Shorts URLs, change YouTube's algorithm, block ads or control playback.
 
-From the repository root, using Node 20+ and npm:
+## Install the prepared files
+
+No server, account, API key, Node or Python is needed to use the prepared extension.
+
+1. Extract `release/chrysalis-0.7.1.zip` into a permanent folder. Do not run files
+   from inside the ZIP. The folder you select must contain `manifest.json` directly.
+2. Open `chrome://extensions` in desktop Chrome. Turn **Developer mode** on.
+3. Choose **Load unpacked**, then select the extracted folder. Pin Chrysalis from
+   Chrome's Extensions menu and open its popup. Setup is skippable.
+4. Open or refresh `https://www.youtube.com/`. Start a session when you choose.
+   Settings → Viewing controls contains the optional layout choices.
+
+In this workspace you can load either `extension/dist/` or the verified extracted
+folder `extension/release/chrysalis-0.7.1-unpacked/`. Existing `dist/` users should
+reload that installation rather than adding a second copy. Keep installation folders
+in place; refresh YouTube after an update. Keep Developer mode on for unpacked use.
+
+## Build the same package
+
+From the repository root, with Node/npm (`.nvmrc`: Node 20.17.0; verified npm 10.8.2)
+and Python 3 for ZIP packaging:
 
 ```sh
 cd extension
 npm ci
 npm run check
+npm run package
 ```
 
-`check` runs 40 Node tests, strict TypeScript, the production build and generated-file
-verification. Individual commands: `npm test`, `npm run typecheck`, `npm run build`.
-The build empties only this package's generated `dist/` directory.
-
-**Unpacked output:** `extension/dist/`, or
-`/Users/elaine/Documents/Chrysalis/extension/dist` in this workspace.
-
-1. Open `chrome://extensions` in desktop Chrome (111+) and enable Developer mode.
-2. Select **Load unpacked** and choose **`extension/dist`**. Pin Chrysalis.
-3. Open the popup; choose Get started or Skip introduction. Start a session when
-   you want one. Viewing preferences opens settings; all hiding controls default off.
-4. Open/refresh `https://www.youtube.com/`. On watch pages the indicator is below
-   the player; on Home it occupies its own row. Collapse it when you want less UI.
-5. After building changes, Reload the extension card and refresh YouTube tabs.
-   Do not load `src/` or the parent `extension/` directory.
-
-No backend, account, OAuth, API key, environment file or dev server is needed.
-
-## Architecture and permissions
-
-Framework-free TypeScript/HTML/CSS, esbuild, no runtime dependencies. Three local
-bundles: module worker `background.js`, extension-page `page.js`, isolated-world
-content script `content.js`. The original React/Python/Flutter applications remain
-independent. Real branding/fonts are reused with their licenses; this is Early preview.
-Chrome scales the existing 100px PNG icon. Store-specific icon exports remain pending.
-
-| Source | Responsibility |
-| --- | --- |
-| `src/shared/` | Typed protocol, runtime validation, sender checks, schema upgrades and queued storage |
-| `src/session/model.ts` | Session transitions, targets, timestamp accounting and recovery |
-| `src/background.ts` | Sole writer, synchronous listeners, native tab/window signals and fixed extension-page opening |
-| `src/ui/page.ts`, `session.ts` | Introduction, preferences, confirmation dialogs and session UI |
-| `src/content/youtube-adapter.ts` | YouTube routes, selectors, supported surfaces and placement anchors |
-| `src/content/indicator.ts`, `dock.ts`, `viewing-controls.ts` | In-flow session/status UI, shared placement lifecycle and reversible CSS |
-| `tests/`, `scripts/` | Domain/security/browser tests, build and generated-file checks |
-
-| Manifest capability | Implemented reason |
-| --- | --- |
-| `storage` | Settings, session and summaries in `storage.local`; a browser epoch in `storage.session` distinguishes worker suspension from browser restart. |
-| Static top-frame match `https://www.youtube.com/*` | Observe foreground visibility, display session/control UI and apply optional scoped visibility rules on this exact desktop origin. |
-
-No additional host permissions, `tabs`, `scripting`, `activeTab`, history, cookies,
-identity, notifications or backend access. Incognito is disabled. Enumerating tab IDs
-for updates and opening a fixed local extension window need no broad page access.
-[Chrome windows API](https://developer.chrome.com/docs/extensions/reference/api/windows).
-All executable code, fonts and assets are local. No remote code, `eval`, webpage
-`postMessage` bridge, external messaging or web-accessible resources. The CSP forbids
-network connections and remote scripts in extension pages.
-
-## State, timing and privacy
-
-Storage key **`chrysalis.extension.v1`**, current **schema 4**. Valid older extension
-schemas upgrade without losing settings/plans; unknown/corrupt data stays untouched.
-The worker serializes mutations, awaits writes, and rejects stale revisions/IDs.
-Session receipts prevent duplicate completion. Delete all retains only defaults and
-non-personal counters/epoch metadata needed to reject delayed old writes.
-
-Time includes browsing and playback in one active YouTube tab in the focused browser
-window. It excludes hidden tabs, unfocused windows, pauses and breaks. Observations
-arrive about every two seconds; timestamps and lifecycle events are authoritative.
-Gaps over five seconds are excluded and pause for recovery. Browser restart restores
-unfinished sessions paused. This is not exact watch time, attention or productivity.
-
-Plans, dates, measured durations and the latest 100 summaries remain local. No
-video titles, URLs, searches, account IDs, sync or telemetry are recorded.
-**The current intention appears on YouTube and can be read by the page.** Avoid
-private details; settings can hide the indicator. Collapse is not a privacy boundary.
-History and arbitrary plan/data changes remain restricted to extension pages.
-
-Content UI can send constrained session commands and open fixed Chrysalis surfaces
-through validated messages; its handlers require trusted user clicks. It cannot
-change settings, read full snapshots, delete data or directly read Chrome storage.
-Chrome local storage is restricted to trusted extension contexts.
-[Chrome messaging](https://developer.chrome.com/docs/extensions/develop/concepts/messaging),
-[Chrome storage](https://developer.chrome.com/docs/extensions/reference/api/storage).
-
-Detailed contracts: [experience/accessibility/privacy](EXPERIENCE.md),
-[session transitions and timing](SESSION_MODEL.md),
-[viewing controls and support evidence](VIEWING_CONTROLS.md).
-
-## Browser checks
+`check`: 63 focused tests, TypeScript, production build and manifest/asset checks.
+`package`: production build, deterministic ZIP, extracted loadable directory,
+per-file SHA-256 manifest and archive checksum in `release/`. Exact reproducibility,
+validation, update and installation instructions: [INSTALL](INSTALL.md).
 
 ```sh
 npx playwright install chromium
-npm run test:browser          # four suites: foundation, session, viewing, experience
-npm run test:experience       # experience fixtures only
-npm run test:experience:live  # actual signed-out Home/watch placement and actions
-npm run test:viewing:live     # separate live viewing-control checks
+npm run test:package   # two identical builds, package guards, all seven browser suites on extracted ZIP
+npm run screenshots   # actual extension/live YouTube captures; allow about two minutes
 ```
 
-Tests load the unpacked extension into disposable Playwright Chromium profiles.
-Controlled YouTube-origin fixtures use real extension APIs, native focus/tab events,
-fullscreen and Chrome tab zoom. Live tests are separate; fixture selectors are not
-presented as verified live support. Reports/screenshots go to ignored `test-results/`.
-The toolbar popup HTML is opened as an extension page; a native toolbar click is
-still a manual check. [Playwright extension testing](https://playwright.dev/docs/chrome-extensions).
+## Supported features and practical limits
 
-Manual checks: load through installed Chrome's toolbar, navigate by keyboard, try
-screen readers, browser zoom, fullscreen/theater/miniplayer and signed-in YouTube
-layouts. Verify captions/player/search/navigation remain usable. Unknown layouts
-stay usable; where no safe dock exists, use the extension popup. Restore ordinary
-layout before disabling if immediate control cleanup is needed; refresh existing
-YouTube tabs after extension reload/disable for guaranteed stale-script cleanup.
+- One shared session across desktop YouTube tabs. Counts browsing and playback only
+  in the active tab of the focused window; excludes hidden/unfocused tabs, pauses
+  and breaks. It cannot measure attention or exact video watch time.
+- Optional targets, neutral checkpoints, extra time, untimed continuation and
+  voluntary breaks. Break expiry stays paused. No playback interruption.
+- Reversible controls and an in-flow collapsible indicator, hidden in fullscreen.
+  Unfamiliar layouts stay usable; some content may remain. Populated/signed-in Home
+  and many experimental/non-English variants need further live verification.
+- Local history: latest 100 sessions, up to 100 explicit target revisions per
+  session, optional notes up to 500 characters; delete one, clear history or reset all.
+- Pause Chrysalis restores the ordinary layout and stops timing. Enable restores
+  saved controls; Resume is a separate choice. A running break ends when paused.
+- About two-second observations; missing signals over five seconds can discard time
+  and require Resume. Browser restart recovers unfinished viewing sessions paused.
+- Desktop Chrome only; no native mobile YouTube, other browsers promised, incognito,
+  accounts, sync, telemetry, AI coach or social feed. Minimum manifest version is
+  Chrome 111, but validation uses Chromium 153; older versions remain unverified.
 
-Latest completed checks, limitations and next stage:
-[implementation status](../docs/extension-implementation-status.md).
+## Privacy, help and pilot
+
+Plans, reflections and settings stay in Chrome's local storage. Chrysalis inspects
+page structure without recording video URLs, titles, searches or account identities.
+There is no upload or analytics. Your current intention can be read by YouTube when
+displayed in its page. Local notes are not encrypted by Chrysalis.
+[Full privacy explanation](PRIVACY.md) is also available offline through settings.
+
+See [troubleshooting](INSTALL.md#troubleshooting), [voluntary pilot guide](pilot/GUIDE.md),
+[optional feedback questions](pilot/FEEDBACK.md), and [case-study outline](pilot/CASE_STUDY.md).
+No feedback is sent automatically and viewing history/personal notes are not required.
+
+**Personal-installation package verified; pilot materials prepared.** A volunteer
+launch remains conditional on the preflight checks in the guide. This is not a
+Chrome Web Store release or an approval claim. [Distribution status](distribution/STATUS.md)
+records actual checks and blockers; [store draft](distribution/STORE_DRAFT.md) contains
+unsubmitted listing and policy materials.
+
+The original React/Python/Flutter applications remain independent. Technical contracts:
+[session model](SESSION_MODEL.md), [viewing adapter](VIEWING_CONTROLS.md),
+[history](HISTORY.md), [experience](EXPERIENCE.md), [hardening evidence](HARDENING.md).

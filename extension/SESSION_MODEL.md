@@ -24,22 +24,66 @@ Resume if paused. Editing a target means a new **total** session target.
 | idle | Start | active, new local session ID and original plan |
 | active | Pause | paused, settle short foreground tail |
 | active | Target reached | checkpoint, acknowledge this target once |
-| checkpoint | Continue viewing | active; same target will not prompt again |
+| checkpoint | Dismiss checkpoint / collapse or close its in-page prompt | active; target unchanged, quiet indicator; same target will not prompt again |
+| checkpoint / active with a reached target | Continue with additional duration | active; target becomes settled foreground time plus chosen duration; explicitly rearm |
+| checkpoint / active with a reached target | Continue without a time target | active; current target cleared, original target retained |
 | checkpoint | Pause | paused |
 | paused | Resume | active; checkpoint immediately if a newly armed target is reached |
 | active / paused / checkpoint | Take a break | break, user-chosen wall-clock deadline |
 | break | End break / deadline reached | paused; never auto-resume |
+| break | Resume session now | active; clear the deadline; explicit user action |
 | active / paused / checkpoint / break | Edit | same phase, except a changed target may clear/rearm checkpoint |
 | active / paused / checkpoint / break | Finish | finished; save one summary before rendering it |
 | finished | Done | idle; keep the summary |
 | finished | Start another session | active, new ID and plan; keep previous summary |
 | active / checkpoint | Unexplained observation gap | paused with recovery explanation; uncertain interval discarded |
-| any unfinished state | New browser epoch | paused with restart explanation; no closed-browser time added |
+| unfinished, except break | New browser epoch | paused with restart explanation; no closed-browser time added |
+| break | New browser epoch | preserve unexpired deadline; expired break becomes paused; reject stale pre-restart commands |
 
 All other transitions reject without partially applying the command. Checkpoint
 is a decision state, **not a forced pause**: confirmed foreground time continues
 while it is open. Breaks do not monitor what someone does away from YouTube.
 This stage does not pause/resume the video player, close tabs, or enforce limits.
+
+## Checkpoint and break choices
+
+The in-page indicator and popup offer “You planned [duration]. What would you like
+to do next?” with additional-time presets/custom minutes, untimed continuation,
+Finish, and suggested/custom breaks. Dismissal is a separate operation: it does
+not extend or remove the target and is not recorded as an extension in summaries.
+The old `continue` command remains a compatibility alias for dismissal; no UI
+labels it as a chosen extension. There is no escalating prompt, sound, tab closure,
+playback interruption, modal overlay, automatic scrolling or focus grab.
+
+`goalAcknowledged` is persisted when the one global target crossing occurs. The
+checkpoint phase is one pending decision mirrored by open surfaces, not independent
+per-tab timers or queued notifications. Repeated observations/read/reinjection do
+not create another transition. Dismissal persists active/acknowledged atomically,
+so other tabs, refresh and worker/browser recovery cannot reopen that target.
+Intention-only edits do not rearm; a different total target or an explicit added
+duration does. Checkpoints disabled in settings leave accounting enabled. Turning
+them back on can offer a reached target only if it was never acknowledged.
+
+Additional time starts at the measured foreground total **when the choice commits**,
+including a valid short observation tail, rather than at the old target. The new
+target can therefore include seconds/milliseconds; intention edits can retain it
+exactly. Custom durations are whole minutes from 1–1440; the revised total target
+also has the existing 1440-minute maximum. Validation failures leave the plan
+unchanged and offer less additional time or untimed continuation. Original target
+and final target remain separate; target labels round subsecond precision upward.
+
+Fullscreen hides the existing dock; the pending checkpoint waits there until the
+user exits fullscreen, unless handled in the popup. A collapsed/disabled indicator
+is never forced open. Collapsing an open checkpoint dismisses it; the explicit
+Dismiss button and its close icon keep the quiet timer. Whole-indicator dismissal
+outside a checkpoint retains its existing page-local behavior.
+
+Break suggestions are 2/5/10/15 minutes, plus custom 1–1440 minutes. The saved break
+preference fills the choice. There is no “optimal” duration or session-matching
+claim. The wall-clock countdown does not announce each tick. End break leaves the
+session paused; Resume session now is an explicit resume; Finish saves the measured
+session. None block YouTube. In-page visible-break reads update/reconcile once per
+second; these are display wakeups, not elapsed-time credits or a worker keepalive.
 
 ## One authoritative timeline
 
@@ -108,8 +152,10 @@ or pause for; the next eligible tab starts a new interval.
 The browser epoch is a random value in `chrome.storage.session`. Chrome preserves
 it across worker suspension but clears it on browser restart/extension reload.
 Every serialized read reconciles this epoch with the local snapshot, so recovery
-does not depend only on receiving `runtime.onStartup`. An unfinished session,
-including a break/checkpoint, restores paused. The original/final plan, committed
+does not depend only on receiving `runtime.onStartup`. An unfinished viewing session,
+including a checkpoint, restores paused. An unexpired voluntary break retains its
+deadline and never resumes viewing; an expired break restores paused. Its revision
+advances so an old queued Resume cannot restart viewing. The original/final plan, committed
 elapsed time and summaries survive. Document ownership is reset.
 
 Within the same epoch, a restarted worker may reconcile a short valid observation
@@ -139,11 +185,13 @@ user can still finish. Elapsed duration remains separately measured.
   recent sequence ledger for atomic accounting. They are not video/account IDs,
   contain no URL/title/search, are absent from summaries, and clear on restart or
   finish. No document ledger is retained while idle or newly observed while paused.
-- Schema 4 upgrades only this extension's valid schema-1/2/3 data at the existing
+- Schema 6 upgrades only this extension's valid schema-1/2/3/4/5 data at the existing
   `chrysalis.extension.v1` key, preserving display settings and any reserved records.
   Unfinished reserved records upgrade paused. Legacy website/Flutter data is untouched.
 - The latest 100 completed summaries remain local; receipt metadata also contains
-  recent plan choices. Reflection/history browsing is a later stage; confirmed deletion works in settings.
+  recent plan choices. Optional reflection, local history and confirmed deletion work
+  in extension pages; [HISTORY.md](HISTORY.md) documents recorded revisions, separate
+  break totals, missing old data and retention.
   Uninstall removes extension-local data. History/all-data deletion clears receipts and advances revisions to reject stale commands.
 
 ## Verification
@@ -154,5 +202,32 @@ checks native Chrome tab/window signals and the popup flow against controlled
 YouTube-origin pages, and restarts the browser. A near-target snapshot is seeded
 only in that temporary test profile before real observations cross the target.
 `LIVE_YOUTUBE=1 npm run test:browser` adds signed-out public YouTube checks.
+`npm run test:checkpoints` separately covers fullscreen target crossing while real
+fixture media plays, worker stop, dismissal across tabs/refresh, added/untimed
+choices, break countdown, early end/resume, actual browser restart and expiry.
+Proximity to a target/deadline is seeded only in the disposable test profile.
 
 See `../docs/extension-implementation-status.md` for results and unperformed checks.
+
+## Extension-wide pause (0.7.0)
+
+`settings.extensionPaused` defaults to false; schema 5 upgrades preserve every
+existing field and add only this default. Pausing and settings changes share the
+same authoritative mutation queue and timestamp boundaries as session commands.
+Pause settles a short observed foreground tail, ends a running break with its
+elapsed wall-clock total, moves any unfinished session to `paused`, and clears
+foreground ownership/signals. Idle and finished states retain their phase.
+
+Enabling restores saved viewing controls but leaves a session paused. Start,
+Resume, new breaks and target continuation require enabling first; Edit and Finish
+remain available. Both pause and enable advance the session revision so old actions
+cannot resume or change the session after a newer choice. Duplicate settings
+messages conflict rather than applying twice. Reset-all clears the pause preference.
+
+Content pauses remove all owned UI/styles/observers and cancel timing/deadline
+polling. A local visible-document check every five seconds detects extension-context
+invalidation without worker messages or storage writes. Native visibility changes
+are used for sampling; synthetic webpage visibility events are ignored. Timing
+persistence is bounded by the two-second observation cadence per visible document
+plus actual lifecycle/action boundaries, not rendering. Other visible windows can
+produce anti-replay signal writes but never add a second foreground timeline.

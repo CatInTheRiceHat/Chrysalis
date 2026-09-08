@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 const profile = await mkdtemp(path.join(tmpdir(), 'chrysalis-viewing-'));
-const extensionPath = path.resolve('dist');
+const extensionPath = path.resolve(process.env.CHRYSALIS_EXTENSION_PATH ?? 'dist');
 await mkdir('test-results', { recursive: true });
 const checks = [];
 let context;
@@ -138,7 +138,7 @@ try {
   await expect(youtube.locator('#chrysalis-viewing-status')).toContainText('No supported items found. Empty or unfamiliar layouts stay visible.');
   await youtube.locator('ytd-browse').evaluate(e => e.setAttribute('page-subtype', 'home'));
   await hidden('home-video');
-  const bundle = await readFile('dist/content.js', 'utf8'); await isolated(bundle); await isolated(bundle);
+  const bundle = await readFile(path.join(extensionPath, 'content.js'), 'utf8'); await isolated(bundle); await isolated(bundle);
   await expect(youtube.locator('#chrysalis-viewing-style')).toHaveCount(1);
   await expect(youtube.locator('#chrysalis-viewing-status')).toHaveCount(1);
   assert.equal(await isolated('activeControlObservers'), 2);

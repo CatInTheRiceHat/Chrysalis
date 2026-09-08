@@ -33,6 +33,7 @@ const handle = createHandler(store, chrome.runtime.id, chrome.runtime.getManifes
       tab.status !== 'loading' && window.focused && window.state !== 'minimized';
   } catch { return false; }
 }, async page => {
+  if (page === 'history') { await chrome.tabs.create({ url: chrome.runtime.getURL('options.html#history') }); return; }
   if (page === 'settings') { await chrome.runtime.openOptionsPage(); return; }
   await chrome.windows.create({ type: 'popup', url: chrome.runtime.getURL(page === 'edit' ? 'popup.html#edit' : 'popup.html'), width: 440, height: 700, focused: true });
 });

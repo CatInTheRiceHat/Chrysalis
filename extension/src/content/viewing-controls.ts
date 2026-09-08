@@ -74,6 +74,7 @@ export function createViewingControls(doc: Document, win: Window) {
     signature = '';
   }
   function apply(next: Settings) {
+    if (next.extensionPaused) { cleanup(); return; }
     theme = next.theme;
     if (host) host.dataset.theme = theme;
     const key = JSON.stringify([next.hideHomeRecommendations, next.hideWatchRecommendations, next.hideShortsEntries]);

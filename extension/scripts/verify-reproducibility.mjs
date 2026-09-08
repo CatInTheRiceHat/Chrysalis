@@ -1,0 +1,12 @@
+import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import assert from 'node:assert/strict';
+const { version } = JSON.parse(await readFile('package.json', 'utf8'));
+const archive = `release/chrysalis-${version}.zip`;
+const hash = async () => createHash('sha256').update(await readFile(archive)).digest('hex');
+const first = await hash();
+const build = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'package'], { stdio: 'inherit' });
+assert.equal(build.status, 0, 'Second production build/package failed');
+assert.equal(await hash(), first, 'Two clean builds produced different archive bytes');
+console.log(`Reproducibility passed: two clean builds produced identical ZIP bytes (${first}).`);

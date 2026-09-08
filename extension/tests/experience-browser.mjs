@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 const profile = await mkdtemp(path.join(tmpdir(), 'chrysalis-experience-'));
-const extensionPath = path.resolve('dist'); const checks = [], errors = [];
+const extensionPath = path.resolve(process.env.CHRYSALIS_EXTENSION_PATH ?? 'dist'); const checks = [], errors = [];
 await mkdir('test-results', { recursive: true });
 let context;
 try {

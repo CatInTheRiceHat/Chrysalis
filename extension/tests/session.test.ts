@@ -172,7 +172,7 @@ test('foundation schema upgrades retain settings and summary data without import
   let disk: unknown = { schemaVersion: 1, revision: 3, settings: { theme: 'dark', showIndicator: false }, currentSession: { phase: 'idle' }, completedSessions: [] };
   const store = createStore({ async read() { return disk; }, async write(value) { disk = value; } });
   const state = await store.read();
-  assert.equal(state.schemaVersion, 4); assert.equal(state.settings.theme, 'dark'); assert.equal(state.revision, 3);
+  assert.equal(state.schemaVersion, 6); assert.equal(state.settings.theme, 'dark'); assert.equal(state.revision, 3);
   assert.equal(state.currentSession.phase, 'idle');
 });
 test('typed protocol rejects malformed observations and session mutations before storage', () => {
@@ -221,12 +221,177 @@ test('failed finish cannot partially save a summary or receipt; retry commits ex
   fail = false; await store.execute(finish); await store.execute(finish);
   assert.equal((await store.read()).completedSessions.length, 1);
 });
-test('restarted breaks restore paused; backward date changes do not prevent finishing', async () => {
+test('restarted breaks retain their deadline; backward date changes do not prevent finishing', async () => {
   const f = fixture(); await f.start(); await f.cmd({ action: 'break', durationMs: 60_000 });
   f.epoch('browser-restarted');
-  assert.equal((await f.store.read()).currentSession.phase, 'paused');
+  assert.equal((await f.store.read()).currentSession.phase, 'break');
   f.advance(-60_000); await f.cmd({ action: 'finish' });
   const state = await f.store.read();
   assert.equal(state.currentSession.phase, 'finished');
   assert.equal(state.completedSessions[0]!.finishedAt, state.completedSessions[0]!.startedAt);
+});
+
+function live(state: StorageSnapshot) { assert(state.currentSession.phase !== 'idle'); return state.currentSession; }
+async function reached() {
+  const f = fixture(); await f.start(60000); await f.pulse();
+  for (let i = 0; i < 30; i++) { f.advance(2000); await f.pulse(); }
+  return f;
+}
+test('one target crossing survives duplicate signals and worker recreation; dismissal never revises the target', async () => {
+  const f = await reached();
+  const revision = (await f.store.read()).sessionRevision;
+  const observer = { tabId: 1, windowId: 1, documentId: 'doc-1' };
+  const sample = { seq: 100, mono: f.now(), sentAt: f.now(), visible: true };
+  await Promise.all([f.store.observe(sample, observer, async () => true), f.store.observe(sample, observer, async () => true)]);
+  assert.equal((await createStore(f.adapter, f.environment).read()).sessionRevision, revision);
+  const dismiss = await f.mutation({ action: 'dismiss-checkpoint' });
+  const [a, b] = await Promise.all([f.store.execute(dismiss), f.store.execute(dismiss)]);
+  assert.equal(a.sessionRevision, b.sessionRevision);
+  assert.equal(a.currentSession.phase, 'active');
+  assert.equal(a.currentSession.targetMs, 60000);
+  assert.equal(a.currentSession.originalTargetMs, 60000);
+  await f.pulse(2); f.advance(2000); await f.pulse(2);
+  assert.equal((await f.store.read()).currentSession.phase, 'active');
+  f.epoch('restart'); await f.store.read(); await f.cmd({ action: 'resume' });
+  assert.equal((await f.store.read()).currentSession.phase, 'active');
+  await assert.rejects(f.store.execute({ ...dismiss, requestId: 'stale-dismiss' }), StaleSessionError);
+});
+test('additional duration begins at measured decision time, persists once, preserves original, and explicitly rearms', async () => {
+  const f = await reached(); f.advance(1250); await f.pulse();
+  const extension = await f.mutation({ action: 'extend', durationMs: 60000 });
+  await Promise.all([f.store.execute(extension), f.store.execute(extension)]);
+  const worker = createStore(f.adapter, f.environment);
+  await worker.execute(extension);
+  let state = await worker.read();
+  assert.equal(live(state).targetMs, 121250);
+  assert.equal(live(state).originalTargetMs, 60000);
+  assert.equal(live(state).goalAcknowledged, false);
+  await f.cmd({ action: 'edit', plan: { intention: 'Exploring', targetMs: 121250 } });
+  assert.equal(live(await f.store.read()).targetMs, 121250, 'intention edit retains precise extended target');
+  await f.pulse(); for (let i = 0; i < 30; i++) { f.advance(2000); await f.pulse(); }
+  assert.equal((await f.store.read()).currentSession.phase, 'checkpoint');
+  state = await f.cmd({ action: 'finish' });
+  assert.equal(state.completedSessions[0]!.targetMs, 121250);
+  assert.equal(state.completedSessions[0]!.originalTargetMs, 60000);
+});
+test('untimed continuation removes only the current target and duplicate choices cannot reopen a checkpoint', async () => {
+  const f = await reached();
+  const untimed = await f.mutation({ action: 'continue-untimed' });
+  const competing = await f.mutation({ action: 'extend', durationMs: 300000 });
+  await f.store.execute(untimed);
+  await assert.rejects(f.store.execute(competing), StaleSessionError);
+  await f.store.execute(untimed);
+  await f.pulse(); f.advance(2000); await f.pulse();
+  const state = await f.cmd({ action: 'finish' });
+  assert.equal(state.completedSessions[0]!.targetMs, null);
+  assert.equal(state.completedSessions[0]!.originalTargetMs, 60000);
+});
+test('disabled prompts keep counting, reenabling arms only unacknowledged targets, and target edits explicitly rearm', async () => {
+  const f = fixture(); await f.start(60000);
+  await f.store.updateSettings({ checkpointsEnabled: false }, 0);
+  await f.pulse(); for (let i = 0; i < 31; i++) { f.advance(2000); await f.pulse(); }
+  assert.equal((await f.store.read()).currentSession.phase, 'active');
+  assert.equal(elapsed(await f.store.read()), 62000);
+  await f.store.updateSettings({ checkpointsEnabled: true }, 1);
+  assert.equal((await f.store.read()).currentSession.phase, 'checkpoint');
+  await f.store.updateSettings({ checkpointsEnabled: false }, 2);
+  await f.store.updateSettings({ checkpointsEnabled: true }, 3);
+  assert.equal((await f.store.read()).currentSession.phase, 'active');
+  await f.cmd({ action: 'edit', plan: { intention: 'Studying', targetMs: 60000 } });
+  assert.equal((await f.store.read()).currentSession.phase, 'active');
+  await f.cmd({ action: 'edit', plan: { intention: 'Studying', targetMs: 120000 } });
+  await f.cmd({ action: 'edit', plan: { intention: 'Studying', targetMs: 60000 } });
+  assert.equal((await f.store.read()).currentSession.phase, 'checkpoint');
+});
+test('invalid additional time and total overflow reject atomically; an unreached target cannot be continued', async () => {
+  const f = fixture(); await f.start(60000);
+  await assert.rejects(f.cmd({ action: 'extend', durationMs: 60000 }));
+  const reachedFixture = await reached();
+  const before = await reachedFixture.store.read();
+  for (const durationMs of [0, -1, 60001, 86400000, Infinity, NaN]) await assert.rejects(reachedFixture.cmd({ action: 'extend', durationMs }));
+  assert.deepEqual(await reachedFixture.store.read(), before);
+  await assert.rejects(reachedFixture.cmd({ action: 'edit', plan: { intention: 'Studying', targetMs: 61000 } }));
+});
+test('a break survives tab handoffs, duplicate start, worker/browser restart and expires paused exactly once', async () => {
+  const f = await reached();
+  const start = await f.mutation({ action: 'break', durationMs: 120000 });
+  await Promise.all([f.store.execute(start), f.store.execute(start)]);
+  const until = live(await f.store.read()).breakUntil;
+  f.advance(30000); await f.pulse(2); await f.store.boundary({ type: 'leave', tabId: 1 });
+  const worker = createStore(f.adapter, f.environment); await worker.execute(start);
+  const oldResume = await f.mutation({ action: 'resume' });
+  f.epoch('restarted');
+  let state = await worker.read();
+  assert.equal(state.currentSession.phase, 'break'); assert.equal(state.currentSession.breakUntil, until);
+  await assert.rejects(worker.execute(oldResume), StaleSessionError);
+  assert.equal(elapsed(state), 60000); assert.equal(state.timing.anchor, null);
+  f.advance(90000); state = await worker.read();
+  assert.equal(state.currentSession.phase, 'paused'); assert.equal(state.currentSession.breakUntil, null);
+  const revision = state.sessionRevision;
+  await f.pulse(2); f.advance(50000);
+  assert.equal((await worker.read()).sessionRevision, revision);
+  assert.equal(elapsed(await worker.read()), 60000);
+  await worker.execute(start); assert.equal((await worker.read()).currentSession.phase, 'paused');
+});
+test('break choices distinguish end early, explicit resume, and finish without counting break time', async () => {
+  const f = await reached(); await f.cmd({ action: 'break', durationMs: 60000 });
+  f.advance(10000); await f.cmd({ action: 'end-break' });
+  assert.equal((await f.store.read()).currentSession.phase, 'paused');
+  await f.cmd({ action: 'break', durationMs: 60000 }); f.advance(10000);
+  await f.cmd({ action: 'resume' });
+  assert.equal((await f.store.read()).currentSession.phase, 'active');
+  assert.equal(live(await f.store.read()).breakUntil, null);
+  await f.pulse(); f.advance(2000); await f.pulse();
+  await f.cmd({ action: 'break', durationMs: 60000 }); f.advance(10000);
+  const result = await f.cmd({ action: 'finish' });
+  assert.equal(result.completedSessions[0]!.elapsedMs, 62000);
+});
+test('content duration commands validate shape and bounds without accepting arbitrary edits', () => {
+  const mutation = (command: unknown) => ({ channel: CHANNEL, type: 'SESSION_CONTROL', mutation: { requestId: 'control', expectedRevision: 2, expectedSessionId: 's', command } });
+  for (const action of ['extend', 'break']) {
+    assert(parseRequest(mutation({ action, durationMs: 60000 })));
+    for (const durationMs of [0, 1.5, 60001, 86460000, '60000']) assert.equal(parseRequest(mutation({ action, durationMs })), null);
+    assert.equal(parseRequest(mutation({ action, durationMs: 60000, url: 'https://example.com' })), null);
+  }
+  assert.equal(parseRequest(mutation({ action: 'edit', plan: { intention: 'Injected', targetMs: null } })), null);
+});
+
+test('extension pause settles once, preserves choices, rejects stale actions and requires explicit resume after enabling', async () => {
+  const f = fixture(); await f.start(300000);
+  await f.store.updateSettings({ hideHomeRecommendations: true }, 0);
+  await f.pulse(); f.advance(1250);
+  const stale = await f.mutation({ action: 'edit', plan: { intention: 'Old', targetMs: null } });
+  const results = await Promise.allSettled([
+    f.store.updateSettings({ extensionPaused: true }, 1),
+    f.store.updateSettings({ extensionPaused: true }, 1),
+  ]);
+  assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
+  let state = await f.store.read();
+  assert.equal(state.currentSession.phase, 'paused'); assert.equal(elapsed(state), 1250);
+  assert.equal(state.timing.anchor, null); assert.deepEqual(state.timing.signals, []);
+  f.advance(600000); await f.pulse();
+  await assert.rejects(f.cmd({ action: 'resume' }));
+  await assert.rejects(f.cmd({ action: 'break', durationMs: 60000 }));
+  state = await createStore(f.adapter, f.environment).read();
+  assert.equal(state.settings.extensionPaused, true); assert.equal(elapsed(state), 1250);
+  await f.store.updateSettings({ extensionPaused: false }, 2);
+  await assert.rejects(f.store.execute(stale), StaleSessionError);
+  assert.equal((await f.store.read()).currentSession.phase, 'paused');
+  await f.pulse(); assert.equal(elapsed(await f.store.read()), 1250);
+  await f.cmd({ action: 'resume' }); await f.pulse(); f.advance(2000); await f.pulse();
+  state = await f.cmd({ action: 'finish' });
+  assert.equal(state.settings.hideHomeRecommendations, true);
+  assert.equal(state.completedSessions[0]!.originalTargetMs, 300000);
+  assert.equal(state.completedSessions[0]!.elapsedMs, 3250);
+});
+test('extension pause ends a voluntary break with its elapsed wall-clock total; finish remains available', async () => {
+  const f = fixture(); await f.start(); await f.cmd({ action: 'break', durationMs: 60000 }); f.advance(12500);
+  await f.store.updateSettings({ extensionPaused: true }, 0);
+  let state = await f.store.read();
+  assert.equal(state.currentSession.phase, 'paused'); assert.equal(live(state).breakUntil, null);
+  assert.equal(live(state).breakStartedAt, null); assert.equal(live(state).history.breakMs, 12500);
+  f.advance(300000); state = await f.cmd({ action: 'finish' });
+  assert.equal(state.completedSessions[0]!.history.breakMs, 12500);
+  assert.equal(state.completedSessions[0]!.elapsedMs, 0);
+  await assert.rejects(f.start());
 });
