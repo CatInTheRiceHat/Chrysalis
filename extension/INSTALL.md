@@ -1,4 +1,4 @@
-# Build, install and troubleshoot Chrysalis 0.8.0
+# Build, install and troubleshoot Chrysalis 0.9.0
 
 ## Personal installation / volunteer files
 
@@ -8,7 +8,7 @@ onto Chrome or select the repository/source folder.
 
 1. Read the [privacy explanation](PRIVACY.md) and [pilot guide](pilot/GUIDE.md) first.
    Participation and every control are optional. You can stop and delete data.
-2. Extract `chrysalis-0.8.0.zip` using your normal archive tool. Place the extracted
+2. Extract `chrysalis-0.9.0.zip` using your normal archive tool. Place the extracted
    files in a stable folder you control, for example `Documents/Chrysalis-extension`.
    Opening that folder must show `manifest.json`, `popup.html`, `background.js`, etc.
 3. Open `chrome://extensions` in desktop Chrome and turn **Developer mode** on.
@@ -22,16 +22,15 @@ onto Chrome or select the repository/source folder.
 
 These are the official [local loading steps](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).
 No extension account, Google login, OAuth consent or YouTube API key is required.
-The website access is only the desktop YouTube origin. `storage` saves local settings,
-sessions and history and distinguishes browser restart from background-worker wake-up.
+Requires desktop Chrome 114 or later. The website access is only the desktop YouTube origin. `storage` saves non-personal preferences locally and keeps session activity in browser memory. Optional persistent history is encrypted; only this feature needs a password.
 
 Exact paths in this workspace:
 
 - Development production build: `/Users/elaine/Documents/Chrysalis/extension/dist`
-- Extracted distribution: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.8.0-unpacked`
-- ZIP: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.8.0.zip`
-- Checksums and per-file inventory: `release/chrysalis-0.8.0.sha256` and
-  `release/chrysalis-0.8.0-build-manifest.json`
+- Extracted distribution: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.9.0-unpacked`
+- ZIP: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.9.0.zip`
+- Checksums and per-file inventory: `release/chrysalis-0.9.0.sha256` and
+  `release/chrysalis-0.9.0-build-manifest.json`
 
 ## Reproducible production build
 
@@ -67,15 +66,15 @@ npm run test:package
 ```
 
 This builds twice, requires byte-identical ZIPs, rejects a deliberately introduced
-development file/missing script in a temporary copy, and runs all ten extension
+development file/missing script in a temporary copy, and runs all eleven extension
 browser suites against the ZIP-extracted directory. It writes a validation record
 bound to the ZIP SHA-256, source revision and source-file digest. Tests use disposable profiles; fixtures are not live-layout
 proof. Node/Python versions can change bytes; equivalence across untested toolchains
 is not promised. Re-run this command after changing inputs.
 
 To verify a received checksum (from `release/`): macOS `shasum -a 256 -c
-chrysalis-0.8.0.sha256`; Linux `sha256sum -c chrysalis-0.8.0.sha256`. On Windows,
-`Get-FileHash .\chrysalis-0.8.0.zip -Algorithm SHA256` in PowerShell and compare with
+chrysalis-0.9.0.sha256`; Linux `sha256sum -c chrysalis-0.9.0.sha256`. On Windows,
+`Get-FileHash .\chrysalis-0.9.0.zip -Algorithm SHA256` in PowerShell and compare with
 the checksum text. A checksum detects differing bytes; it does not authenticate an
 unknown sender. Obtain the files and expected checksum through a trusted source.
 
@@ -89,10 +88,13 @@ or load another copy to update. Changing installation identity/folder can separa
 its storage; moving to a later Store installation is not an implemented data migration.
 See Chrome's [extension ID guidance](https://developer.chrome.com/docs/extensions/reference/manifest/key).
 
-Schema 7 preserves valid schemas 1–6, including existing history and display settings; unknown/malformed data is not
-silently reset. Unfinished viewing restores paused. A break retains its deadline but
-expiry never resumes viewing. Unpacked installations have no automatic update feed. An older build may reject newer
-local schemas: do not downgrade or reinstall as a repair. Website rollback is separate.
+Version 0.9.0 changes retention. Settings survive updates. Existing 0.8.0 plaintext stays untouched until you open Session history and explicitly confirm encrypting it with a new password or deleting it. Encryption retains the latest 100 completed sessions and archives an unfinished earlier plan without resuming it. The confirmation explains discarded technical records and any history limit. Cancel preserves the old record. Unreadable old data is not silently reset.
+
+New session activity, including unfinished timers and temporary history, disappears when Chrome restarts or Chrysalis is reloaded, updated or disabled. Finish first and enable/unlock optional encrypted history if you want completed records to survive. A worker wake-up does not clear browser memory or relock history. A browser restart does both; no unfinished timer resumes. Unlocking is never required for planning or viewing controls.
+
+Passwords are 12–128 characters; use a strong unique passphrase. No password recovery or export/import exists. Lock hides saved records while allowing new temporary sessions. Unlock merges them into the latest 100 saved records. If an encrypted save fails, keep Chrome open and Retry in history. Reloading or closing Chrome can lose unsaved changes. Clear session history can delete encrypted history without a password after confirmation.
+
+Unpacked installations have no automatic update feed. Do not downgrade as a repair. The original 0.8.0 ZIP/tag remains preserved; website rollback is separate.
 
 ## Troubleshooting
 
@@ -105,7 +107,7 @@ local schemas: do not downgrade or reinstall as a repair. Website rollback is se
 | Timer stopped | Check session pause, global pause, target-independent state and focused active tab. Recovery after a >5-second signal gap needs Resume. It is foreground time, not exact player time. |
 | No checkpoint | A target is optional. Check prompts enabled and whether this target was already dismissed/acknowledged. A new explicit target/additional duration rearms it; changing intention alone does not. Fullscreen uses the centered check-in and a compact restore tab. |
 | Old UI remains after reload/disable | Return to the tab; visible old contexts normally remove their UI within about five seconds. Hidden/frozen contexts can be delayed. Refresh gives immediate cleanup and loads the new script when enabled. |
-| Save/read failure | Retry, check that the same version is loaded, reload the extension and reopen its popup. Do not assume Saved unless confirmed. Unknown schemas/corrupt data are preserved, not repaired automatically. |
+| Save/read failure | Keep Chrome open, check the visible error, and use Retry in history for an encrypted save failure. Reload discards unsaved activity. Do not assume Saved unless confirmed. Unknown schemas/corrupt data are preserved, not repaired automatically. |
 | Want to delete data | Settings → history → Delete session for one record; Clear session history for all completed records; Delete all Chrysalis data separately clears preferences/current session too. Confirm the dialog. None of these deletes YouTube history. |
 | Data cannot be read even after retry | Preserve the profile if you want recovery help; no record export/automatic repair is implemented. As an explicit destructive last resort, remove the extension in Chrome and reinstall for a fresh installation. This loses its local data. |
 

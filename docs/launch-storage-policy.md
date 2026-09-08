@@ -1,4 +1,8 @@
-# Store storage decision — 0.8.0
+# Store storage decision — 0.9.0 supersedes 0.8.0
+
+**Current decision:** the owner selected password-free viewing with memory-only activity by default and optional encrypted persistent history. Implemented in 0.9.0; see [every field, migration, key handling and policy reasoning](encrypted-history-storage.md). The pending choice below is retained as the historical 0.8.0 record, not a current blocker. Store approval is not guaranteed.
+
+## Historical 0.8.0 assessment
 
 Reviewed 2026-09-07 PDT against the currently served official documentation.
 This is a release decision record, not a Store approval or legal opinion.

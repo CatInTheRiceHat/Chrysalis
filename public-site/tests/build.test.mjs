@@ -22,9 +22,9 @@ test('every public route renders standalone HTML with a single primary heading a
 });
 test('privacy and installation disclose preview status, timing, retention and update limitations', async () => {
   const install = await readFile('dist/install/index.html', 'utf8');
-  for (const text of ['Load unpacked', 'Continue without a timer', 'schema 7', 'Reload', 'not published']) assert(install.includes(text), text);
+  for (const text of ['Load unpacked', 'Continue without a timer', 'Version 0.9.0', 'Reload', 'not published']) assert(install.includes(text), text);
   const privacy = await readFile('dist/privacy/index.html', 'utf8');
-  for (const text of ['100 completed', 'not encrypted', 'Delete all', '30 minutes', 'No session data', 'hosting provider']) assert(privacy.includes(text), text);
+  for (const text of ['100 completed', 'not encrypted', 'Delete all', '30 minutes', 'AES-256-GCM', 'hosting provider']) assert(privacy.includes(text), text);
   const assets = await readdir('dist/assets');
   assert(assets.includes('Montserrat-OFL.txt')); assert(assets.includes('AbrilFatface-OFL.txt'));
 });

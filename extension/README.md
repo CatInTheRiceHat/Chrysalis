@@ -20,7 +20,7 @@ not block all Shorts URLs, change YouTube's algorithm, block ads or control play
 
 No server, account, API key, Node or Python is needed to use the prepared extension.
 
-1. Extract `release/chrysalis-0.8.0.zip` into a permanent folder. Do not run files
+1. Extract `release/chrysalis-0.9.0.zip` into a permanent folder. Do not run files
    from inside the ZIP. The folder you select must contain `manifest.json` directly.
 2. Open `chrome://extensions` in desktop Chrome. Turn **Developer mode** on.
 3. Choose **Load unpacked**, then select the extracted folder. Pin Chrysalis from
@@ -29,7 +29,7 @@ No server, account, API key, Node or Python is needed to use the prepared extens
    Settings → Viewing controls contains the optional layout choices.
 
 In this workspace you can load either `extension/dist/` or the verified extracted
-folder `extension/release/chrysalis-0.8.0-unpacked/`. Existing `dist/` users should
+folder `extension/release/chrysalis-0.9.0-unpacked/`. Existing `dist/` users should
 reload that installation rather than adding a second copy. Keep installation folders
 in place; refresh YouTube after an update. Keep Developer mode on for unpacked use.
 
@@ -72,17 +72,17 @@ npm run screenshots   # actual extension/live YouTube captures; allow about two 
 - Pause Chrysalis restores the ordinary layout and stops timing. Enable restores
   saved controls; Resume is a separate choice. A running break ends when paused.
 - About two-second observations; missing signals over five seconds can discard time
-  and require Resume. Browser restart recovers unfinished viewing sessions paused.
+  and require Resume. Browser restart clears unfinished sessions and temporary history.
 - Desktop Chrome only; no native mobile YouTube, other browsers promised, incognito,
   accounts, sync, telemetry, AI coach or social feed. Minimum manifest version is
-  Chrome 111, but validation uses Chromium 153; older versions remain unverified.
+  Chrome 114, but validation uses Chromium 153; older versions remain unverified.
 
 ## Privacy, help and pilot
 
-Plans, reflections and settings stay in Chrome's local storage. Chrysalis inspects
+Plans and reflections stay in browser memory by default; optional completed history is encrypted on disk. Non-personal preferences persist locally. Chrysalis inspects
 page structure without recording video URLs, titles, searches or account identities.
 There is no upload or analytics. Your current intention can be read by YouTube when
-displayed in its page. Local notes are not encrypted by Chrysalis.
+displayed in its page. Only optional encrypted history needs unlocking; the timer and viewing controls work without a password.
 [Full privacy explanation](PRIVACY.md) is also available offline through settings.
 
 See [troubleshooting](INSTALL.md#troubleshooting), [voluntary pilot guide](pilot/GUIDE.md),
@@ -99,13 +99,13 @@ The original React/Python/Flutter applications remain independent. Technical con
 [session model](SESSION_MODEL.md), [viewing adapter](VIEWING_CONTROLS.md),
 [history](HISTORY.md), [experience](EXPERIENCE.md), [hardening evidence](HARDENING.md).
 
-## Current release: 0.8.0
+## Current release: 0.9.0
 
 The centered YouTube introduction, compact side timer and check-ins are included in
-all ten packaged browser suites. Storage schema 7 preserves valid earlier data.
+all eleven packaged browser suites. Earlier plaintext needs an explicit encrypt/delete choice; settings are preserved.
 The public website is independent in `public-site/`; old applications remain preserved
 at `legacy-web-baseline-2026-09-07`. Their deployed services are a separate decision.
 
-Current evidence supersedes the historical 0.7.x reports. Exact source identity and
-ZIP digest are recorded in `release/chrysalis-0.8.0-build-manifest.json` and the
+Current evidence supersedes historical runtime behavior in 0.7.x and 0.8.0 reports. The verified 0.8.0 ZIP/tag remains preserved. Exact source identity and
+ZIP digest are recorded in `release/chrysalis-0.9.0-build-manifest.json` and the
 matching validation file. See [current status](../docs/extension-implementation-status.md).

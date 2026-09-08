@@ -1,6 +1,7 @@
 import { CHANNEL, type SettingsChanged } from './shared/protocol';
 import { createHandler } from './shared/handler';
 import { createStore, STORAGE_KEY } from './shared/storage';
+import { createPersistence } from './shared/persistence';
 import { snapshot } from './shared/validation';
 import { sessionDisplay } from './shared/types';
 import { createPrompts, type Visit } from './session/prompts';
@@ -8,11 +9,16 @@ import type { Boundary } from './session/model';
 
 // Access restriction runs on every worker start, before any storage operation.
 // Fail closed if Chrome cannot apply it; a later request can retry.
-const trustedStorage = () => chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
-const store = createStore({
-  async read() { await trustedStorage(); return (await chrome.storage.local.get(STORAGE_KEY))[STORAGE_KEY]; },
-  async write(value) { await trustedStorage(); await chrome.storage.local.set({ [STORAGE_KEY]: value }); },
-}, {
+const trustedStorage = async () => {
+  await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+  await chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+};
+const area = (storage: chrome.storage.StorageArea) => ({
+  async get(keys: string[]) { await trustedStorage(); return storage.get(keys); },
+  async set(values: Record<string, unknown>) { await trustedStorage(); await storage.set(values); },
+});
+const persistence = createPersistence(area(chrome.storage.local), area(chrome.storage.session));
+const store = createStore(persistence.adapter, {
   now: Date.now,
   async epoch() {
     // Cleared by Chrome on browser restart/extension reload, retained on worker suspension.
@@ -42,7 +48,7 @@ const handle = createHandler(store, chrome.runtime.id, chrome.runtime.getManifes
   if (page === 'history') { await chrome.tabs.create({ url: chrome.runtime.getURL('options.html#history') }); return; }
   if (page === 'settings') { await chrome.runtime.openOptionsPage(); return; }
   await chrome.windows.create({ type: 'popup', url: chrome.runtime.getURL(page === 'edit' ? 'popup.html#edit' : 'popup.html'), width: 440, height: 700, focused: true });
-}, prompt);
+}, prompt, (action, password) => store.exclusive(() => persistence.history(action, password)));
 
 function onBoundary(event: Boundary) {
   const at = Date.now();
@@ -70,7 +76,7 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.storage.onChanged.addListener((changes, area) => {
   const value: unknown = changes[STORAGE_KEY]?.newValue;
-  if (area !== 'local' || !snapshot(value)) return;
+  if (area !== 'session' || !snapshot(value)) return;
   const event: SettingsChanged = {
     channel: CHANNEL, type: 'SETTINGS_CHANGED', settings: value.settings, revision: value.revision,
     session: sessionDisplay(value), sequence: value.sequence,

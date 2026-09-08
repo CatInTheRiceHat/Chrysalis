@@ -91,9 +91,9 @@ try {
 
   // Seed near the target only in this disposable profile; actual pulses cross it.
   await worker.evaluate(async () => {
-    const key = 'chrysalis.extension.v1'; const state = (await chrome.storage.local.get(key))[key];
+    const key = 'chrysalis.extension.v1'; const state = (await chrome.storage.session.get(key))[key];
     state.currentSession.elapsedMs = 59000; state.timing.anchor = null; state.sequence++;
-    await chrome.storage.local.set({ [key]: state });
+    await chrome.storage.session.set({ [key]: state });
   });
   await youtube.bringToFront();
   await expect.poll(async () => (await state()).currentSession.phase, { timeout: 15000 }).toBe('checkpoint');
@@ -131,17 +131,14 @@ try {
     await live.screenshot({ path: 'test-results/session-live-youtube.png' });
     checks.push('Live signed-out YouTube homepage: foreground browsing time and session indicator verified.');
   }
-  const priorElapsed = await elapsed();
   await context.close(); context = await launch();
   const restoredPage = await context.newPage();
   await restoredPage.goto(`${base}popup.html`);
-  await expect(restoredPage.locator('#session-phase')).toHaveText('Paused');
-  await expect(restoredPage.locator('#recovery')).toContainText('restored paused');
+  await expect(restoredPage.locator('#submit-plan')).toBeVisible();
   const restored = await restoredPage.evaluate(async () => (await chrome.runtime.sendMessage({ channel: 'chrysalis/v1', type: 'GET_SNAPSHOT' })).snapshot);
-  assert.equal(restored.currentSession.recoveryReason, 'browser-restart');
-  assert(restored.currentSession.elapsedMs >= priorElapsed && restored.currentSession.elapsedMs <= priorElapsed + 5000);
-  assert.equal(restored.completedSessions.length, 1);
-  checks.push('Full browser restart restores an unfinished session paused, preserves observed time and completed summary.');
+  assert.equal(restored.currentSession.phase, 'idle');
+  assert.equal(restored.completedSessions.length, 0);
+  checks.push('Full browser restart discards temporary current session and history; preferences persist and a new session needs no password.');
   assert.deepEqual(errors, []);
   await writeFile('test-results/session-browser-report.json', JSON.stringify({ browser: version, checks, liveYouTube: process.env.LIVE_YOUTUBE === '1', note: 'Actual extension/Chrome events on origin fixtures; target proximity seeded in temporary profile.' }, null, 2) + '\n');
   console.log(JSON.stringify({ browser: version, checks }, null, 2));

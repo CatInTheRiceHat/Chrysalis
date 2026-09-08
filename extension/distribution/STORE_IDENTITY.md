@@ -1,11 +1,11 @@
 # Installation identity and Store transition
 
-0.8.0 has no manifest `key`, Store-assigned ID or update URL. Nothing was uploaded
+0.9.0 has no manifest `key`, Store-assigned ID or update URL. Nothing was uploaded
 to create an item. Its ZIP is for Load unpacked and is not a signed Store installer.
 
 | Installation change | Settings/history outcome |
 | --- | --- |
-| Replace files at the same unpacked folder, Reload the existing card | Same installation identity is expected; schema 7 migrates valid prior schemas. Do not uninstall. |
+| Replace files at the same unpacked folder, Reload the existing card | Same installation identity is expected; preferences survive; existing plaintext history needs an explicit encrypt/delete choice. New temporary activity clears on Reload. Do not uninstall. |
 | Move folder, load a second copy, use a different Chrome profile | A different identity/storage area may result. Do not assume the old records are visible. |
 | Install the future Store item | Treat as a separate installation with empty local settings/history. No cross-ID transfer is implemented. |
 | Uninstall the old unpacked copy | Chrome clears its extension-local data. Do not do this before deciding whether its history must be retained. |
@@ -32,7 +32,7 @@ status has been invented. See the official [registration](https://developer.chro
 [preparation](https://developer.chrome.com/docs/webstore/prepare) and
 [publishing](https://developer.chrome.com/docs/webstore/publish) instructions.
 
-Manual preflight not established by the existing automated evidence: older minimum
-Chrome 111, signed-in/populated and experimental YouTube layouts, physical sleep/wake,
+Manual preflight not established by the existing automated evidence: minimum
+Chrome 114, signed-in/populated and experimental YouTube layouts, physical sleep/wake,
 human screen-reader use and physical toolbar positioning. Scope remains desktop
 YouTube only; no mobile-app, productivity-outcome or universal-layout claim.

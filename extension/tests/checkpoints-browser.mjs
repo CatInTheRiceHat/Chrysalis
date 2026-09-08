@@ -25,10 +25,10 @@ try {
     if (!reply.ok) throw new Error(reply.error); return reply.snapshot;
   });
   const seedNearTarget = () => worker.evaluate(async () => {
-    const key = 'chrysalis.extension.v1', s = (await chrome.storage.local.get(key))[key];
+    const key = 'chrysalis.extension.v1', s = (await chrome.storage.session.get(key))[key];
     s.currentSession.elapsedMs = s.currentSession.targetMs - 500;
     s.timing.anchor = null; s.sequence++;
-    await chrome.storage.local.set({ [key]: s });
+    await chrome.storage.session.set({ [key]: s });
   });
   await popup.locator('#time-target').selectOption('custom'); await popup.locator('#custom-minutes').fill('1');
   await popup.locator('#submit-plan').click();
@@ -122,22 +122,10 @@ try {
   worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
   popup = await context.newPage(); await popup.goto(`${base}popup.html`); await popup.bringToFront();
   await expect.poll(() => popup.evaluate(() => document.hidden)).toBe(false);
-  await expect(popup.locator('#session-phase')).toHaveText('Break');
-  assert.equal((await state()).currentSession.breakUntil, deadline);
-  assert.equal((await state()).currentSession.elapsedMs, breakElapsed);
-  // Only seed the deadline proximity; normal reads reconcile its actual expiry.
-  await worker.evaluate(async () => {
-    const key = 'chrysalis.extension.v1', s = (await chrome.storage.local.get(key))[key];
-    s.currentSession.breakUntil = Date.now() + 1500; s.sequence++; await chrome.storage.local.set({ [key]: s });
-  });
-  await expect(popup.locator('#session-phase')).toHaveText('Paused', { timeout: 10000 }).catch(async error => {
-    console.log('Expiry diagnostic', { visible: await popup.evaluate(() => !document.hidden), now: Date.now(), saved: await state() }); throw error;
-  });
-  assert.equal((await state()).currentSession.elapsedMs, breakElapsed);
-  await popup.locator('[data-choice="break"]').click(); await popup.locator('[data-action="finish"]').click();
-  await expect(popup.locator('#session-phase')).toHaveText('Finished');
-  assert.equal((await state()).completedSessions.length, 1);
-  checks.push('Actual browser restart preserves an unexpired break deadline; expiry reconciles to paused without crediting time; finishing a break saves one summary.');
+  await expect(popup.locator('#submit-plan')).toBeVisible();
+  assert.equal((await state()).currentSession.phase, 'idle');
+  assert.equal((await state()).completedSessions.length, 0);
+  checks.push('Actual browser restart clears the temporary break and session history; no countdown is recovered or resumed.');
   const options = await context.newPage(); await options.goto(`${base}options.html`);
   await options.locator('#checkpoints-enabled').uncheck();
   await expect(options.locator('#save-status')).toHaveText('Saved on this device.');

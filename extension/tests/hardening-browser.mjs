@@ -42,7 +42,7 @@ try {
   const second = await context.newPage(); await second.goto('https://www.youtube.com/');
   await popup.bringToFront(); await popup.locator('#time-target').selectOption('none'); await popup.locator('#submit-plan').click();
   await yt.bringToFront(); await expect.poll(async () => (await state()).currentSession.elapsedMs, { timeout: 15000 }).toBeGreaterThanOrEqual(2000);
-  await popup.evaluate(() => { window.writes = 0; window.writeDetails = []; chrome.storage.onChanged.addListener((c, area) => { if (area === 'local' && c['chrysalis.extension.v1']) { window.writes++; const s=c['chrysalis.extension.v1'].newValue; window.writeDetails.push({at:Date.now(),anchor:s.timing.anchor,signals:s.timing.signals}); } }); });
+  await popup.evaluate(() => { window.writes = 0; window.writeDetails = []; chrome.storage.onChanged.addListener((c, area) => { if (area === 'session' && c['chrysalis.extension.v1']) { window.writes++; const s=c['chrysalis.extension.v1'].newValue; window.writeDetails.push({at:Date.now(),anchor:s.timing.anchor,signals:s.timing.signals}); } }); });
   await yt.evaluate(() => { for (let i = 0; i < 1000; i++) document.dispatchEvent(new Event('visibilitychange')); });
   await delay(6500);
   const writes = await popup.evaluate(() => window.writes);
@@ -102,9 +102,9 @@ try {
   await expect(yt.locator('#card')).toBeVisible({ timeout: 10000 });
   await expect(yt.locator('#chrysalis-extension-indicator, #chrysalis-viewing-style, #chrysalis-viewing-status')).toHaveCount(0);
   assert.equal(await isolated('observers'), 0);
-  popup = await context.newPage(); await popup.goto(`${base}popup.html`); worker = await restarted; assert(worker, "Worker should wake when refreshed popup requests state"); s = await state(); assert.equal(s.completedSessions.length, 1); assert.equal(s.settings.hideHomeRecommendations, true);
+  popup = await context.newPage(); await popup.goto(`${base}popup.html`); worker = await restarted; assert(worker, "Worker should wake when refreshed popup requests state"); s = await state(); assert.equal(s.completedSessions.length, 0); assert.equal(s.settings.hideHomeRecommendations, true);
   await yt.reload(); await expect(yt.locator('#card')).toBeHidden();
-  checks.push('The real chrome://extensions Reload button invalidates the old idle content context: it removes its controls/observers within ten seconds. Settings/history survive; refreshing YouTube installs the new content script.');
+  checks.push('The real chrome://extensions Reload button invalidates the old idle content context: it removes its controls/observers within ten seconds. Preferences survive; temporary history is cleared on extension reload; refreshing YouTube installs the new content script.');
   const embedded = await context.newPage(); await embedded.goto('https://www.youtube.com/embed/fixture');
   await delay(700); await expect(embedded.locator('#chrysalis-extension-indicator')).toHaveCount(0);
   checks.push('Player-only /embed documents receive no dock; controls remain accessible through the popup.');

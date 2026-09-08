@@ -74,7 +74,7 @@ try {
   await introduction.getByRole('button', { name: 'Continue without a timer', exact: true }).click();
   await expect(introduction).toHaveCount(0);
   await youtube.locator('#youtube-control').click();
-  assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get('chrysalis.extension.v1'))['chrysalis.extension.v1'].currentSession.phase), 'idle');
+  assert.equal(await worker.evaluate(async () => (await chrome.storage.session.get('chrysalis.extension.v1'))['chrysalis.extension.v1'].currentSession.phase), 'idle');
   results.push('Default introduction dismisses through Continue without a timer, restores host interaction and creates no session.');
   const indicator = youtube.locator('#chrysalis-extension-indicator');
   await expect(indicator).toHaveCount(1);
@@ -103,7 +103,7 @@ try {
   assert.equal(denied.code, 'FORBIDDEN');
   const privateRead = await isolated(`chrome.runtime.sendMessage({channel:'chrysalis/v1',type:'GET_SNAPSHOT'})`);
   assert.equal(privateRead.code, 'FORBIDDEN');
-  const directRead = await isolated(`(async()=>{try {await chrome.storage.local.get(null); return 'allowed';}catch{return 'denied';}})()`);
+  const directRead = await isolated(`(async()=>{try {await chrome.storage.session.get(null); return 'allowed';}catch{return 'denied';}})()`);
   assert.equal(directRead, 'denied');
   results.push('Actual content context cannot mutate settings, request private snapshots or directly read restricted storage.');
 

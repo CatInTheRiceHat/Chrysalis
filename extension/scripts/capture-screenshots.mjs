@@ -58,7 +58,7 @@ try {
   const state = () => popup.evaluate(async () => { const r = await chrome.runtime.sendMessage({ channel: 'chrysalis/v1', type: 'GET_SNAPSHOT' }); if (!r.ok) throw Error(r.error); return r.snapshot; });
   await expect.poll(async () => (await state()).currentSession.elapsedMs, { timeout: 15000 }).toBeGreaterThanOrEqual(2000);
   await indicator.scrollIntoViewIfNeeded();
-  await capture(live, '02-live-youtube-session.png', 'Actual signed-out YouTube homepage with a live foreground session; no YouTube page content was substituted.', true);
+  await capture(live, '02-live-youtube-session.png', 'Actual signed-out YouTube homepage with a live foreground session; no YouTube page content was substituted.', false);
   console.log('Capturing a real one-minute foreground session; waiting for its checkpoint.');
   await expect.poll(async () => (await state()).currentSession.phase, { timeout: 80000, intervals: [1000] }).toBe('checkpoint');
   await indicator.scrollIntoViewIfNeeded();
@@ -77,7 +77,16 @@ try {
   assert(saved.elapsedMs >= 60000); assert(saved.history.breakMs >= 2000); assert.equal(saved.reflection, null);
   await settings.bringToFront(); await settings.locator('#history').scrollIntoViewIfNeeded();
   await expect(settings.locator('.history-entry')).toHaveCount(1);
-  await capture(settings, '04-local-history.png', 'A real record created by the preceding automated session actions; not participant data or research evidence.', true);
+  await capture(settings, '04-local-history.png', 'A real record created by the preceding automated session actions; not participant data or research evidence.', false);
+  await settings.locator('#history-password').fill('capture-only unique passphrase');
+  await settings.locator('#history-password-confirm').fill('capture-only unique passphrase');
+  await settings.locator('#vault-submit').click();
+  await expect(settings.locator('#vault-mode')).toContainText('Encrypted history is unlocked');
+  await settings.locator('#history-storage').scrollIntoViewIfNeeded();
+  await capture(settings, '05-encrypted-history.png', 'Actual optional encrypted history enabled through its UI; password fields are cleared and no password appears in the capture.', true);
+  await settings.locator('#vault-lock').click();
+  await expect(settings.locator('#vault-mode')).toContainText('Saved history is locked');
+  await capture(settings, '06-locked-history.png', 'Actual locked-history controls; planning and viewing remain available without unlocking.', true);
   checks.push('Real foreground pulses reached a checkpoint on live YouTube; UI target revisions, added time, voluntary break, finish and Skip produced the photographed history record.');
   limitations.push('Signed-out Home only; native toolbar popover, authenticated feeds and all experimental layouts are not established by these captures.');
   await writeFile(`${output}/capture-report.json`, JSON.stringify({ version, sourceRevision: manifest.sourceRevision, zipSha256: manifest.sha256, browser: context.browser().version(), capturedAt: new Date().toISOString(), source: extension, captures, checks, limitations }, null, 2) + '\n');

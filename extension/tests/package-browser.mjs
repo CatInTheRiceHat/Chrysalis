@@ -15,7 +15,7 @@ for (const [file, digest] of Object.entries(report.files)) {
   assert.equal(hash(await readFile(path.join('dist', file))), digest);
 }
 assert.equal(spawnSync(process.execPath, ['scripts/verify-build.mjs', unpacked], { stdio: 'inherit' }).status, 0);
-const suites = ['integrated-browser', 'browser', 'session-browser', 'viewing-browser', 'experience-browser', 'checkpoints-browser', 'history-browser', 'hardening-browser', 'usability-browser', 'usability-native'];
+const suites = ['integrated-browser', 'browser', 'session-browser', 'viewing-browser', 'experience-browser', 'checkpoints-browser', 'history-browser', 'hardening-browser', 'usability-browser', 'usability-native', 'encrypted-history-browser'];
 for (const suite of suites) {
   console.log(`Packaged-extension verification: ${suite}`);
   const result = spawnSync(process.execPath, [`tests/${suite}.mjs`], { stdio: 'inherit', env: { ...process.env, CHRYSALIS_EXTENSION_PATH: unpacked, CHRYSALIS_USABILITY_OUTPUT: path.resolve('test-results/usability') } });

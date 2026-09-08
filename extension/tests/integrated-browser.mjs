@@ -105,13 +105,13 @@ try {
   }
   checks.push(`Dark mode, reduced motion and 375px widget bounds checked${live?'':'; fixture theater, fullscreen restore and real 200% Chrome zoom checked'}.`);
   // Seed near the target; real observations perform the crossing.
-  await worker.evaluate(async()=>{const k='chrysalis.extension.v1',s=(await chrome.storage.local.get(k))[k];s.currentSession.elapsedMs=119000;s.timing.anchor=null;s.sequence++;await chrome.storage.local.set({[k]:s});});
+  await worker.evaluate(async()=>{const k='chrysalis.extension.v1',s=(await chrome.storage.session.get(k))[k];s.currentSession.elapsedMs=119000;s.timing.anchor=null;s.sequence++;await chrome.storage.session.set({[k]:s});});
   await yt.bringToFront(); await expect(modal.locator('dialog')).toBeVisible({timeout:20000});
   await expect(modal.locator('#dialog-title')).toHaveText('A moment to choose.');
   await modal.locator('#additional-duration').selectOption('5');
   await modal.locator('[data-choice="extend"]').click(); await expect(modal).toHaveCount(0);
   assert((await state()).currentSession.targetMs>=419000);
-  await worker.evaluate(async()=>{const k='chrysalis.extension.v1',s=(await chrome.storage.local.get(k))[k];s.currentSession.elapsedMs=s.currentSession.targetMs-1000;s.timing.anchor=null;s.sequence++;await chrome.storage.local.set({[k]:s});});
+  await worker.evaluate(async()=>{const k='chrysalis.extension.v1',s=(await chrome.storage.session.get(k))[k];s.currentSession.elapsedMs=s.currentSession.targetMs-1000;s.timing.anchor=null;s.sequence++;await chrome.storage.session.set({[k]:s});});
   await expect(modal.locator('dialog')).toBeVisible({timeout:20000});
   await modal.locator('[data-choice="break"]').click(); await expect(popup.locator('#session-phase')).toHaveText('Break');
   if (await indicator.locator('#restore').isVisible()) await indicator.locator('#restore').click();
@@ -134,7 +134,7 @@ try {
   await laterVisit(); await modal.locator('#duration').selectOption('custom'); await modal.locator('#minutes').fill('1');
   await modal.locator('#intention').focus(); await yt.keyboard.press('Enter');
   await expect(modal).toHaveCount(0); assert.equal((await state()).currentSession.intention,'Your session');
-  await worker.evaluate(async()=>{const k='chrysalis.extension.v1',s=(await chrome.storage.local.get(k))[k];s.currentSession.elapsedMs=59000;s.timing.anchor=null;s.sequence++;await chrome.storage.local.set({[k]:s});});
+  await worker.evaluate(async()=>{const k='chrysalis.extension.v1',s=(await chrome.storage.session.get(k))[k];s.currentSession.elapsedMs=59000;s.timing.anchor=null;s.sequence++;await chrome.storage.session.set({[k]:s});});
   await expect(modal.locator('dialog')).toBeVisible({timeout:20000}); await modal.locator('#finish').click();
   await expect(popup.locator('#session-phase')).toHaveText('Finished');
   checks.push('Continue without a timer creates no session; optional empty intention and Enter submission work; scripted submit is ignored; centered Finish saves the session.');

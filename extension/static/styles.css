@@ -151,3 +151,12 @@ textarea:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 #session-root #break-controls > select { max-width: 100%; width: 100%; }
 #session-root #break-controls > button { grid-column: auto; margin: 0; }
 #session-root #break-controls > .note { margin: 0; }
+
+#history-storage { font-size: 16px; }
+#vault-form { display: grid; gap: 10px; max-width: 440px; margin: 24px 0; }
+#vault-form input { width: 100%; min-width: 0; min-height: 44px; font: inherit; background: var(--bg); color: var(--ink); border: 1px solid var(--control-line); border-radius: 8px; padding: 10px; }
+#vault-form label { font-weight: 600; }
+.storage-notice { padding: 20px; border: 1px solid var(--control-line); border-radius: 10px; background: var(--surface); }
+#vault-error:empty { display: none; }
+#vault-mode { border-left: 3px solid var(--accent); padding-left: 16px; }
+#history-storage [hidden] { display: none !important; }

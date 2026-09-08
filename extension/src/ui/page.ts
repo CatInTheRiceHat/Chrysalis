@@ -4,6 +4,7 @@ import { STORAGE_KEY } from '../shared/storage';
 import { snapshot } from '../shared/validation';
 import { viewingDefaults, type Settings, type StorageSnapshot } from '../shared/types';
 import { targetFromMinutes } from '../session/model';
+import { mountHistoryStorage } from './history-storage';
 import { mountHistory } from './history';
 import { mountSession } from './session';
 
@@ -70,7 +71,7 @@ function renderSnapshot(state: StorageSnapshot) {
   if (lastSnapshot && state.sequence < lastSnapshot.sequence) return;
   lastSnapshot = state; render(state.settings, state.revision); history?.render(state);
   const count = $('history-count');
-  if (count) count.textContent = state.completedSessions.length ? `${state.completedSessions.length} completed ${state.completedSessions.length === 1 ? 'session is' : 'sessions are'} saved on this device.` : 'No completed sessions saved yet.';
+  if (count) count.textContent = state.completedSessions.length ? `${state.completedSessions.length} completed ${state.completedSessions.length === 1 ? 'session is' : 'sessions are'} available in this browser session.` : 'No completed sessions saved yet.';
 }
 async function load() {
   enabled(false);
@@ -138,7 +139,7 @@ async function confirmData(scope: 'history' | 'all', trigger: HTMLElement) {
   await load(); if (!lastSnapshot) return;
   confirming = { scope, revision, sessionRevision: lastSnapshot.sessionRevision, historyRevision: lastSnapshot.historyRevision, trigger };
   $('delete-title')!.textContent = scope === 'all' ? 'Delete all Chrysalis data?' : 'Clear session history?';
-  $('delete-description')!.textContent = scope === 'all' ? 'This removes all saved plans and summaries, ends the current session and restores default settings. YouTube data is unaffected. This cannot be undone.' : 'This removes completed summaries and recent command records. An unfinished session and your preferences stay. This cannot be undone.';
+  $('delete-description')!.textContent = scope === 'all' ? 'This deletes encrypted and temporary history, ends the current session and restores default settings. If earlier-version data is pending, resolve its separate choice first. YouTube data is unaffected. This cannot be undone.' : 'This deletes all encrypted and temporary completed history, the earlier unfinished-plan archive and recent command records. Saved history will be disabled. If earlier-version data is pending, resolve its separate choice first. An unfinished session and your preferences stay. This cannot be undone.';
   $('delete-error')!.textContent = ''; $('confirm-delete')!.textContent = scope === 'all' ? 'Delete all data' : 'Clear history';
   dialog.showModal(); $('cancel-delete')!.focus();
 }
@@ -157,6 +158,26 @@ $('confirm-delete')!.addEventListener('click', async () => {
   } catch (e) { $('delete-error')!.textContent = e instanceof Error ? e.message : 'Nothing was deleted. Try again.'; }
   finally { busy = false; $<HTMLButtonElement>('confirm-delete')!.disabled = false; $<HTMLButtonElement>('cancel-delete')!.disabled = false; }
 });
-chrome.storage.onChanged.addListener((changes, area) => { const value: unknown = changes[STORAGE_KEY]?.newValue; if (area === 'local' && snapshot(value)) renderSnapshot(value); });
+chrome.storage.onChanged.addListener((changes, area) => { const value: unknown = changes[STORAGE_KEY]?.newValue; if (area === 'session' && snapshot(value)) renderSnapshot(value); });
 void request({ channel: CHANNEL, type: 'PING' }).then(reply => { $('connection')!.textContent = reply.ok && reply.type === 'PONG' ? 'Extension connected' : 'Connection unavailable'; }).catch(() => { $('connection')!.textContent = 'Connection unavailable'; });
 void load();
+
+if ($('history-storage')) mountHistoryStorage($('history-storage')!, renderSnapshot);
+
+if ($('history-storage-summary')) {
+  let alive = true;
+  let timer: ReturnType<typeof setTimeout>;
+  const pollHistory = async () => {
+    if (!alive) return;
+    if (!document.hidden) try {
+      const result = await request({ channel: CHANNEL, type: 'HISTORY_VAULT', action: 'status' });
+      if (result.ok && result.type === 'VAULT') {
+        const s = result.status;
+        $('history-storage-summary')!.textContent = s.legacyPending ? 'Earlier unencrypted data needs your choice. Open Session history to encrypt or delete it. New activity stays in memory.' : s.saveError ? 'History changes have not been saved to disk. Keep Chrome open and retry in Session history.' : s.unlocked ? 'Completed history saves encrypted while unlocked. The current timer is temporary.' : s.enabled ? 'Saved history is locked. New activity is temporary until you unlock history.' : 'Session activity stays in browser memory by default; restarting Chrome clears it.';
+      }
+    } catch { /* Session controls report their own errors. */ }
+    if (alive) timer = setTimeout(pollHistory, 1500);
+  };
+  window.addEventListener('pagehide', () => { alive = false; clearTimeout(timer); }, { once: true });
+  void pollHistory();
+}

@@ -26,7 +26,7 @@ export function mountSession(root: HTMLElement) {
       ${breakMarkup}
     </div>
     <div id="session-summary" hidden><h3 tabindex="-1">Session finished</h3><p id="summary-intention"></p><dl id="summary-values"></dl>
-      <p class="note">A record of your choices, without a score. Saved locally with your latest 100 sessions.</p><p id="finished-reflection"></p><section id="session-reflection" aria-label="Optional reflection"></section><button data-action="reset">Done</button></div>
+      <p class="note">A record of your choices, without a score. Kept in browser memory, or saved encrypted while optional history is unlocked.</p><p id="finished-reflection"></p><section id="session-reflection" aria-label="Optional reflection"></section><button data-action="reset">Done</button></div>
     <form id="session-plan" hidden>
       <label for="intention">What brings you to YouTube?</label>
       <select id="intention"><option>Studying</option><option>Watching a specific video</option><option selected>Entertainment</option><option>Exploring</option><option value="custom">My own intention</option></select>
@@ -213,7 +213,7 @@ export function mountSession(root: HTMLElement) {
   });
   const onStorage = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
     const state: unknown = changes[STORAGE_KEY]?.newValue;
-    if (area === 'local' && snapshot(state)) render(state);
+    if (area === 'session' && snapshot(state)) render(state);
   };
   chrome.storage.onChanged.addListener(onStorage);
   async function tick() {

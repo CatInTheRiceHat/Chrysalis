@@ -1,11 +1,11 @@
 import { clockText, durationText } from '../session/model';
-import type { CompletedSessionSummary, StorageSnapshot } from '../shared/types';
+import type { SessionDetails, StorageSnapshot } from '../shared/types';
 import { request } from '../shared/client';
 import { CHANNEL } from '../shared/protocol';
 import { mountReflection } from './reflection';
 
 const target = (ms: number | null) => ms === null ? 'No time target' : durationText(ms);
-export function summaryRows(s: CompletedSessionSummary): [string, string][] {
+export function summaryRows(s: SessionDetails): [string, string][] {
   return [['Date', new Date(s.startedAt).toLocaleString()], ['Intention', s.intention ?? 'No intention recorded'],
     ['Original time target', target(s.originalTargetMs)],
     ...(s.targetMs === s.originalTargetMs ? [] : [['Final time target', target(s.targetMs)] as [string, string]]),
@@ -13,7 +13,7 @@ export function summaryRows(s: CompletedSessionSummary): [string, string][] {
     [s.history.complete ? 'Break time (wall-clock)' : 'Recorded break time since update', !s.history.complete && !s.history.breakMs ? 'Not recorded in the earlier version' : clockText(s.history.breakMs)]];
 }
 export function mountHistory(root: HTMLElement, update: (state: StorageSnapshot) => void) {
-  root.innerHTML = `<h2 id="history-heading" tabindex="-1">Session history</h2><p class="note">Your latest 100 completed sessions, stored on this device. Older summaries are removed automatically. These records have no score.</p>
+  root.innerHTML = `<h2 id="history-heading" tabindex="-1">Session history</h2><p class="note history-storage-note">Up to 100 completed sessions from this browser session. By default these disappear when Chrome restarts or Chrysalis is reloaded or disabled.</p>
     <p id="history-empty">No completed sessions saved yet.</p><div id="history-list"></div><section id="history-reflection" aria-label="Optional reflection"></section><p id="history-status" role="status"></p>`;
   const list = root.querySelector<HTMLElement>('#history-list')!;
   const heading = root.querySelector<HTMLElement>('h2')!;
@@ -34,7 +34,9 @@ export function mountHistory(root: HTMLElement, update: (state: StorageSnapshot)
       const result = await request({ channel: CHANNEL, type: 'HISTORY', sessionId: deleting.id, expectedRevision: deleting.revision, change: { action: 'delete' } });
       if (!result.ok) throw new Error(result.error);
       if (result.type === 'SNAPSHOT') update(result.snapshot);
-      dialog.close(); status.textContent = 'Session deleted.';
+      dialog.close();
+      const saved = await request({ channel: CHANNEL, type: 'HISTORY_VAULT', action: 'status' });
+      status.textContent = saved.ok && saved.type === 'VAULT' ? (saved.status.saveError ? 'Removed from memory, but encrypted deletion has not saved. Keep Chrome open and Retry above.' : 'Session deleted.') : 'Removed from memory; encrypted save status could not be checked. Reopen history before closing Chrome.';
     } catch (e) { dialog.querySelector('[role="status"]')!.textContent = e instanceof Error ? e.message : 'Deletion was not confirmed.'; }
     finally { busy = false; dialog.querySelectorAll<HTMLButtonElement>('button').forEach(b => { b.disabled = false; }); }
   });

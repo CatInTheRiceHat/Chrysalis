@@ -88,10 +88,10 @@ try {
  await expect(popup.locator('#custom-intention')).toHaveValue('');
  checks.push('Finish saves a real summary; deletion dialog supports Escape/focus restoration; clear history and delete all remove the appropriate local data and reset defaults.');
  const saved = await state();
- await worker.evaluate(() => chrome.storage.local.set({'chrysalis.extension.v1':{schemaVersion:999}}));
+ await worker.evaluate(() => chrome.storage.session.set({'chrysalis.extension.v1':{schemaVersion:999}}));
  await popup.reload(); await expect(popup.locator('#intro-retry')).toBeVisible();
- assert.equal(await worker.evaluate(async()=> (await chrome.storage.local.get('chrysalis.extension.v1'))['chrysalis.extension.v1'].schemaVersion),999);
- await worker.evaluate(s=>chrome.storage.local.set({'chrysalis.extension.v1':s}),saved);
+ assert.equal(await worker.evaluate(async()=> (await chrome.storage.session.get('chrysalis.extension.v1'))['chrysalis.extension.v1'].schemaVersion),999);
+ await worker.evaluate(s=>chrome.storage.session.set({'chrysalis.extension.v1':s}),saved);
  await popup.locator('#intro-retry').click(); await expect(popup.locator('#intro-start')).toBeEnabled();
  checks.push('Delete-all clears unsaved plan fields too; invalid saved data stays untouched and first-use retry remains accessible.');
  assert.deepEqual(errors,[]);

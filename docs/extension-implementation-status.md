@@ -1,5 +1,7 @@
 # Chrysalis — current implementation
 
+**0.9.0 storage update:** current activity is browser-memory-only; optional completed history is password-encrypted, and unlocking never gates viewing. Browser restart/reload/update/disable clears temporary activity; earlier plaintext requires an explicit encrypt/delete choice. This supersedes older persistence/restart statements below. See [current privacy policy](PRIVACY.md) and `docs/encrypted-history-storage.md`.
+
 Release **0.8.0**, extension storage schema **7**. Desktop `www.youtube.com` in
 Chrome only. No Instagram, account, cloud sync, telemetry or API dependency.
 The original feed application is preserved, outside the active public-site build.

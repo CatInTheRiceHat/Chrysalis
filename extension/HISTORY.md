@@ -1,5 +1,7 @@
 # Local history and reflection — 0.8.0
 
+**0.9.0 storage update:** current activity is browser-memory-only; optional completed history is password-encrypted, and unlocking never gates viewing. Browser restart/reload/update/disable clears temporary activity; earlier plaintext requires an explicit encrypt/delete choice. This supersedes older persistence/restart statements below. See [current privacy policy](PRIVACY.md) and `docs/encrypted-history-storage.md`.
+
 ## What is shown and stored
 
 The popup offers an optional reflection after Finish: “Did this session match what

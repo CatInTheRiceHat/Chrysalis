@@ -5,7 +5,7 @@ import { applyCommand, boundary, observe, reconcile, checkTarget, setExtensionPa
 export const STORAGE_KEY = 'chrysalis.extension.v1';
 export interface StorageAdapter {
   read(): Promise<unknown>;
-  write(value: StorageSnapshot): Promise<void>;
+  write(value: StorageSnapshot, intent?: 'history' | 'all'): Promise<void>;
 }
 export class ConflictError extends Error {}
 // The worker is the only writer. Read from disk inside the queue on every operation;
@@ -26,7 +26,7 @@ export function createStore(adapter: StorageAdapter, environment?: { now(): numb
     }
     return state;
   }
-  function transaction(operation: (state: StorageSnapshot, now: number) => Promise<void> | void, at?: number) {
+  function transaction(operation: (state: StorageSnapshot, now: number) => Promise<void> | void, at?: number, intent?: 'history' | 'all') {
     // Timestamp receipt, not queue completion: slow storage must not shift a
     // pause/focus boundary later and credit time after the user has left.
     const now = at ?? environment?.now() ?? Date.now();
@@ -34,15 +34,16 @@ export function createStore(adapter: StorageAdapter, environment?: { now(): numb
       const state = await read(now);
       const before = JSON.stringify(state);
       await operation(state, now);
-      if (JSON.stringify(state) !== before) {
+      if (intent || JSON.stringify(state) !== before) {
         state.sequence++;
         if (!snapshot(state)) throw new Error('Cannot save invalid session data.');
-        await adapter.write(state);
+        await adapter.write(state, intent);
       }
       return state;
     });
   }
   return {
+    exclusive: serialize,
     read: () => serialize(() => read()),
     initialize: () => serialize(async () => {
       const existing = await adapter.read();
@@ -69,7 +70,7 @@ export function createStore(adapter: StorageAdapter, environment?: { now(): numb
         state.completedSessions = []; state.receipts = []; state.sessionRevision++; state.historyRevision++;
         if (state.currentSession.phase === 'finished') state.currentSession = { phase: 'idle' };
       }
-    }),
+    }, undefined, scope),
     offerReflection: (sessionId: string) => serialize(async () => {
       const state = await read();
       const summary = state.completedSessions.find(s => s.id === sessionId);

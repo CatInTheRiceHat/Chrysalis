@@ -35,7 +35,7 @@ try {
   // A near-target fixture exercises the collapsed UI; crossing uses real observations.
   await popup.locator('#edit-plan').click();await popup.locator('#time-target').selectOption('custom');await popup.locator('#custom-minutes').fill('1');await popup.locator('#submit-plan').click();
   await indicator.locator('[data-action="resume"]').click();await indicator.locator('#collapse').click();
-  await worker.evaluate(async()=>{const key='chrysalis.extension.v1',s=(await chrome.storage.local.get(key))[key];s.currentSession.elapsedMs=59999;s.timing.anchor=null;s.sequence++;await chrome.storage.local.set({[key]:s});});
+  await worker.evaluate(async()=>{const key='chrysalis.extension.v1',s=(await chrome.storage.session.get(key))[key];s.currentSession.elapsedMs=59999;s.timing.anchor=null;s.sequence++;await chrome.storage.session.set({[key]:s});});
   await yt.bringToFront();await expect(indicator.locator('#phase')).toContainText('Time target reached',{timeout:15000});await expect(indicator.locator('#details')).toBeHidden();await capture(yt,'collapsed-checkpoint',false);
   await expect(yt.locator('#chrysalis-session-dialog dialog')).toBeVisible();
   await yt.locator('#chrysalis-session-dialog #close').click();

@@ -1,5 +1,7 @@
 # Chrysalis voluntary testing guide
 
+**0.9.0 storage update:** current activity is browser-memory-only; optional completed history is password-encrypted, and unlocking never gates viewing. Browser restart/reload/update/disable clears temporary activity; earlier plaintext requires an explicit encrypt/delete choice. This supersedes older persistence/restart statements below. See [current privacy policy](../PRIVACY.md) and `docs/encrypted-history-storage.md`.
+
 This is an early desktop Chrome extension, independent of YouTube and Google.
 Try it only if you want to. You can skip any task, choose entertainment, change your
 mind, stop testing or remove the extension. Longer viewing is not a failed test.

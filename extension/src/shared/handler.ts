@@ -1,3 +1,5 @@
+import type { HistoryAction, HistoryStatus } from './persistence';
+import type { StorageSnapshot } from './types';
 import { parseRequest, senderRole, type Reply } from './protocol';
 import { ConflictError, type Store } from './storage';
 import { SessionError, StaleSessionError } from '../session/model';
@@ -6,7 +8,8 @@ import { sessionDisplay } from './types';
 export function createHandler(store: Store, extensionId: string, version: string,
   isForeground: (sender: chrome.runtime.MessageSender) => Promise<boolean> = async () => false,
   openPage: (page: 'session' | 'edit' | 'settings' | 'viewing' | 'history') => Promise<void> = async () => { throw new Error('Page opening unavailable'); },
-  prompt: (foreground: () => Promise<boolean>) => Promise<'intro' | 'checkpoint' | null> = async () => null) {
+  prompt: (foreground: () => Promise<boolean>) => Promise<'intro' | 'checkpoint' | null> = async () => null,
+  vault?: (action: HistoryAction, password?: string) => Promise<{ status: HistoryStatus; snapshot: StorageSnapshot }>) {
   return async (value: unknown, sender: chrome.runtime.MessageSender): Promise<Reply> => {
     const role = senderRole(sender, extensionId);
     if (!role) return { ok: false, code: 'FORBIDDEN', error: 'This sender is not allowed.' };
@@ -17,6 +20,11 @@ export function createHandler(store: Store, extensionId: string, version: string
     }
     try {
       switch (request.type) {
+        case 'HISTORY_VAULT': {
+          if (!vault) throw new Error('History storage unavailable.');
+          try { return { ok: true, type: 'VAULT', ...await vault(request.action, request.password) }; }
+          catch (error) { return { ok: false, code: 'STORAGE', error: error instanceof Error ? error.message : 'History storage failed. Data was not reset.' }; }
+        }
         case 'PROMPT': {
           if (role !== 'content' || !sender.documentId || (sender.documentLifecycle && sender.documentLifecycle !== 'active')) return { ok: false, code: 'FORBIDDEN', error: 'An active YouTube document is required.' };
           return { ok: true, type: 'PROMPT', prompt: await prompt(() => isForeground(sender)) };

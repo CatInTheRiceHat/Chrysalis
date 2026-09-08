@@ -1,9 +1,11 @@
+import type { HistoryAction, HistoryStatus } from './persistence';
 import type { Reflection, SessionDisplay, Settings, StorageSnapshot } from './types';
 import { display, finite, keys, natural, record, reflection, settings, settingsPatch, snapshot } from './validation';
 import { validatePlan, type Observation, type SessionMutation } from '../session/model';
 
 export const CHANNEL = 'chrysalis/v1' as const;
 export type Request = { channel: typeof CHANNEL } & (
+  { type: 'HISTORY_VAULT'; action: HistoryAction; password?: string } |
   { type: 'PROMPT' } | { type: 'PING' } | { type: 'GET_SETTINGS' } | { type: 'GET_SNAPSHOT' } | { type: 'GET_DISPLAY' } |
   { type: 'OPEN_PAGE'; page: 'session' | 'edit' | 'settings' | 'viewing' | 'history' } |
   { type: 'DELETE_DATA'; scope: 'history' | 'all'; expectedRevision: number; expectedSessionRevision: number; expectedHistoryRevision: number } |
@@ -14,6 +16,7 @@ export type Request = { channel: typeof CHANNEL } & (
   { type: 'UPDATE_SETTINGS'; patch: Partial<Settings>; expectedRevision: number }
 );
 export type Reply = { ok: true } & (
+  { type: 'VAULT'; status: HistoryStatus; snapshot: StorageSnapshot } |
   { type: 'PROMPT'; prompt: 'intro' | 'checkpoint' | null } | { type: 'REFLECTION_OFFER'; offered: boolean; snapshot: StorageSnapshot } | { type: 'OPENED' } | { type: 'PONG'; version: string } |
   { type: 'SETTINGS'; settings: Settings; revision: number } |
   { type: 'DISPLAY'; settings: Settings; session: SessionDisplay; sequence: number } |
@@ -50,6 +53,9 @@ function mutation(value: unknown): value is SessionMutation {
 }
 export function parseRequest(value: unknown): Request | null {
   if (!record(value) || value.channel !== CHANNEL) return null;
+  if (value.type === 'HISTORY_VAULT') return keys(value, ['channel', 'type', 'action', 'password']) &&
+    typeof value.action === 'string' && ['status','enable','unlock','lock','retry','migrate-encrypt','migrate-delete'].includes(value.action) &&
+    (value.password === undefined || (typeof value.password === 'string' && value.password.length <= 128)) ? value as Request : null;
   if (value.type === 'OFFER_REFLECTION') return keys(value, ['channel', 'type', 'sessionId']) && typeof value.sessionId === 'string' && value.sessionId.length > 0 && value.sessionId.length <= 128 ? value as Request : null;
   if (value.type === 'HISTORY') {
     const c = value.change;
@@ -76,6 +82,7 @@ export function isReply(value: unknown): value is Reply {
   if (!record(value)) return false;
   if (value.ok === false) return typeof value.code === 'string' && ['INVALID', 'FORBIDDEN', 'STORAGE', 'CONFLICT'].includes(value.code) && typeof value.error === 'string';
   if (value.ok !== true) return false;
+  if (value.type === 'VAULT') return snapshot(value.snapshot) && record(value.status) && ['enabled','unlocked','legacyPending','legacyReadable','saveError'].every(k => typeof (value.status as Record<string, unknown>)[k] === 'boolean') && snapshot({ ...value.snapshot, currentSession: value.status.archivedSession, timing: { browserEpoch: null, anchor: null, signals: [] } });
   if (value.type === 'REFLECTION_OFFER') return typeof value.offered === 'boolean' && snapshot(value.snapshot);
   if (value.type === 'PROMPT') return [null, 'intro', 'checkpoint'].includes(value.prompt as string | null);
   if (value.type === 'OPENED') return true;
