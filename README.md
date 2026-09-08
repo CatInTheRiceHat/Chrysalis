@@ -1,217 +1,63 @@
----
-title: Chrysalis
-emoji: 🦋
-colorFrom: purple
-colorTo: green
-sdk: docker
-app_port: 8080
-pinned: false
----
+# Chrysalis — YouTube, on your terms
 
-# Chrysalis: Healthy Feed Algorithm
+Chrysalis is an independent Chrome extension for desktop `www.youtube.com`.
+Plan a session, notice foreground time, and choose which supported recommendation
+surfaces to hide. Targets, breaks and reflections are optional. No accounts,
+analytics, cloud sync or claims of proven behavior change.
 
-A youth-centric social media recommender system that prioritizes digital well-being over engagement maximization.
+## Active products
 
-## Quick Start
+- **`extension/`** — version 0.8.0, storage schema 7. Centered introduction, compact
+  side timer, check-ins, reversible viewing controls and local history.
+  [Install/update](extension/INSTALL.md) · [Privacy](extension/PRIVACY.md).
+- **`public-site/`** — independent static project, installation, privacy and contact
+  pages. [Build/verify](public-site/README.md).
 
-```bash
-# Install dependencies
-pip install pandas numpy matplotlib fastapi uvicorn python-multipart
-
-# Set up your YouTube API key (optional, for live video data)
-cp .env.example .env
-# Edit .env and add backend-only secrets:
-#   YOUTUBE_API_KEY
-#   FEED_INGEST_SECRET
-# Optional:
-#   YOUTUBE_FEED_QUERIES=category=query,category=query
-# Optional: pin local SQLite storage. Relative paths resolve from project root.
-DATABASE_PATH=./chrysalis.db
-
-# Run the API server
-python api.py
-# Server starts at http://localhost:8000
+```sh
+git lfs pull
+cd extension
+npm ci
+npm run check
+npx playwright install chromium
+npm run test:package
 ```
 
-### Local `/reels` live-video check
+Load `extension/dist/` or the extracted release folder through `chrome://extensions`
+→ Developer mode → Load unpacked. Keep the installation path stable for updates.
+These commands do not publish to the Chrome Web Store or deploy a website.
 
-Run the API and Vite frontend together:
-
-```bash
-DATABASE_PATH=./chrysalis.db python api.py
-cd website
-npm run dev
+```sh
+cd public-site
+npm ci
+npm test
+npm run preview
 ```
 
-`website/.env.local` should contain `VITE_API_URL=http://localhost:8000`.
-The local API allows Vite on `localhost` or `127.0.0.1` ports `5173` and `5174`,
-so `/reels` can still fetch live cards when Vite moves to the next open port.
+The public build is `public-site/dist/`. It never builds/imports the old app.
+CI verifies both products, synchronized privacy content and the service boundary.
 
-### Anonymous research feed
+## Preserved prototype
 
-`/study` uses an anonymous bearer credential and a server-owned research session.
-The browser cannot select a condition: it requests
-`GET /api/research/sessions/{session_id}/feed`, and the backend reads the stored
-condition, private seed, and immutable policy version from the session record.
+The original React feed (`website/`), Python recommendation/backend (`api.py`,
+`api/`, `core/`, `integrations/`), associated scripts/tests/migrations and independent
+Flutter prototype (`intentional_social/`) are retired from active product development.
+Their paths remain intact. None is a prerequisite for the extension.
 
-The current policies are:
+Baseline: **`legacy-web-baseline-2026-09-07`**, revision
+`5228d0df5e983b46e57f4e403450c976a4fc81f0`. Git history and referenced LFS objects
+were backed up locally; production data was not included.
+[Recovery](docs/legacy/README.md) · [Original README](docs/legacy/README-baseline.md).
 
-- `regular-v1`: the existing `flutter-feed` ordering, with no additional
-  research quota or repetition rule.
-- `balanced-v1`: a deterministic, seeded 60% normal / 30% existing healthy or
-  positive / 10% perspective target across a 12-item window, with bounded
-  category and creator repetition penalties and inventory fallbacks.
+**Service retirement is separate.** Vercel now builds the public site but retains
+Python API routing and existing crons; the ingestion workflow remains unchanged.
+Deploying replaces old study/auth UI with notices, so confirm active users and
+participants before production cutover. An unapplied service-retirement patch is
+prepared for a later explicit decision. [Deployment/data checklist](deployment/README.md).
 
-Apply PostgreSQL migrations in order before deploying the research route:
+[Current validation](docs/extension-implementation-status.md) ·
+[Transition record](docs/extension-public-site-transition.md) ·
+[Unsubmitted Store draft](extension/distribution/STORE_DRAFT.md).
 
-```bash
-psql "$DATABASE_URL" -f migrations/015_research_sessions_and_events.sql
-psql "$DATABASE_URL" -f migrations/016_research_feed_policies.sql
-```
-
-Local SQLite creates the same tables and upgrades Phase 1 research sessions on
-startup. `feed_seed` is server-only. Issued item provenance is stored in
-`research_feed_items`, then resolved by the server when it accepts any post
-event; client-supplied category, position, bucket, reason, and policy values are
-not authoritative.
-
-For local verification only, `CHRYSALIS_RESEARCH_DEBUG=1` adds the active policy
-to the `X-Chrysalis-Research-Policy` response header and backend log. Leave it
-unset in production. Run the engineering distribution check with:
-
-```bash
-.venv/bin/python scripts/research_feed_sanity.py --windows 500 --window-size 12
-```
-
-The script uses the repository's demo-video fixtures and validates selection
-behavior only; it does not analyze participants or support well-being claims.
-
-### Daily YouTube feed ingestion
-
-The Algorithm feed is populated by a backend-only YouTube Data API ingestion job.
-The React frontend never calls YouTube Data API and never receives `YOUTUBE_API_KEY`.
-
-Required backend env vars:
-
-```bash
-YOUTUBE_API_KEY=...
-FEED_INGEST_SECRET=...
-DATABASE_PATH=./chrysalis.db
-```
-
-Optional query override. Plain queries are still accepted and stored with
-`source_category=custom`; use `category=query` to preserve analysis metadata:
-
-```bash
-YOUTUBE_FEED_QUERIES=news/current events=current events explained,gaming=gaming highlights
-```
-
-Manual local ingestion:
-
-```bash
-DATABASE_PATH=./chrysalis.db python scripts/ingest_youtube_feed.py --max-results 10 --days-back 7
-```
-
-Or run through the API:
-
-```bash
-curl -X POST \
-  -H "X-Feed-Ingest-Secret: $FEED_INGEST_SECRET" \
-  "http://localhost:8000/api/admin/ingest/youtube"
-```
-
-The job searches recent, embeddable, English, US-region short videos across broad
-topic buckets: news/current events, opinion/commentary, travel, food, cute animals,
-fashion/aesthetic, gaming, comedy, internet culture, AI/technology, pop culture,
-sports, wellness/mental health, study/productivity, lifestyle/vlogs,
-education/explainers, and music/culture. It filters obvious explicit, shock,
-humiliation, gambling, adult, violent, and low-quality content; stores
-`source_category` and `source_query` as analysis metadata in `feed_videos`; and all
-three `/api/feed/{mode}` routes draw from the same shared real-video pool. The
-mode changes the reflection/explanation layer, not the source pool. Built-in
-template cards remain frontend fallback/fill content only when there are not
-enough real videos for `k`.
-
-For hosted daily ingestion, configure GitHub repository secrets:
-
-```bash
-CHRYSALIS_API_BASE_URL=https://your-deployed-api.example
-FEED_INGEST_SECRET=...
-```
-
-Then enable `.github/workflows/youtube-feed-ingest.yml`, which calls the admin
-endpoint once per day and can also be run manually with `workflow_dispatch`.
-
-## Project Structure
-
-```
-Chrysalis/
-├── core/algorithm.py          # Core ranking algorithm with Gini diversity, engagement decay
-├── data.py               # Data processing utilities
-├── metrics.py            # Evaluation metrics (diversity@k, streak detection, etc.)
-├── graphs.py             # Visualization scripts for experiment results
-├── api.py                # FastAPI web server with YouTube integration
-├── experiments.py        # Run evaluation experiments
-├── youtube_service.py    # YouTube Data API wrapper with caching
-├── datasets/             # Processed datasets
-├── results/              # Experiment outputs (CSVs, figures)
-└── website/              # Frontend UI (served by api.py)
-```
-
-## Algorithm Overview
-
-The ranking formula balances four key factors:
-
-| Factor | Weight (entertainment preset) | Purpose |
-|--------|-------------------------------|---------|
-| Engagement (e) | 0.55 | Baseline popularity, decayed during passive consumption |
-| Diversity (d) | 0.20 | Gini coefficient promotes content variety |
-| Prosocial (p) | 0.15 | Up-ranks prosocial/bridging content |
-| Risk (r) | 0.10 | Down-ranks harmful upward comparison triggers |
-
-### Key Features
-
-- **Passive Consumption Decay**: Detects doomscrolling and forces diversity injection
-- **Similarity Mindset Modifier**: Mitigates harmful social comparison by checking creator-user similarity
-- **Gini Coefficient Diversity**: Mathematically enforces content variety to prevent filter bubbles
-- **User-Controllable Weights**: Frontend sliders allow real-time algorithm adjustment
-
-## Running Experiments
-
-```bash
-# Run 10 evaluation sessions
-python experiments.py --n_sessions 10
-
-# Generate result visualizations
-python graphs.py --summary results/data/experiment_summary.csv
-```
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Serves the frontend UI |
-| `/api/run/local` | POST | Run algorithm with custom weights |
-| `/api/youtube/videos/{topic}` | GET | Fetch live YouTube video IDs |
-| `/api/youtube/cache` | GET | Debug YouTube cache status |
-| `/api/admin/ingest/youtube` | POST | Secret-protected daily YouTube feed ingestion |
-| `/api/feed/{mode}` | GET | Serve Chrysalis-ranked Algorithm feed cards |
-
-## Configuration
-
-Presets available in `core/algorithm.py`:
-- `baseline` - Engagement-only ranking
-- `entertainment` - Balanced weights (default)
-- `inspiration` - High diversity focus
-- `learning` - High prosocial focus
-
-Night mode adds extra risk penalty and caps feed length at 15.
-
-## Documentation
-
-- `README_ALGORITHM.md` - Mathematical formulas and UI mapping guide
-- `Social Media Algorithm Project Enhancement.md` - Research paper with full theoretical background
-
-## License
-
-MIT
+Support: https://github.com/CatInTheRiceHat/Chrysalis/issues. The original website
+lists elaineyouyuanche@gmail.com. Do not post session notes, recovery links or
+participant credentials publicly.

@@ -22,6 +22,11 @@ try {
   const page = await context.newPage();
   await page.goto('https://www.youtube.com/', { waitUntil: 'domcontentloaded', timeout: 45000 });
   await expect(page.locator('#chrysalis-extension-indicator')).toHaveCount(1);
+  await page.bringToFront();
+  await expect(page.locator('#chrysalis-session-dialog dialog')).toBeVisible({ timeout: 22000 });
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#chrysalis-session-dialog')).toHaveCount(0);
+  checks.push('Live first-visit introduction dismisses with Escape before interacting with YouTube viewing controls.');
   const nav = page.locator('ytd-guide-entry-renderer').filter({ has: page.locator('a#endpoint[title="Shorts"]') }).first();
   await expect(nav).toBeVisible({ timeout: 20000 });
   await toggle('#hide-shorts', true); await expect(nav).toBeHidden();

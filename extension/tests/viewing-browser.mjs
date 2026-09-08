@@ -41,7 +41,6 @@ try {
   await options.goto(`chrome-extension://${id}/options.html`);
   await expect(options.locator('#connection')).toHaveText('Extension connected');
   await options.locator('#intro-skip').click();
-  await options.locator('#auto-session-intro').uncheck();
   await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: fixture }));
   const youtube = await context.newPage();
   const errors = [];
@@ -51,6 +50,14 @@ try {
   cdp.on('Runtime.executionContextCreated', ({ context: world }) => worlds.set(world.id, world));
   await cdp.send('Runtime.enable');
   await youtube.goto('https://www.youtube.com/');
+  const introduction = youtube.locator('#chrysalis-session-dialog');
+  await expect(introduction.locator('dialog')).toBeVisible();
+  await expect(introduction.locator('#duration')).toBeFocused();
+  await youtube.keyboard.press('Escape');
+  await expect(introduction).toHaveCount(0);
+  await youtube.locator('#search input').click();
+  await expect(youtube.locator('#search input')).toBeFocused();
+  checks.push('Default centered introduction dismisses with Escape and releases modal inertness before viewing controls are exercised.');
   await expect(youtube.locator('#chrysalis-extension-indicator')).toHaveCount(1);
   const world = [...worlds.values()].find(w => w.origin === `chrome-extension://${id}`);
   assert(world);

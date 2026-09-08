@@ -1,0 +1,13 @@
+{
+  "name": "chrysalis-public-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/serve.mjs",
+    "test": "npm run build && node --test tests/build.test.mjs && node tests/browser.mjs"
+  },
+  "devDependencies": { "@playwright/test": "^1.63.0" }
+}

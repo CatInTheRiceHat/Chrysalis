@@ -1,13 +1,13 @@
 # Chrysalis privacy explanation
 
-Applies to local preview 0.7.1. Updated 2026-09-07.
+Applies to local preview 0.8.0. Updated 2026-09-07.
 Chrysalis is independent and is not affiliated with or endorsed by YouTube or Google.
 
 ## What stays on your device
 
 Chrysalis uses Chrome's local extension storage for:
 
-- Preferences: appearance, viewing controls, indicator display, introduction status,
+- Preferences: appearance, viewing controls, indicator display, introduction status and automatic session introductions,
   default durations, checkpoint prompts and whether Chrysalis is paused.
 - Your current session: intention (up to 80 characters), original/current target,
   explicit target changes, session state, dates, measured foreground YouTube time,
@@ -19,7 +19,10 @@ Chrysalis uses Chrome's local extension storage for:
   revision counters, up to 64 recent command receipts (which can include the plan),
   and up to 32 recent document sequence markers. A timing anchor can include
   browser tab/window/document identifiers and timestamps. A temporary browser-epoch
-  identifier distinguishes a worker wake-up from a browser restart. These are not
+  identifier distinguishes a worker wake-up from a browser restart. Temporary visit
+  metadata (last foreground time, whether introduced, and a checkpoint claim) prevents
+  repeated introductions across tabs. A visit renews during foreground YouTube use and
+  a new one begins after 30 minutes away; this metadata clears on browser restart. These are not
   advertising identifiers and are not shared with us.
 
 There is no age-based deletion. Finishing a session removes summaries beyond the
@@ -48,7 +51,7 @@ or AI processing. Its executable code, fonts and artwork are bundled locally.
 The developers cannot remotely read your extension storage. YouTube and Chrome
 continue to operate under their own policies; this explanation covers Chrysalis.
 
-**Your current intention appears in YouTube's page when the indicator is expanded.**
+**Your current intention appears in YouTube’s page in the session form and expanded timer.**
 The page can read that displayed text. Avoid private details and turn off “Show
 session indicator” if you do not want it displayed. Collapsing is not a privacy
 boundary. Reflections and notes are shown only in trusted extension pages.
@@ -80,6 +83,9 @@ who supplied it, share only feedback you want them to receive. You do not need t
 send video details, browsing history, session records, screenshots or personal notes.
 Any separately shared feedback is handled by the pilot organizer, not this extension;
 the organizer should explain that channel and its retention before collecting it.
-For this local preview, use the channel through which you received the files for
-questions. A verified public publisher/contact and hosted policy URL must be supplied
-before a store submission; none is invented here.
+For project questions, the existing project email is elaineyouyuanche@gmail.com.
+Public bug reports can be made at https://github.com/CatInTheRiceHat/Chrysalis/issues;
+issues are public, so do not include private session notes or account credentials.
+These destinations come from the repository; email delivery is not independently
+verified. A deployed policy URL and verified Store publisher are still needed before
+submission. The public-site policy copy is prepared, not yet published.

@@ -60,7 +60,6 @@ try {
   await context.route('https://www.youtube.com/**', route => route.fulfill({
     contentType: 'text/html', body: '<!doctype html><html><head><title>YouTube test fixture</title></head><body><main><h1>Controlled YouTube fixture</h1><button id="youtube-control">YouTube control</button></main></body></html>',
   }));
-  await options.locator('#auto-session-intro').uncheck();
   const youtube = await context.newPage();
   watchErrors(youtube);
   const cdp = await context.newCDPSession(youtube);
@@ -69,6 +68,14 @@ try {
   cdp.on('Runtime.executionContextsCleared', () => worlds.clear());
   await cdp.send('Runtime.enable');
   await youtube.goto('https://www.youtube.com/');
+  await youtube.bringToFront();
+  const introduction = youtube.locator('#chrysalis-session-dialog');
+  await expect(introduction.locator('dialog')).toBeVisible({ timeout: 22000 });
+  await introduction.getByRole('button', { name: 'Continue without a timer', exact: true }).click();
+  await expect(introduction).toHaveCount(0);
+  await youtube.locator('#youtube-control').click();
+  assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get('chrysalis.extension.v1'))['chrysalis.extension.v1'].currentSession.phase), 'idle');
+  results.push('Default introduction dismisses through Continue without a timer, restores host interaction and creates no session.');
   const indicator = youtube.locator('#chrysalis-extension-indicator');
   await expect(indicator).toHaveCount(1);
   await expect(indicator).toContainText('Ready when you are');
@@ -82,6 +89,7 @@ try {
   const bundle = await readFile(path.join(extensionPath, 'content.js'), 'utf8');
   await isolated(bundle);
   await isolated(bundle);
+  await expect(introduction).toHaveCount(0);
   await expect(indicator).toHaveCount(1);
   await youtube.evaluate(() => {
     history.pushState({}, '', '/watch?v=fixture');
@@ -98,6 +106,52 @@ try {
   const directRead = await isolated(`(async()=>{try {await chrome.storage.local.get(null); return 'allowed';}catch{return 'denied';}})()`);
   assert.equal(directRead, 'denied');
   results.push('Actual content context cannot mutate settings, request private snapshots or directly read restricted storage.');
+
+  // Hold initial display replies in the actual isolated content context, then
+  // deliver a browser-generated focus event to the registered lifecycle handler.
+  // The harness controls event ordering, not production state. Claiming the introduction
+  // here used to consume it while the dialog had no state and could not render.
+  await worker.evaluate(() => chrome.storage.session.remove('chrysalis.visit'));
+  await isolated(`globalThis.__originalSend = chrome.runtime.sendMessage.bind(chrome.runtime);
+    globalThis.__displayReplies = []; globalThis.__promptCount = 0;
+    globalThis.__messageListeners = new Map(); globalThis.__heldMessages = [];
+    globalThis.__addMessage = chrome.runtime.onMessage.addListener.bind(chrome.runtime.onMessage);
+    globalThis.__removeMessage = chrome.runtime.onMessage.removeListener.bind(chrome.runtime.onMessage);
+    chrome.runtime.onMessage.addListener = listener => {
+      const held = (...args) => globalThis.__heldMessages.push(() => listener(...args));
+      globalThis.__messageListeners.set(listener, held); globalThis.__addMessage(held);
+    };
+    chrome.runtime.onMessage.removeListener = listener => globalThis.__removeMessage(globalThis.__messageListeners.get(listener) ?? listener);
+    globalThis.__earlyFocus = 0;
+    globalThis.__windowAdd = window.addEventListener.bind(window);
+    window.addEventListener = (type, listener, options) => {
+      if (type === 'focus') globalThis.__focusHandler = listener;
+      globalThis.__windowAdd(type, listener, options);
+    };
+    chrome.runtime.sendMessage = async message => {
+      if (message.type === 'PROMPT') globalThis.__promptCount++;
+      if (['GET_DISPLAY','OBSERVE'].includes(message.type)) await new Promise(resolve => globalThis.__displayReplies.push(resolve));
+      return globalThis.__originalSend(message);
+    };`);
+  await isolated(bundle);
+  await isolated(`window.addEventListener = globalThis.__windowAdd;
+    document.addEventListener('focusin', event => {
+      if (event.isTrusted) { globalThis.__earlyFocus++; globalThis.__focusHandler(event); }
+    }, { once: true });`);
+  await youtube.evaluate(() => document.activeElement?.blur());
+  await youtube.locator('#youtube-control').click();
+  await expect.poll(() => isolated('globalThis.__earlyFocus')).toBeGreaterThan(0);
+  await expect.poll(() => isolated('globalThis.__displayReplies.length')).toBeGreaterThan(0);
+  assert.equal(await isolated('globalThis.__promptCount'), 0, 'Do not claim before a display can render');
+  await isolated(`chrome.runtime.sendMessage = globalThis.__originalSend;
+    chrome.runtime.onMessage.addListener = globalThis.__addMessage; chrome.runtime.onMessage.removeListener = globalThis.__removeMessage;
+    for (const [listener, held] of globalThis.__messageListeners) { globalThis.__removeMessage(held); globalThis.__addMessage(listener); }
+    globalThis.__heldMessages.splice(0).forEach(deliver => deliver());
+    globalThis.__displayReplies.splice(0).forEach(resolve => resolve());`);
+  await expect(introduction.locator('dialog')).toBeVisible({ timeout: 22000 });
+  await youtube.keyboard.press('Escape'); await expect(introduction).toHaveCount(0);
+  await youtube.locator('#youtube-control').click();
+  results.push('Fault-injected early focus cannot consume an introduction before delayed state arrives; the dialog appears once afterward and releases host focus on dismissal.');
 
   await options.locator('#show-indicator').uncheck();
   await expect(options.locator('#save-status')).toHaveText('Saved on this device.');

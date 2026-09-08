@@ -9,7 +9,8 @@ import { createHash } from 'node:crypto';
 const { version } = JSON.parse(await readFile('package.json', 'utf8'));
 const extension = path.resolve(`release/chrysalis-${version}-unpacked`);
 const profile = await mkdtemp(path.join(tmpdir(), 'chrysalis-captures-'));
-const output = 'distribution/screenshots'; await mkdir(output, { recursive: true });
+const output = `release/chrysalis-${version}-screenshots`; await mkdir(output, { recursive: true });
+const manifest = JSON.parse(await readFile(`release/chrysalis-${version}-build-manifest.json`, 'utf8'));
 let context;
 const captures = [], checks = [], limitations = [];
 try {
@@ -35,6 +36,13 @@ try {
   await expect(settings.locator('body')).toContainText('not encrypted');
   checks.push('The packaged privacy page opens from settings and renders the actual local-data explanation.');
   await settings.goto(`${base}options.html#history`);
+  const arrival = await context.newPage();
+  await arrival.goto('https://www.youtube.com/', { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await arrival.bringToFront();
+  await expect(arrival.locator('#chrysalis-session-dialog dialog')).toBeVisible({ timeout: 22000 });
+  await capture(arrival, '00-live-session-introduction.png', 'Actual centered first-visit introduction on signed-out YouTube, with its default duration and optional intention.', true);
+  await arrival.keyboard.press('Escape'); await expect(arrival.locator('#chrysalis-session-dialog')).toHaveCount(0);
+  await arrival.close();
   await popup.bringToFront(); await popup.locator('#intention').selectOption('Exploring');
   await popup.locator('#time-target').selectOption('custom'); await popup.locator('#custom-minutes').fill('1'); await popup.locator('#submit-plan').click();
   await expect(popup.locator('#session-phase')).toHaveText('Active');
@@ -72,6 +80,6 @@ try {
   await capture(settings, '04-local-history.png', 'A real record created by the preceding automated session actions; not participant data or research evidence.', true);
   checks.push('Real foreground pulses reached a checkpoint on live YouTube; UI target revisions, added time, voluntary break, finish and Skip produced the photographed history record.');
   limitations.push('Signed-out Home only; native toolbar popover, authenticated feeds and all experimental layouts are not established by these captures.');
-  await writeFile(`${output}/capture-report.json`, JSON.stringify({ version, browser: context.browser().version(), capturedAt: new Date().toISOString(), source: extension, captures, checks, limitations }, null, 2) + '\n');
+  await writeFile(`${output}/capture-report.json`, JSON.stringify({ version, sourceRevision: manifest.sourceRevision, zipSha256: manifest.sha256, browser: context.browser().version(), capturedAt: new Date().toISOString(), source: extension, captures, checks, limitations }, null, 2) + '\n');
   console.log(`Saved ${captures.length} actual screenshots to ${output}.`);
 } finally { await context?.close(); await rm(profile, { recursive: true, force: true, maxRetries: 3 }); }

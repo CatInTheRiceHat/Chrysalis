@@ -1,4 +1,4 @@
-# Build, install and troubleshoot Chrysalis 0.7.2
+# Build, install and troubleshoot Chrysalis 0.8.0
 
 ## Personal installation / volunteer files
 
@@ -8,7 +8,7 @@ onto Chrome or select the repository/source folder.
 
 1. Read the [privacy explanation](PRIVACY.md) and [pilot guide](pilot/GUIDE.md) first.
    Participation and every control are optional. You can stop and delete data.
-2. Extract `chrysalis-0.7.2.zip` using your normal archive tool. Place the extracted
+2. Extract `chrysalis-0.8.0.zip` using your normal archive tool. Place the extracted
    files in a stable folder you control, for example `Documents/Chrysalis-extension`.
    Opening that folder must show `manifest.json`, `popup.html`, `background.js`, etc.
 3. Open `chrome://extensions` in desktop Chrome and turn **Developer mode** on.
@@ -17,8 +17,8 @@ onto Chrome or select the repository/source folder.
    do not bypass managed-device policy.
 4. Pin Chrysalis through Chrome's Extensions menu, then open its popup. Skip or read
    the introduction. Ordinary layout/no target are available; choose controls yourself.
-5. Open or refresh `https://www.youtube.com/`. The indicator is below the player or
-   in normal page flow where recognized. The popup always provides session controls.
+5. Open or refresh `https://www.youtube.com/`. A centered introduction offers a plan; the compact timer sits
+   near the right edge and can be hidden/restored. The popup always provides session controls.
 
 These are the official [local loading steps](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).
 No extension account, Google login, OAuth consent or YouTube API key is required.
@@ -28,10 +28,10 @@ sessions and history and distinguishes browser restart from background-worker wa
 Exact paths in this workspace:
 
 - Development production build: `/Users/elaine/Documents/Chrysalis/extension/dist`
-- Extracted distribution: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.7.2-unpacked`
-- ZIP: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.7.2.zip`
-- Checksums and per-file inventory: `release/chrysalis-0.7.2.sha256` and
-  `release/chrysalis-0.7.2-build-manifest.json`
+- Extracted distribution: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.8.0-unpacked`
+- ZIP: `/Users/elaine/Documents/Chrysalis/extension/release/chrysalis-0.8.0.zip`
+- Checksums and per-file inventory: `release/chrysalis-0.8.0.sha256` and
+  `release/chrysalis-0.8.0-build-manifest.json`
 
 ## Reproducible production build
 
@@ -67,15 +67,15 @@ npm run test:package
 ```
 
 This builds twice, requires byte-identical ZIPs, rejects a deliberately introduced
-development file/missing script in a temporary copy, and runs all nine extension
+development file/missing script in a temporary copy, and runs all ten extension
 browser suites against the ZIP-extracted directory. It writes a validation record
-bound to the ZIP SHA-256. Tests use disposable profiles; fixtures are not live-layout
+bound to the ZIP SHA-256, source revision and source-file digest. Tests use disposable profiles; fixtures are not live-layout
 proof. Node/Python versions can change bytes; equivalence across untested toolchains
 is not promised. Re-run this command after changing inputs.
 
 To verify a received checksum (from `release/`): macOS `shasum -a 256 -c
-chrysalis-0.7.2.sha256`; Linux `sha256sum -c chrysalis-0.7.2.sha256`. On Windows,
-`Get-FileHash .\chrysalis-0.7.2.zip -Algorithm SHA256` in PowerShell and compare with
+chrysalis-0.8.0.sha256`; Linux `sha256sum -c chrysalis-0.8.0.sha256`. On Windows,
+`Get-FileHash .\chrysalis-0.8.0.zip -Algorithm SHA256` in PowerShell and compare with
 the checksum text. A checksum detects differing bytes; it does not authenticate an
 unknown sender. Obtain the files and expected checksum through a trusted source.
 
@@ -89,9 +89,10 @@ or load another copy to update. Changing installation identity/folder can separa
 its storage; moving to a later Store installation is not an implemented data migration.
 See Chrome's [extension ID guidance](https://developer.chrome.com/docs/extensions/reference/manifest/key).
 
-Schema 6 preserves supported older extension data; unknown/malformed data is not
+Schema 7 preserves valid schemas 1–6, including existing history and display settings; unknown/malformed data is not
 silently reset. Unfinished viewing restores paused. A break retains its deadline but
-expiry never resumes viewing. Unpacked installations have no automatic update feed.
+expiry never resumes viewing. Unpacked installations have no automatic update feed. An older build may reject newer
+local schemas: do not downgrade or reinstall as a repair. Website rollback is separate.
 
 ## Troubleshooting
 
@@ -102,7 +103,7 @@ expiry never resumes viewing. Unpacked installations have no automatic update fe
 | No indicator or controls | Confirm `www.youtube.com` in desktop Chrome, extension enabled, and website access allowed in its Details → Site access controls where available. Enable Chrysalis in its popup, enable Show session indicator if desired, then refresh YouTube. Incognito/mobile/alternate origins are unsupported. |
 | Home/related/Shorts still visible | Check the independent toggle and appropriate page. Open the control status disclosure. Unrecognized or empty layouts stay visible; Shorts URLs and unrelated surfaces are not blocked. Use Restore ordinary layout or turn that toggle off. |
 | Timer stopped | Check session pause, global pause, target-independent state and focused active tab. Recovery after a >5-second signal gap needs Resume. It is foreground time, not exact player time. |
-| No checkpoint | A target is optional. Check prompts enabled and whether this target was already dismissed/acknowledged. A new explicit target/additional duration rearms it; changing intention alone does not. Fullscreen defers the in-page prompt. |
+| No checkpoint | A target is optional. Check prompts enabled and whether this target was already dismissed/acknowledged. A new explicit target/additional duration rearms it; changing intention alone does not. Fullscreen uses the centered check-in and a compact restore tab. |
 | Old UI remains after reload/disable | Return to the tab; visible old contexts normally remove their UI within about five seconds. Hidden/frozen contexts can be delayed. Refresh gives immediate cleanup and loads the new script when enabled. |
 | Save/read failure | Retry, check that the same version is loaded, reload the extension and reopen its popup. Do not assume Saved unless confirmed. Unknown schemas/corrupt data are preserved, not repaired automatically. |
 | Want to delete data | Settings → history → Delete session for one record; Clear session history for all completed records; Delete all Chrysalis data separately clears preferences/current session too. Confirm the dialog. None of these deletes YouTube history. |

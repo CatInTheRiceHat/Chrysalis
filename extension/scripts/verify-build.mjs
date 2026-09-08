@@ -51,5 +51,11 @@ for (const [size, file] of Object.entries(manifest.icons)) {
 }
 for (const script of ['background.js', 'content.js', 'page.js']) {
   assert.doesNotMatch(await readFile(path.join(root, script), 'utf8'), /\beval\s*\(|new Function\s*\(|import\s*\(/);
+  assert.doesNotMatch(await readFile(path.join(root, script), 'utf8'), /\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|storage\.sync/, 'Unexpected runtime network/sync code');
+}
+assert((await readFile(path.join(root, 'privacy.html'), 'utf8')).includes(`local preview ${pkg.version}`), 'Privacy version must match the release');
+for (const file of expectedFiles) {
+  const bytes = await readFile(path.join(root, file));
+  assert.doesNotMatch(bytes.toString('utf8'), /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\bAKIA[0-9A-Z]{16}\b|\bgh[pousr]_[A-Za-z0-9]{30,}\b|\bAIza[A-Za-z0-9_-]{35}\b/, `Credential signature in ${file}`);
 }
 console.log(`Build verified: ${expectedFiles.length} allowed assets, ${files.size} local references, valid PNG icons, scoped permissions and bundled scripts (${root}).`);

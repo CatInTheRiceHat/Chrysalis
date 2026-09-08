@@ -1,85 +1,44 @@
-# Distribution readiness — Chrysalis 0.7.1
+# Distribution status — Chrysalis 0.8.0
 
-Prepared and verified 2026-09-07. Nothing uploaded, submitted, published or sent to
-volunteers. No telemetry, accounts, backend, extra permissions or migrations added.
+Prepared local developer preview. No upload, Store submission, publication, volunteer
+invitation or public deployment occurred. See the current transition record at
+`../../docs/extension-public-site-transition.md` for actual check results.
 
-## Exact artifacts
+## Reproducible artifact
 
-| Artifact | Location (relative to `extension/`) |
-| --- | --- |
-| Production build | `dist/` |
-| Installable extracted package | `release/chrysalis-0.7.1-unpacked/` |
-| Distribution ZIP, manifest at root | `release/chrysalis-0.7.1.zip` |
-| Archive checksum | `release/chrysalis-0.7.1.sha256` |
-| Per-file SHA-256 inventory/toolchain | `release/chrysalis-0.7.1-build-manifest.json` |
-| Browser validation bound to ZIP hash | `release/chrysalis-0.7.1-validation.json` |
-| Real screenshots/provenance | `distribution/screenshots/` |
-| Draft 440×280 promotional artwork | `distribution/artwork/promo-440x280.png` |
-| Store copy/policy review | `distribution/STORE_DRAFT.md` |
-| Volunteer guide/questionnaire/case-study outline | `pilot/` |
+Run from `extension/`: `npm ci`, `npm run check`, `npm run test:package`.
 
-ZIP: **968,790 bytes**, **17 allowlisted files**. SHA-256:
+- `release/chrysalis-0.8.0.zip`: manifest at root, 17 allowlisted runtime files.
+- `release/chrysalis-0.8.0-unpacked/`: independently extracted and byte-compared.
+- `release/chrysalis-0.8.0.sha256`: ZIP checksum.
+- `release/chrysalis-0.8.0-build-manifest.json`: source revision/digest and dirty flag,
+  toolchain, ZIP hash and each source/artifact file hash.
+- `release/chrysalis-0.8.0-validation.json`: ten browser suites bound to the ZIP hash.
 
-```text
-db3f4ec6888445d6c9a7af06b3495df31f19cf3ffb6fa83829762c32179c50e8
-```
+Only local runtime JS/HTML/CSS, fonts/licenses and artwork/icons are packaged. Exact
+membership/reference checks reject development files and missing scripts; bounded scans
+reject known credential signatures and runtime network/sync code. These scans are not
+proof against every possible secret format. Source/docs/tests, legacy assets, profiles,
+.env files, screenshots and histories are excluded. Two clean builds must match bytes.
+The ZIP is reproducible, not signed. Use a trusted source and expected checksum.
 
-Only runtime HTML/CSS/JS, manifest, local artwork/icons/fonts and required font
-licenses are in the ZIP. No source, node_modules, test fixtures, personal Chrome
-profile data, screenshots, documentation bundle, unrelated application files or
-`.env` files. The expanded package is extracted from that exact ZIP. Every file is
-byte-identical to the verified `dist` build. The ZIP is reproducible, not signed.
-`release/` is generated/ignored; commands reproduce it from checked-in inputs.
+## Scope and readiness limits
 
-## Commands actually run and results
+Storage schema 7; migrate valid existing local data without reset. Keep the same
+installation entry/path for updates; older schema readers and unpacked-to-Store
+identity migration are not assumed safe. No export/cloud backup is implemented.
 
-Toolchain: Node 20.17.0, npm 10.8.2, Python 3.13.1; Chromium 153.0.8010.12.
-Commands below run from `extension/`, except the final diff check.
+Personal unpacked use is supported after package acceptance. Signed-in/experimental
+layouts, physical sleep/wake, screen readers, older Chrome and physical toolbar behavior
+need relevant manual preflight before recruiting testers. Do not present fixture coverage
+as proof for every YouTube layout or as evidence of reduced scrolling time.
 
-| Command/check | Result |
-| --- | --- |
-| `npm ci` | Passed; locked dependencies installed |
-| `npm run check` | 63 Node tests, strict TypeScript and production/reference validation passed |
-| `npm run package` | Created ZIP/extracted folder/checksum/inventory; all 17 files verified |
-| `npm run test:package` | Two clean builds yielded identical ZIP bytes; unexpected development asset/missing script guards passed; all seven real extension-enabled browser suites passed on the extracted package |
-| `npm run screenshots` | Seven genuine screenshots captured; live foreground minute reached a checkpoint, explicit UI revisions/continuation/break/Finish/Skip produced the pictured history; packaged offline privacy link/page verified |
-| Manual screenshot inspection | Live checkpoint, recorded history and icon inspected; additional viewing/intro/privacy checks recorded with capture evidence |
-| Python ZIP/signature inspection | CRC passed; known credential/private-key signatures had zero matches; membership matched allowlist |
-| `git diff --check` from repository root | Passed |
+Store submission still needs a publicly hosted policy URL, verified publisher/account
+and dashboard declarations, review of local unencrypted data handling against current
+policy, final metadata/artwork, and an installation/update identity decision. Public
+support Issues is verified and repository email is documented. The versioned screenshot command writes to `release/chrysalis-0.8.0-screenshots/`;
+review its capture report and final artwork before submitting. Old 0.7.1 images remain
+historical.
 
-Earlier hardening already verified observed live related/Shorts surfaces, player
-progress and search/subscriptions navigation. Current packaged suites repeat lifecycle,
-control fixtures, restart, focus, fullscreen, keyboard/zoom and deletion behavior.
-Current live capture verifies the signed-out Home session/checkpoint flow; it does
-not upgrade populated Home selectors from fixture-only evidence. Popup documents
-are real extension pages, but the native toolbar popover remains a manual check.
-
-A signature scan is bounded, not proof that every possible secret format is absent.
-Screenshots come from disposable automated test sessions, not participant research.
-The runtime includes no initial histories or screenshot example data.
-
-## Readiness and remaining blockers
-
-**Ready for personal unpacked installation. Pilot materials are complete; launch of
-a small volunteer pilot is conditional, not certified by these automated checks.**
-
-Before inviting volunteers, the organizer should run the preflight in
-[pilot/GUIDE.md](../pilot/GUIDE.md): actual native Chrome toolbar installation/use,
-intended signed-in/populated layouts, physical sleep recovery and relevant player/
-accessibility setups; explain support/feedback channel and retention. No facilitator
-contact was invented. Unknown layouts fail open; conservative timing may undercount
-or ask for Resume. Do not promise precise watch time or control of every layout.
-Chrome 111, all ads/captions/player modes and physical screen readers are unverified.
-
-**Not ready for Chrome Web Store submission.** Official requirements were checked;
-[STORE_DRAFT.md](STORE_DRAFT.md) contains linked sources and prepared fields. Missing:
-verified publisher/contact and account setup, hosted privacy-policy URL, final
-metadata/artwork review, and resolution of the current FAQ's encryption-at-rest
-language against this build's unencrypted local Chrome storage. No policy approval,
-legal conclusion or store acceptance is claimed. Private/unlisted store pilots still
-require review. Distribution-channel updates and migration from unpacked IDs are
-not yet verified or implemented.
-
-Scope of 0.7.1: distribution tooling, standard icon exports, an offline full-privacy
-page linked from settings, corrected version footer and documentation/materials.
-Session model/schema 6, viewing controls and retention remain as verified in 0.7.0.
+The public-site build and local privacy pages are ready for review, not already published.
+See `STORE_DRAFT.md` for prepared copy and remaining owner decisions.

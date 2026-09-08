@@ -1,6 +1,6 @@
 # Chrome Web Store submission draft — NOT SUBMITTED
 
-Prepared 2026-09-07 for 0.7.1. No publisher account was accessed, no ZIP uploaded,
+Prepared 2026-09-07 for 0.8.0. No publisher account was accessed, no ZIP uploaded,
 and no item published. Complete unresolved fields and policy review before submission.
 
 ## Proposed listing copy
@@ -13,6 +13,10 @@ Plan YouTube sessions, notice foreground time and choose which supported recomme
 **Detailed description:**
 
 Make desktop YouTube fit what you came for, with choices you can change.
+
+A centered introduction appears once per visit (after 30 minutes away), with an
+optional intention and chosen duration. Refreshes and extra tabs share the visit.
+Continue without a timer starts no session. Disable automatic introductions in settings.
 Chrysalis is an independent browser extension, not affiliated with or endorsed by
 YouTube or Google. It works on www.youtube.com in desktop Chrome, not the native
 YouTube phone app.
@@ -27,12 +31,12 @@ watch pages, and supported Shorts shelves/navigation. Controls start off and can
 reversed. Hiding Shorts entry points does not block all Shorts URLs. Chrysalis does
 not change the recommendation algorithm, block ads or manipulate playback.
 
-A collapsible indicator shows foreground YouTube time: browsing and playback while
+A compact side timer shows foreground YouTube time: browsing and playback while
 YouTube is the active tab of your focused window. This is not exact watch time or
 a measure of attention. Hidden/unfocused tabs, pauses and breaks do not count.
 Missing signals may require you to resume; browser restart restores viewing paused.
 
-At your chosen target, a non-blocking checkpoint offers additional time, no target,
+At your chosen target, a dismissible centered check-in offers additional time, no target,
 Finish or a voluntary break. Dismiss it or disable prompts if you prefer. A break
 uses a wall-clock countdown and never blocks YouTube or automatically resumes viewing.
 
@@ -64,7 +68,7 @@ Entertainment, exploration and longer sessions are valid choices.
 | Language | English. |
 | Category | Select the closest currently available category in the dashboard after reviewing its choices; no category was submitted or invented as an established classification. |
 | Privacy URL | **Missing:** publicly hosted, accurate policy URL. Local `privacy.html`/PRIVACY.md are prepared, not a hosted URL. |
-| Publisher/support | **Missing/unverified:** intended publisher identity, support contact/URL, account registration and verification, applicable account/dashboard declarations. |
+| Publisher/support | Public GitHub Issues verified reachable; repository contact: elaineyouyuanche@gmail.com. Publisher registration, identity verification and dashboard declarations still require the owner. |
 | Visibility | No selection made. Consider private trusted testers only after review blockers are resolved; an unlisted link is accessible to anyone who has it. |
 
 No store credentials, API key or update URL is embedded in the package. A later
@@ -73,23 +77,24 @@ an ID during this preparation stage.
 
 ## Assets and reviewer instructions
 
-- ZIP with manifest at root: `../release/chrysalis-0.7.1.zip`.
+- ZIP with manifest at root: `../release/chrysalis-0.8.0.zip`.
 - Required 128px icon: `../static/icons/icon-128.png`; toolbar variants 16/32/48 also
   included. These export the existing Chrysalis butterfly, not a Google/YouTube icon.
 - Draft small promotional tile: `artwork/promo-440x280.png` (440×280).
-- Four 1280×800 screenshot candidates: `screenshots/01-viewing-settings.png`,
-  `02-live-youtube-session.png`, `03-live-checkpoint.png`, `04-local-history.png`.
-  Captured from actual packaged extension contexts. History/checkpoint data came
-  from real automated test actions and elapsed time, not participants or fabricated
-  statistics. Raw 375px popup captures are supplemental, not store-sized candidates.
-- [Screenshot provenance](screenshots/README.md) and hash report accompany the drafts.
-  Publisher must review artwork rights and recognizable third-party UI before use.
+- Current capture command: `npm run screenshots`, after package validation. Versioned
+  output: `../release/chrysalis-0.8.0-screenshots/`, including the centered introduction,
+  viewing settings, live side timer, target check-in and local history. Captures use
+  actual signed-out YouTube and real elapsed time; no participant records or statistics.
+  The report binds screenshots to the ZIP/source revision. Inspect final sizes/artwork
+  before submission; supplemental 375px popup images are not Store-sized candidates.
+- Historical `distribution/screenshots/` stays preserved as 0.7.1 evidence and is not
+  an accurate depiction of 0.8.0. Do not submit old screenshots as this release.
 
 Reviewer flow: no login or credentials required. Open the popup, skip/read setup,
 start a custom one-minute target and keep a supported YouTube tab active. Use settings
 to turn controls on/off. At the target, continue untimed or add time; take/end a custom
 one-minute break, finish and Skip/answer reflection. Open history, delete a session,
-then use separate Delete all data. Use the popup if no safe in-page anchor exists.
+then use separate Delete all data. Use the popup as an alternative to the in-page timer.
 Foreground measurement needs an active tab and focused window, not merely playback.
 Unfamiliar/empty layouts intentionally stay visible. See the full [pilot guide](../pilot/GUIDE.md).
 
@@ -103,7 +108,7 @@ assertion that Google's review will approve the extension.
 | Production testing, correct manifest/version, description ≤132 characters, ZIP with manifest at root | Build/reference checks, locked dependencies, byte comparisons and extracted-package browser tests prepared. | [Prepare your extension](https://developer.chrome.com/docs/webstore/prepare) |
 | 128px icon, small 440×280 promotion image, at least one real 1280×800 or 640×400 screenshot | Required sizes exported/captured locally; final publisher artwork review remains. | [Supplying images](https://developer.chrome.com/docs/webstore/images) |
 | Narrow purpose, least permissions, remote-code declaration, accurate privacy fields | Drafts above match the actual package; publisher must complete/certify the dashboard. | [Privacy fields](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy) |
-| Local-only data handling still needs disclosure and privacy policy | Full local policy prepared; public hosting/contact remain missing. | [User Data FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq) |
+| Local-only data handling still needs disclosure and privacy policy | Full local policy prepared; public policy hosting remains pending; GitHub Issues is verified and the repository email is documented. | [User Data FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq) |
 | Limited Use, secure handling, truthful metadata, no impersonation, developer two-step verification | Independent branding and limited-use explanation prepared. Account security and final policy review unverified. | [Program Policies](https://developer.chrome.com/docs/webstore/program-policies/policies) |
 | Registration and publisher setup before publishing | No account/payment action taken; owner supplies verified publisher details. | [Register](https://developer.chrome.com/docs/webstore/register), [Publishing](https://developer.chrome.com/docs/webstore/publish) |
 | Private/unlisted/public items face the same policy review | A private pilot does not bypass review. Do not confuse local unpacked testing with store distribution. | [Distribution settings](https://developer.chrome.com/docs/webstore/cws-dashboard-distribution) |
@@ -117,5 +122,5 @@ required change before certifying or submitting. Do not describe local-only stor
 as automatically satisfying all Store requirements. This stage preserves implemented
 data behavior rather than inventing encryption or silently changing the data model.
 
-**No submission readiness claim:** hosted privacy/contact, publisher/account setup,
+**No submission readiness claim:** published privacy URL, publisher/account setup,
 secure-storage review, final artwork/metadata review and practical pilot checks remain.

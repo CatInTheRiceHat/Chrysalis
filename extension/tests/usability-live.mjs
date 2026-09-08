@@ -1,5 +1,5 @@
 import {chromium,expect} from '@playwright/test';import assert from 'node:assert/strict';import {mkdtemp,mkdir,rm,writeFile} from 'node:fs/promises';import {tmpdir} from 'node:os';import path from 'node:path';
-const out=path.resolve('../screenshots/chrysalis-usability');await mkdir(out,{recursive:true});const profile=await mkdtemp(path.join(tmpdir(),'chrysalis-review-live-'));let context;const results=[];
+const out=path.resolve('test-results/usability');await mkdir(out,{recursive:true});const profile=await mkdtemp(path.join(tmpdir(),'chrysalis-review-live-'));let context;const results=[];
 try {
  const ext=path.resolve(process.env.CHRYSALIS_EXTENSION_PATH??'dist');context=await chromium.launchPersistentContext(profile,{channel:'chromium',headless:true,viewport:{width:1440,height:1000},colorScheme:'light',args:[`--disable-extensions-except=${ext}`,`--load-extension=${ext}`]});const worker=context.serviceWorkers()[0]??await context.waitForEvent('serviceworker');const base=`chrome-extension://${new URL(worker.url()).hostname}/`;
  const popup=await context.newPage();await popup.goto(`${base}popup.html`);await popup.locator('#intro-skip').click();await popup.locator('#time-target').selectOption('custom');await popup.locator('#custom-minutes').fill('1');await popup.locator('#submit-plan').click();

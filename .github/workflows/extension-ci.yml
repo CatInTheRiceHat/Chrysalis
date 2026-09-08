@@ -1,0 +1,63 @@
+name: Extension and public website
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: extension/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            extension/package-lock.json
+            public-site/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Verify local LFS objects
+        run: git lfs fsck --objects HEAD
+      - name: Install extension test toolchain
+        working-directory: extension
+        run: npm ci
+      - name: Install Chromium
+        working-directory: extension
+        run: npx playwright install --with-deps chromium
+      - name: Unit tests and production build
+        working-directory: extension
+        run: npm run check
+      - name: Validate package and actual extension browser flows
+        working-directory: extension
+        run: npm run test:package
+      - name: Check synchronized privacy and preserved service configuration
+        run: |
+          node scripts/sync_extension_privacy.mjs --check
+          node --test scripts/transition.test.mjs
+      - name: Install public-site test toolchain
+        working-directory: public-site
+        run: npm ci
+      - name: Build and test the independent public site
+        working-directory: public-site
+        run: npm test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chrysalis-validation
+          path: |
+            extension/release/
+            extension/test-results/
+            public-site/test-results/
+            public-site/dist/
+          retention-days: 14

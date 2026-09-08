@@ -1,7 +1,7 @@
 // Capture the actual action popup target, which Playwright does not expose as a Page.
 import {chromium,expect} from '@playwright/test';
 import {mkdtemp,rm,writeFile,mkdir} from 'node:fs/promises';import {tmpdir} from 'node:os';import path from 'node:path';
-const out=path.resolve(process.env.CHRYSALIS_USABILITY_OUTPUT ?? '../screenshots/chrysalis-usability');await mkdir(out,{recursive:true});const profile=await mkdtemp(path.join(tmpdir(),'chrysalis-native-'));let context;const checks=[];
+const out=path.resolve(process.env.CHRYSALIS_USABILITY_OUTPUT ?? 'test-results/usability');await mkdir(out,{recursive:true});const profile=await mkdtemp(path.join(tmpdir(),'chrysalis-native-'));let context;const checks=[];
 try {
  const ext=path.resolve(process.env.CHRYSALIS_EXTENSION_PATH??'dist');context=await chromium.launchPersistentContext(profile,{channel:'chromium',headless:true,args:[`--disable-extensions-except=${ext}`,`--load-extension=${ext}`]});const worker=context.serviceWorkers()[0]??await context.waitForEvent('serviceworker');
  const anchor=await context.newPage();await anchor.goto('about:blank');const cdp=await context.newCDPSession(anchor);

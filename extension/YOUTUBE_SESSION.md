@@ -10,7 +10,9 @@ recommendation algorithms were added.
 - New installations enable **Introduce new YouTube sessions**. Existing settings
   migrate to schema 7 with this option enabled; all existing choices and session
   data, including the collapse preference, are preserved.
-- Only the foreground YouTube document can claim an automatic introduction.
+- Only the foreground YouTube document with initialized display state can claim an
+  automatic introduction. An early focus event waits for that state instead of consuming
+  an offer before the dialog can render.
   The worker serializes claims and stores visit metadata in `chrome.storage.session`.
   Refreshes, SPA navigation, additional tabs and worker suspension do not create
   another prompt. An unfinished session (including manual pause or break) always

@@ -1,27 +1,27 @@
 # Chrysalis
 
-## Project context
+Active products: the desktop YouTube Chrome extension in `extension/`, and the
+independent static supporting site in `public-site/`. No Instagram or standalone
+app work unless requested. Describe actual user choice and foreground-time behavior;
+make no claims of measured improvements or exact watch time.
 
-Chrysalis is a mental-health-aware social media recommendation algorithm. The
-live feed is served through three reels ranking modes defined in
-`core/ranking/modes.py`:
+## Verify
 
-- **daily-dew** — a small, calm, grounding taste
-- **metamorphosis** — the recovery mode: very few items, and only when low-risk
-- **flutter-feed** — unlimited (closest to a normal feed)
+- Extension: `cd extension && npm ci && npm run check`; release browser checks:
+  `npm run test:package`. Use disposable profiles. Live checks are separate.
+- Site: `cd public-site && npm ci && npm test`; build: `npm run build`.
+- Privacy: edit `extension/PRIVACY.md`, then run
+  `node scripts/sync_extension_privacy.mjs` at the root. Both product builds use
+  checked-in local copies and remain independent.
+- Service boundary: `node --test scripts/transition.test.mjs`.
 
-All three draw from the same safe pool (`feed_videos`); mode-specific behavior
-lives in the ranking/explanation layer.
+## Legacy boundary
 
-Python interpreter: `.venv/bin/python3.13` (system Python lacks pytest and project deps).
-Dataset: `datasets/processed_dataset.csv`.
-Database: `chrysalis.db` (SQLite, project root); Supabase/Postgres in production.
+`website/`, Python feed/backend code and `intentional_social/` are preserved
+prototypes. Baseline tag: `legacy-web-baseline-2026-09-07`.
+See `docs/legacy/README.md` and `deployment/README.md` before changing that boundary.
+Archiving development does not authorize shutting down APIs, jobs, authentication,
+databases or storage. Root deployment retains Python APIs/crons deliberately.
 
-Run tests: `.venv/bin/python -m pytest -q`
-
-## Archived
-
-The old multi-agent test pipeline (test-runner / simulation-agent / fact-checker
-/ analysis-agent / fix-agent) and the deprecated Cocoon/Migration Mode code were
-retired on 2026-07-03. Preserved under `../archive/2026-07-03-unused-code/` — see
-that folder's `README.md`.
+Original instructions are preserved at `docs/legacy/CLAUDE-baseline.md`; their sibling
+historical archive reference is not known to be recoverable here.

@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 const before=process.argv.includes('--before'), stage=before?'before':'after';
-const out=path.resolve(process.env.CHRYSALIS_USABILITY_OUTPUT ?? '../screenshots/chrysalis-usability');await mkdir(out,{recursive:true});
+const out=path.resolve(process.env.CHRYSALIS_USABILITY_OUTPUT ?? 'test-results/usability');await mkdir(out,{recursive:true});
 const profile=await mkdtemp(path.join(tmpdir(),'chrysalis-usability-')), ext=path.resolve(process.env.CHRYSALIS_EXTENSION_PATH??'dist');
 const checks=[], measurements={};let context;
 try {

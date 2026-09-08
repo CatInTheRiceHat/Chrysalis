@@ -62,3 +62,21 @@ test('schema 6 upgrades enable automatic intros while preserving the existing co
   assert.equal(settingsPatch({ autoSessionIntro: 'yes' }), false);
   assert.equal(settingsPatch({ autoSessionIntro: false }), true);
 });
+
+test('a populated schema 6 upgrade preserves history, reflection, settings and revision metadata without mutating input', () => {
+  const state = defaultSnapshot();
+  applyCommand(state, { requestId: 'saved-session', expectedRevision: 0, expectedSessionId: null, command: { action: 'start', plan: { intention: 'A tutorial', targetMs: 60000 } } }, 1000);
+  assert(state.currentSession.phase !== 'idle');
+  state.currentSession.elapsedMs = 42000;
+  applyCommand(state, { requestId: 'finish', expectedRevision: state.sessionRevision, expectedSessionId: state.currentSession.id, command: { action: 'finish' } }, 44000);
+  state.completedSessions[0]!.reflection = { answer: 'partly', note: 'Keep this private note' };
+  state.settings.hideWatchRecommendations = true;
+  state.settings.theme = 'dark';
+  const { autoSessionIntro: _, ...settings } = state.settings;
+  const prior = { ...state, schemaVersion: 6, settings };
+  const before = structuredClone(prior);
+  const upgraded = migrate(prior);
+  assert.deepEqual(prior, before);
+  assert.deepEqual(upgraded, { ...prior, schemaVersion: 7, settings: { ...settings, autoSessionIntro: true } });
+  assert.throws(() => migrate({ ...upgraded, schemaVersion: 8 }), /Unsupported saved data/);
+});

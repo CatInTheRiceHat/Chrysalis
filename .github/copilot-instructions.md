@@ -1,28 +1,10 @@
-# Healthy-Feed-Algorithm Copilot Instructions
+# Chrysalis repository guidance
 
-## Project Overview
-This Python project implements an algorithm for healthy feed optimization. The core components are:
-- `main.py`: Main application entry point
-- `data.py`: Data handling and processing module
+Active product code lives in `extension/` (desktop YouTube Chrome extension) and
+`public-site/` (independent static support website). Follow `CLAUDE.md` and each
+product's README for builds, tests and data contracts.
 
-## Architecture
-- Simple script-based structure with separation of concerns between main logic and data operations
-- Expected data flow: Data loading → Processing → Algorithm execution → Output
-
-## Key Patterns
-- Use Python's standard library for core functionality
-- Follow PEP 8 naming conventions
-- Modular design with functions in separate files
-
-## Workflows
-- **Run the algorithm**: `python main.py`
-- **Data processing**: Import and use functions from `data.py`
-
-## Conventions
-- File naming: snake_case for modules (e.g., `data.py`)
-- Function naming: snake_case
-- No specific linting or formatting tools configured yet
-
-## Dependencies
-- Python 3.x (no external packages currently)
-- Future additions may include numpy/scipy for numerical computations
+Preserve the archived React/Python/Flutter prototypes at their original paths.
+Their development status does not authorize production-service or data retirement;
+see `deployment/README.md`. Use disposable profiles for extension browser tests,
+and separate fixture results from actual live YouTube observations.

@@ -61,7 +61,7 @@ export function createSessionDialog(doc: Document, act: (command: SessionCommand
     <form id="start-form"><label for="duration">How much time would you like?</label><select id="duration"><option value="5">5 minutes</option><option value="15" selected>15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="custom">Custom duration</option></select>
     <div id="custom-field" hidden><label for="minutes">Minutes (1–1440)</label><input id="minutes" type="number" min="1" max="1440" step="1" value="20"></div>
     <label for="intention">What are you here to watch? <span class="note">Optional</span></label><input id="intention" type="text" maxlength="80" autocomplete="off" placeholder="A tutorial, a favorite creator, a little exploring…">
-    <p class="note">Counts browsing and watching while YouTube is visible in the focused Chrome window. Time away is excluded. Your intention stays on this device.</p>
+    <p class="note">Counts browsing and watching while YouTube is visible in the focused Chrome window. Time away is excluded. Your intention is shown in YouTube’s page; avoid private details.</p>
     <button class="primary" type="submit">Start session</button><button id="untimed" type="button">Continue without a timer</button></form>
     <div id="check-in" hidden>${checkpointMarkup}<button id="finish" class="primary">Finish session</button>${breakMarkup}</div>
     <p id="dialog-error" role="status" hidden></p></dialog>`;

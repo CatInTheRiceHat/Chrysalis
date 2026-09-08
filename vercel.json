@@ -1,13 +1,77 @@
 {
   "framework": null,
-  "buildCommand": "cd website && npm install && npm run build",
-  "outputDirectory": "website/dist",
+  "installCommand": "cd public-site && npm ci --omit=dev",
+  "buildCommand": "cd public-site && npm run build",
+  "outputDirectory": "public-site/dist",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/index.py" },
-    { "source": "/:path*",     "destination": "/index.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/install",
+      "destination": "/install/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy/index.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact/index.html"
+    },
+    {
+      "source": "/legacy",
+      "destination": "/legacy/index.html"
+    },
+    {
+      "source": "/legacy-account",
+      "destination": "/legacy-account/index.html"
+    },
+    {
+      "source": "/:page(algorithm|reels|home|community|challenges|saved|search|inbox)",
+      "destination": "/legacy/index.html"
+    },
+    {
+      "source": "/:page(login|signup|forgot-password|reset-password|diagnostic|study|profile)",
+      "destination": "/legacy-account/index.html"
+    },
+    {
+      "source": "/profile/edit",
+      "destination": "/legacy-account/index.html"
+    },
+    {
+      "source": "/u/:username",
+      "destination": "/legacy/index.html"
+    }
   ],
   "crons": [
-    { "path": "/api/cron/drop?mode=morning",  "schedule": "0 7 * * *" },
-    { "path": "/api/cron/drop?mode=evening",  "schedule": "0 19 * * *" }
+    {
+      "path": "/api/cron/drop?mode=morning",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/drop?mode=evening",
+      "schedule": "0 19 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
   ]
 }

@@ -43,9 +43,12 @@ if (window === window.top && supportedUrl(location.href)) {
   let samplePending = false;
   let promptTimer: ReturnType<typeof setTimeout> | undefined;
   let promptPending = false;
+  let displayReady = false;
   async function prompt() {
     clearTimeout(promptTimer);
-    if (!supportsSessionUI() || disposed || pageSuspended || extensionPaused || promptPending || document.hidden || !document.hasFocus()) return;
+    // A focus event can arrive before the first display reply. Do not consume
+    // the once-per-visit claim until the dialog has state with which to render it.
+    if (!displayReady || !supportsSessionUI() || disposed || pageSuspended || extensionPaused || promptPending || document.hidden || !document.hasFocus()) return;
     promptPending = true;
     try {
       const reply = await request({ channel: CHANNEL, type: 'PROMPT' });
@@ -65,7 +68,7 @@ if (window === window.top && supportedUrl(location.href)) {
       indicator.remove(); dialog.remove(); clearTimeout(promptTimer); promptTimer = undefined; controls.dispose(); return;
     }
     running = session.phase === 'active' || session.phase === 'checkpoint';
-    if (supportsSessionUI()) { indicator.render(settings, session); dialog.render(settings, session); }
+    if (supportsSessionUI()) { indicator.render(settings, session); dialog.render(settings, session); displayReady = true; }
     else { indicator.remove(); dialog.remove(); }
     if (previousPhase !== session.phase || !promptTimer) { previousPhase = session.phase; void prompt(); }
     clearTimeout(breakTimer); breakTimer = undefined;

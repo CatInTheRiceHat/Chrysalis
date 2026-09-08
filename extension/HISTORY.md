@@ -1,4 +1,4 @@
-# Local history and reflection — 0.7.0
+# Local history and reflection — 0.8.0
 
 ## What is shown and stored
 
@@ -31,7 +31,7 @@ untimed continuation do. New sessions retain the original target separately.
 
 ## Measurement, migration and retention
 
-Schema **6** preserves valid schemas 1–5. Schema 5 records retain all recorded
+Schema **7** preserves valid schemas 1–6. Schema 6 gains the automatic-introduction preference; existing summaries and display choices are preserved. Schema 5 records retain all recorded
 history and gain only the extension-pause default. Records from schemas 1–4 did not contain a full target
 revision history or break time: migration marks their details incomplete and the UI
 labels this absence. It does not infer revisions from original/final targets or

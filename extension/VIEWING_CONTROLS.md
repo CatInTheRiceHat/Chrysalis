@@ -68,7 +68,7 @@ private page JavaScript or recommendation data.
   available while controls are enabled even if the separate session indicator is off.
 
 Schema **6** retains the three boolean viewing preferences and experience defaults,
-and adds extension-wide pause (default off). Valid extension schemas 1–5 upgrade
+and adds extension-wide pause (default off). Valid extension schemas 1–6 upgrade
 without losing settings, sessions, summaries, timing or receipts; unknown/malformed
 records remain untouched. Existing serialized/revision-checked settings messages
 and sender restrictions are reused. No new permissions, telemetry, browsing records,

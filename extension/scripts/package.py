@@ -13,6 +13,20 @@ ROOT = Path(__file__).resolve().parents[1]
 def digest(data):
     return hashlib.sha256(data).hexdigest()
 
+def source_identity():
+    """Bind validation to the source checkout as well as the actual ZIP bytes."""
+    inputs = [p for folder in ('src', 'static', 'scripts', 'tests')
+              for p in (ROOT / folder).rglob('*') if p.is_file()]
+    inputs += [ROOT / name for name in ('package.json', 'package-lock.json', 'tsconfig.json')]
+    hashes = {str(p.relative_to(ROOT)): digest(p.read_bytes()) for p in sorted(inputs)}
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    dirty = subprocess.check_output(['git', 'status', '--porcelain', '--',
+                                    'src', 'static', 'scripts', 'tests', 'package.json',
+                                    'package-lock.json', 'tsconfig.json'], cwd=ROOT, text=True)
+    return {'sourceRevision': revision, 'sourceDirty': bool(dirty.strip()),
+            'sourceTreeSha256': digest(json.dumps(hashes, sort_keys=True).encode()),
+            'sourceFiles': hashes}
+
 def package():
     expected = sorted(json.loads((ROOT / 'scripts/package-files.json').read_text()))
     subprocess.run(['node', 'scripts/verify-build.mjs'], cwd=ROOT, check=True)
@@ -49,7 +63,7 @@ def package():
         subprocess.run(['node', 'scripts/verify-build.mjs', str(extracted)], cwd=ROOT, check=True)
         hashes = {file: digest(data) for file, data in source.items()}
         assert all(digest((extracted / file).read_bytes()) == value for file, value in hashes.items())
-        report = {'version': version, 'zip': archive.name, 'sha256': digest(archive.read_bytes()),
+        report = {**source_identity(), 'version': version, 'zip': archive.name, 'sha256': digest(archive.read_bytes()),
                   'unpacked': extracted.name, 'files': hashes,
                   'toolchain': {'node': subprocess.check_output(['node', '--version'], text=True).strip(),
                                 'python': platform.python_version()},
