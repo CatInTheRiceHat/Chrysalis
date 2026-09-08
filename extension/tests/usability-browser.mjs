@@ -39,7 +39,10 @@ try {
   await yt.bringToFront();await expect(indicator.locator('#phase')).toContainText('Time target reached',{timeout:15000});await expect(indicator.locator('#details')).toBeHidden();await capture(yt,'collapsed-checkpoint',false);
   await expect(yt.locator('#chrysalis-session-dialog dialog')).toBeVisible();
   await yt.locator('#chrysalis-session-dialog #close').click();
-  await indicator.locator('#collapse').focus();await yt.keyboard.press('Enter');await expect(indicator.locator('#checkpoint-controls')).toBeHidden();await expect(indicator.locator('#collapse')).toBeFocused();
+  // Dismissal is asynchronous; wait for modal inertness to be released before keyboard input.
+  await expect(yt.locator('#chrysalis-session-dialog')).toHaveCount(0);
+  await expect(indicator.locator('#collapse')).toBeEnabled();
+  await indicator.locator('#collapse').focus();await yt.keyboard.press('Enter');await expect(indicator.locator('#details')).toBeVisible();await expect(indicator.locator('#checkpoint-controls')).toBeHidden();await expect(indicator.locator('#collapse')).toBeFocused();
   await indicator.locator('#collapse').press('Enter');await expect(indicator.locator('#phase')).toContainText('Target reached');await expect(indicator.locator('#details')).toBeHidden();
   await indicator.locator('#collapse').press('Enter');await expect(indicator.locator('#checkpoint-controls')).toBeHidden();await indicator.locator('[data-action="pause"]').click();
   checks.push('Centered checkpoint dismissal keeps the target; compact status and keyboard expand/collapse preserve focus.');
