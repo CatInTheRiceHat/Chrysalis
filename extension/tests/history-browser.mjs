@@ -69,7 +69,7 @@ try {
   await popup.reload(); await expect(popup.locator('#session-reflection')).toBeHidden();
   const secondPopup = await context.newPage(); await secondPopup.goto(`${base}popup.html`); await expect(secondPopup.locator('#session-reflection')).toBeHidden();
   await secondPopup.close();
-  await popup.bringToFront(); await popup.locator('#time-target').selectOption('none'); await popup.locator('#submit-plan').click();
+  await popup.bringToFront(); await popup.locator('#custom-minutes').fill('17'); await popup.locator('#submit-plan').click();
   await expect(popup.locator('#session-phase')).toHaveText('Active'); await popup.locator('[data-action="finish"]').click();
   await expect(popup.locator('#session-reflection')).toBeVisible();
   await popup.locator('#session-reflection textarea').fill('This draft is discarded by Skip'); await popup.locator('#session-reflection [data-skip]').click();

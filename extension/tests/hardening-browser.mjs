@@ -40,7 +40,7 @@ try {
   assert.equal(forbidden.code, 'FORBIDDEN');
   checks.push('Actual isolated content context cannot access local storage or request private session/history snapshots.');
   const second = await context.newPage(); await second.goto('https://www.youtube.com/');
-  await popup.bringToFront(); await popup.locator('#time-target').selectOption('none'); await popup.locator('#submit-plan').click();
+  await popup.bringToFront(); await popup.locator('#custom-minutes').fill('17'); await popup.locator('#submit-plan').click();
   await yt.bringToFront(); await expect.poll(async () => (await state()).currentSession.elapsedMs, { timeout: 15000 }).toBeGreaterThanOrEqual(2000);
   await popup.evaluate(() => { window.writes = 0; window.writeDetails = []; chrome.storage.onChanged.addListener((c, area) => { if (area === 'session' && c['chrysalis.extension.v1']) { window.writes++; const s=c['chrysalis.extension.v1'].newValue; window.writeDetails.push({at:Date.now(),anchor:s.timing.anchor,signals:s.timing.signals}); } }); });
   await yt.evaluate(() => { for (let i = 0; i < 1000; i++) document.dispatchEvent(new Event('visibilitychange')); });
